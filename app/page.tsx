@@ -1,6 +1,7 @@
 import { FinanceService } from '@/src/application/use-cases/FinanceService';
 import { ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
 import DashboardChart from './components/DashboardChart';
+import { headers } from 'next/headers';
 
 // Format rupiah helper
 const formatIDR = (amount: number) => {
@@ -11,7 +12,10 @@ const formatIDR = (amount: number) => {
   }).format(amount);
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
+  await headers();
   const summary = await FinanceService.getSummary();
   const transactions = await FinanceService.getTransactions();
 

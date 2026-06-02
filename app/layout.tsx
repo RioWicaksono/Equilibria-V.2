@@ -23,7 +23,7 @@ export default function RootLayout({
         <aside className="w-full md:w-64 bg-[#0D0D0D] border-r border-[#262626] flex flex-col p-6 flex-shrink-0 md:min-h-screen">
           <div className="mb-10">
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              <span className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center text-black font-black">
+              <span className="w-8 h-8 flex items-center justify-center font-black bg-[#000000] text-[#faff04] border border-[#faff04] rounded-[20px]">
                 E
               </span> 
               Equilibria
@@ -52,10 +52,13 @@ export default function RootLayout({
           </div>
           
           <div className="mt-auto p-4 bg-[#141414] border border-zinc-800 rounded-xl text-[11px] hidden md:block">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mb-2">
               <div className="w-2 h-2 bg-teal-400 rounded-full shadow-[0_0_8px_#2DD4BF]"></div>
-              <span className="text-zinc-300 font-semibold">Sistem Aktif</span>
+              <span className="text-zinc-300 font-semibold">Status Sistem</span>
             </div>
+            <p className="text-zinc-500">Framework: Next.js</p>
+            <p className="text-zinc-500">DB: PostgreSQL / In-Memory</p>
+            <p className="text-zinc-500 mt-2 italic">DDD Architecture Active</p>
           </div>
         </aside>
 

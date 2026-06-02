@@ -2,6 +2,7 @@ import { FinanceService } from '@/src/application/use-cases/FinanceService';
 import { revalidatePath } from 'next/cache';
 import { TransactionType } from '@/src/domain/models/Transaction';
 import { Trash2 } from 'lucide-react';
+import { headers } from 'next/headers';
 
 const formatIDR = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -11,7 +12,10 @@ const formatIDR = (amount: number) => {
   }).format(amount);
 };
 
+export const dynamic = 'force-dynamic';
+
 export default async function TransactionsPage() {
+  await headers(); // Force dynamic rendering and prevent build-time DB execution
   const transactions = await FinanceService.getTransactions();
 
   // Server Action for adding transaction
