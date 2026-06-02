@@ -1,15 +1,14 @@
 import { FinanceService } from '@/src/application/use-cases/FinanceService';
-import { ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
-import DashboardChart from './components/DashboardChart';
+import { ArrowDownRight, ArrowUpRight, Wallet, Plus } from 'lucide-react';
+import DashboardCalendar from './components/DashboardCalendar';
+import DashboardReminder from './components/DashboardReminder';
+import SystemStatus from './components/SystemStatus';
+import Link from 'next/link';
 import { headers } from 'next/headers';
 
 // Format rupiah helper
 const formatIDR = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0,
-  }).format(amount);
+  return 'Rp ' + (amount || 0).toLocaleString('id-ID');
 };
 
 export const dynamic = 'force-dynamic';
@@ -19,22 +18,14 @@ export default async function DashboardPage() {
   const summary = await FinanceService.getSummary();
   const transactions = await FinanceService.getTransactions();
 
-  // Prepare chart data (Last 7 Days)
-  // Simplifying for preview: Aggregate transactions by date
-  // A real app would aggregate more comprehensively.
-  const chartData = transactions.map(t => ({
-    date: new Date(t.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
-    income: t.type === 'INCOME' ? t.amount : 0,
-    expense: t.type === 'EXPENSE' ? t.amount : 0,
-  })).reverse().slice(-10); // get last 10 transactions
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <header className="flex justify-between items-center mb-8">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex flex-col">
           <h2 className="text-2xl font-semibold text-white">Ringkasan Keuangan</h2>
           <p className="text-sm text-zinc-500 mt-1">Laporan otomatis berdasarkan catatan harian Anda.</p>
         </div>
+        <SystemStatus />
       </header>
 
       {/* Summary Cards */}
@@ -67,17 +58,22 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Chart Section */}
-      <div className="bg-[#141414] border border-[#262626] rounded-xl p-6">
-        <h3 className="text-lg font-bold text-white mb-6">Aktivitas Terbaru</h3>
-        <div className="h-80 w-full">
-          <DashboardChart data={chartData} />
+      {/* Sub Modules: Calendar & Reminder */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Calendar Section */}
+        <div className="bg-[#141414] border border-[#262626] rounded-xl p-6 flex flex-col">
+          <h3 className="text-lg font-bold text-white mb-6">Kalender Transaksi</h3>
+          <div className="w-full flex justify-center flex-1 items-center overflow-x-auto pb-2">
+            <div className="min-w-fit">
+              <DashboardCalendar transactions={transactions} />
+            </div>
+          </div>
         </div>
-      </div>
-      
-      {/* Infrastructure Note */}
-      <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4 text-sm text-zinc-300">
-        <strong className="text-zinc-100">Info Setup Server:</strong> Aplikasi saat ini berjalan menggunakan <em className="text-zinc-400">In-Memory Storage</em> untuk mode Preview. Untuk deploy ke Railway dengan PostgreSQL, cukup tambahkan Environtment Variables <code className="bg-zinc-800 px-1 py-0.5 rounded text-zinc-200">DATABASE_URL</code>, dan sistem akan otomatis bind ke layer Database Postgres berkat arsitektur Domain-Driven Design (DDD).
+
+        {/* Reminder Section */}
+        <div className="h-full">
+          <DashboardReminder />
+        </div>
       </div>
     </div>
   );

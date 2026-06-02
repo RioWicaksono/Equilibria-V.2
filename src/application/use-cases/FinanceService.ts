@@ -44,6 +44,30 @@ export class FinanceService {
     return repository.findAll();
   }
 
+  static async updateTransaction(
+    id: string,
+    amount: number,
+    type: TransactionType,
+    category: string,
+    description: string,
+    dateString: string
+  ): Promise<Transaction | null> {
+    const existing = await repository.findById(id);
+    if (!existing) return null;
+
+    const updated: Transaction = {
+      ...existing,
+      amount,
+      type,
+      category,
+      description,
+      date: new Date(dateString),
+    };
+    
+    await repository.save(updated);
+    return updated;
+  }
+
   static async getSummary() {
     const transactions = await repository.findAll();
     let totalIncome = 0;

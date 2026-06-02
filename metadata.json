@@ -1,6 +1,6 @@
 {
   "name": "Equilibria",
-  "description": "Financial tracker by Rio. W. Focuses on manual data entry for maximum privacy.",
+  "description": "Financial tracker application. Focuses on manual data entry.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
