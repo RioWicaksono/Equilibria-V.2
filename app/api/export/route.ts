@@ -4,9 +4,20 @@ import * as xlsx from 'xlsx';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const transactions = await FinanceService.getTransactions();
+    const { searchParams } = new URL(req.url);
+    const monthQuery = searchParams.get('month'); // YYYY-MM
+    
+    let transactions = await FinanceService.getTransactions();
+
+    if (monthQuery) {
+      transactions = transactions.filter(t => {
+        const d = new Date(t.date);
+        const yyyymm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        return yyyymm === monthQuery;
+      });
+    }
 
     // Map the transactions to a flatter structure for the sheet
     const data = transactions.map((t) => ({

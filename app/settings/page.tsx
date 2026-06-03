@@ -13,12 +13,7 @@ export default function SettingsPage() {
       </header>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl">
-          <div className="bg-[#141414] border border-[#262626] rounded-xl p-6">
-            <h3 className="text-lg font-bold text-white mb-6">Keamanan</h3>
-            <SettingsClient />
-          </div>
-        </div>
+        <SettingsClient />
       </div>
     </div>
   );

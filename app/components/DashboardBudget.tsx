@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Target, Plus, X, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Budget } from '@/src/application/use-cases/FinanceService';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface DashboardBudgetProps {
   budgets: Budget[];
@@ -15,6 +16,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
   const [formData, setFormData] = useState({ category: '', limit: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const { formatCurrency } = useSettings();
 
   const handleSave = async () => {
     if (!formData.category || !formData.limit) return;
@@ -37,8 +39,6 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
       setIsSubmitting(false);
     }
   };
-
-  const formatIDR = (amount: number) => 'Rp ' + amount.toLocaleString('id-ID');
 
   return (
     <div className="bg-[#141414] border border-[#262626] rounded-xl p-6 h-full flex flex-col" role="region" aria-label="Pelacakan Anggaran Bulanan">
@@ -74,7 +74,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
               <div className="flex justify-between items-center mb-2">
                 <span className="font-semibold text-sm text-zinc-200">{budget.category}</span>
                 <span className="text-xs text-zinc-400 font-medium">
-                  {formatIDR(spent)} / {formatIDR(budget.limit)}
+                  {formatCurrency(spent)} / {formatCurrency(budget.limit)}
                 </span>
               </div>
               <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>

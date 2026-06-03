@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function DebtsPage() {
+  const { formatCurrency } = useSettings();
   const [debts, setDebts] = useState<{ id: string; name: string; amount: number; paidAmount: number; type: 'DEBT' | 'LOAN'; status: 'UNPAID' | 'PAID' }[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<{ name: string; amount: string; type: 'DEBT' | 'LOAN' }>({ name: '', amount: '', type: 'DEBT' });
@@ -56,15 +58,10 @@ export default function DebtsPage() {
         { id: '1', name: 'Pinjam ke Budi', amount: 500000, paidAmount: 0, type: 'DEBT', status: 'UNPAID' },
         { id: '2', name: 'Bayar Makan Siang Andi', amount: 150000, paidAmount: 50000, type: 'LOAN', status: 'UNPAID' },
       ];
-      // eslint-disable-next-line
       setDebts(initial);
       localStorage.setItem('equilibria_debts', JSON.stringify(initial));
     }
   }, []);
-
-  const formatIDR = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -100,7 +97,7 @@ export default function DebtsPage() {
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded mt-2 inline-block">Hutang Harus Dibayar</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-rose-400">{formatIDR(debt.amount - (debt.paidAmount || 0))}</p>
+                    <p className="text-xl font-bold text-rose-400">{formatCurrency(debt.amount - (debt.paidAmount || 0))}</p>
                     <p className="text-xs text-zinc-500 font-medium">Sisa Tagihan</p>
                   </div>
                 </div>
@@ -111,8 +108,8 @@ export default function DebtsPage() {
                 
                 <div className="flex items-center justify-between pt-3 border-t border-[#262626]">
                   <div className="text-xs">
-                    <p className="text-zinc-500">Total: <span className="text-zinc-300">{formatIDR(debt.amount)}</span></p>
-                    <p className="text-zinc-500">Terbayar: <span className="text-white">{formatIDR(debt.paidAmount || 0)}</span></p>
+                    <p className="text-zinc-500">Total: <span className="text-zinc-300">{formatCurrency(debt.amount)}</span></p>
+                    <p className="text-zinc-500">Terbayar: <span className="text-white">{formatCurrency(debt.paidAmount || 0)}</span></p>
                   </div>
                   <button onClick={() => { setSelectedDebtId(debt.id); setPayAmount(''); setIsPayModalOpen(true); }} className="px-4 py-1.5 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] text-white text-xs font-semibold rounded-lg transition-colors">
                     Bayar / Cicil
@@ -140,7 +137,7 @@ export default function DebtsPage() {
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-teal-500/10 text-teal-400 rounded mt-2 inline-block">Piutang Menunggu</span>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-teal-400">{formatIDR(debt.amount - (debt.paidAmount || 0))}</p>
+                    <p className="text-xl font-bold text-teal-400">{formatCurrency(debt.amount - (debt.paidAmount || 0))}</p>
                     <p className="text-xs text-zinc-500 font-medium">Sisa Menunggu</p>
                   </div>
                 </div>
@@ -151,8 +148,8 @@ export default function DebtsPage() {
                 
                 <div className="flex items-center justify-between pt-3 border-t border-[#262626]">
                   <div className="text-xs">
-                    <p className="text-zinc-500">Total: <span className="text-zinc-300">{formatIDR(debt.amount)}</span></p>
-                    <p className="text-zinc-500">Diterima: <span className="text-white">{formatIDR(debt.paidAmount || 0)}</span></p>
+                    <p className="text-zinc-500">Total: <span className="text-zinc-300">{formatCurrency(debt.amount)}</span></p>
+                    <p className="text-zinc-500">Diterima: <span className="text-white">{formatCurrency(debt.paidAmount || 0)}</span></p>
                   </div>
                   <button onClick={() => { setSelectedDebtId(debt.id); setPayAmount(''); setIsPayModalOpen(true); }} className="px-4 py-1.5 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] text-white text-xs font-semibold rounded-lg transition-colors">
                     Terima Cicilan Lunas

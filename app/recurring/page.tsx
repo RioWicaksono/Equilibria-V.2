@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Repeat, Plus, CalendarClock, X } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function RecurringPage() {
+  const { formatCurrency } = useSettings();
   const [recurring, setRecurring] = useState<{ id: string; name: string; amount: number; frequency: string; nextDate: string }[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', frequency: 'Bulanan', nextDate: '' });
@@ -34,15 +36,10 @@ export default function RecurringPage() {
         { id: '1', name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15' },
         { id: '2', name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10' },
       ];
-      // eslint-disable-next-line
       setRecurring(initial);
       localStorage.setItem('equilibria_recurring', JSON.stringify(initial));
     }
   }, []);
-
-  const formatIDR = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -69,7 +66,7 @@ export default function RecurringPage() {
                    <Repeat className="w-3 h-3" /> {item.frequency}
                  </span>
                </div>
-               <p className="text-lg font-bold text-rose-400">- {formatIDR(item.amount)}</p>
+               <p className="text-lg font-bold text-rose-400">- {formatCurrency(item.amount)}</p>
              </div>
              
              <div className="mt-4 pt-4 border-t border-[#262626] flex justify-between items-center text-sm">

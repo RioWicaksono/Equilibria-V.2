@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Target, Plus, X } from 'lucide-react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function GoalsPage() {
+  const { formatCurrency } = useSettings();
   const [goals, setGoals] = useState<{ id: string; name: string; targetAmount: number; currentAmount: number; deadline: string }[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', targetAmount: '', currentAmount: '', deadline: '' });
@@ -35,15 +37,10 @@ export default function GoalsPage() {
         { id: '1', name: 'Dana Darurat', targetAmount: 20000000, currentAmount: 5000000, deadline: '2026-12-31' },
         { id: '2', name: 'Liburan ke Bali', targetAmount: 7000000, currentAmount: 1500000, deadline: '2026-08-15' },
       ];
-      // eslint-disable-next-line
       setGoals(initial);
       localStorage.setItem('equilibria_goals', JSON.stringify(initial));
     }
   }, []);
-
-  const formatIDR = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -73,8 +70,8 @@ export default function GoalsPage() {
                </div>
                
                <div className="flex justify-between text-sm mb-2">
-                 <span className="text-teal-400 font-medium">{formatIDR(goal.currentAmount)}</span>
-                 <span className="text-zinc-500">{formatIDR(goal.targetAmount)}</span>
+                 <span className="text-teal-400 font-medium">{formatCurrency(goal.currentAmount)}</span>
+                 <span className="text-zinc-500">{formatCurrency(goal.targetAmount)}</span>
                </div>
                
                <div className="h-2 w-full bg-[#1A1A1A] border border-[#262626] rounded-full overflow-hidden">

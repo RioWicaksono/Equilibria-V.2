@@ -3,12 +3,10 @@
 import { useState, useMemo } from 'react';
 import { Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const formatIDR = (amount: number) => {
-  return 'Rp ' + (amount || 0).toLocaleString('id-ID');
-};
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function SummaryClient({ allTransactions }: { allTransactions: any[] }) {
+  const { formatCurrency } = useSettings();
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
 
@@ -79,15 +77,15 @@ export default function SummaryClient({ allTransactions }: { allTransactions: an
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="p-4 rounded-xl bg-[#1A1A1A] border border-[#262626] print:border-zinc-300 print:bg-transparent">
             <p className="text-sm text-zinc-500 mb-1">Total Pemasukan</p>
-            <p className="text-xl font-bold text-teal-400">{formatIDR(totalIncome)}</p>
+            <p className="text-xl font-bold text-teal-400">{formatCurrency(totalIncome)}</p>
           </div>
           <div className="p-4 rounded-xl bg-[#1A1A1A] border border-[#262626] print:border-zinc-300 print:bg-transparent">
             <p className="text-sm text-zinc-500 mb-1">Total Pengeluaran</p>
-            <p className="text-xl font-bold text-rose-400">{formatIDR(totalExpense)}</p>
+            <p className="text-xl font-bold text-rose-400">{formatCurrency(totalExpense)}</p>
           </div>
           <div className="p-4 rounded-xl bg-[#1A1A1A] border border-[#262626] print:border-zinc-300 print:bg-transparent">
             <p className="text-sm text-zinc-500 mb-1">Net (Saldo)</p>
-            <p className={`text-xl font-bold ${net >= 0 ? 'text-teal-400' : 'text-rose-400'}`}>{formatIDR(net)}</p>
+            <p className={`text-xl font-bold ${net >= 0 ? 'text-teal-400' : 'text-rose-400'}`}>{formatCurrency(net)}</p>
           </div>
         </div>
 
@@ -114,7 +112,7 @@ export default function SummaryClient({ allTransactions }: { allTransactions: an
                   <td className="py-4">{t.category}</td>
                   <td className="py-4">{t.description || "-"}</td>
                   <td className={`py-4 text-right font-medium ${t.type === 'INCOME' ? 'text-teal-400' : 'text-rose-400'}`}>
-                    {t.type === 'INCOME' ? '+' : '-'}{formatIDR(t.amount)}
+                    {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount)}
                   </td>
                 </tr>
               ))

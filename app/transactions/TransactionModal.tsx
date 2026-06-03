@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function TransactionModal({ onSaveLocal }: { onSaveLocal?: (data: any) => void }) {
+export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSaveLocal?: (data: any) => void; isFAB?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
@@ -82,13 +82,22 @@ export default function TransactionModal({ onSaveLocal }: { onSaveLocal?: (data:
 
   return (
     <>
-      <button 
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-black px-4 py-2 rounded-lg font-bold text-sm transition-colors"
-      >
-        <Plus className="w-4 h-4" />
-        Tambah Transaksi
-      </button>
+      {isFAB ? (
+        <button 
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-teal-500 hover:bg-teal-400 text-black p-4 rounded-full shadow-[0_4px_14px_0_rgba(45,212,191,0.39)] transition-transform hover:scale-105 z-40 flex items-center justify-center"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      ) : (
+        <button 
+          onClick={() => setIsOpen(true)}
+          className="flex items-center gap-2 bg-teal-500 hover:bg-teal-400 text-black px-4 py-2 rounded-lg font-bold text-sm transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Tambah Transaksi
+        </button>
+      )}
 
       <AnimatePresence>
         {isOpen && (

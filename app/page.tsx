@@ -3,13 +3,10 @@ import { ArrowDownRight, ArrowUpRight, Wallet, Plus } from 'lucide-react';
 import DashboardCalendar from './components/DashboardCalendar';
 import DashboardBudget from './components/DashboardBudget';
 import SystemStatus from './components/SystemStatus';
+import TransactionModal from './transactions/TransactionModal';
+import FormatCurrency from './components/FormatCurrency';
 import Link from 'next/link';
 import { headers } from 'next/headers';
-
-// Format rupiah helper
-const formatIDR = (amount: number) => {
-  return 'Rp ' + (amount || 0).toLocaleString('id-ID');
-};
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +24,9 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out relative min-h-[calc(100vh-120px)]">
+      <TransactionModal isFAB={true} />
+      
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div className="flex flex-col">
           <h2 className="text-2xl font-semibold text-white">Ringkasan Keuangan</h2>
@@ -43,7 +42,7 @@ export default async function DashboardPage() {
             <Wallet className="h-4 w-4" /> Total Saldo
           </span>
           <h3 className="text-3xl font-bold text-white group-hover:scale-[1.02] transform origin-left transition-transform duration-300">
-            {formatIDR(summary.balance)}
+            <FormatCurrency amount={summary.balance} />
           </h3>
         </div>
 
@@ -52,7 +51,7 @@ export default async function DashboardPage() {
             <ArrowUpRight className="h-4 w-4" /> Pemasukan
           </span>
           <h3 className="text-3xl font-bold text-teal-400 group-hover:text-teal-300 group-hover:scale-[1.02] transform origin-left transition-all duration-300">
-            {formatIDR(summary.totalIncome)}
+            <FormatCurrency amount={summary.totalIncome} />
           </h3>
         </div>
 
@@ -61,7 +60,7 @@ export default async function DashboardPage() {
             <ArrowDownRight className="h-4 w-4" /> Pengeluaran
           </span>
           <h3 className="text-3xl font-bold text-rose-500 group-hover:text-rose-400 group-hover:scale-[1.02] transform origin-left transition-all duration-300">
-            {formatIDR(summary.totalExpense)}
+            <FormatCurrency amount={summary.totalExpense} />
           </h3>
         </div>
       </div>

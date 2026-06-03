@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { Reminder, getReminders, saveReminders } from '@/lib/reminders';
 import { Bell, Edit2, Trash2, Plus, X, Search, Calendar, CheckCircle2, Circle, AlertCircle, RefreshCw, Filter } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function ClientReminderList() {
+  const { formatCurrency } = useSettings();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
@@ -92,12 +94,6 @@ export default function ClientReminderList() {
     } catch {
       return isoDate;
     }
-  };
-
-  const formatIDR = (amount: string | number) => {
-    const numericAmount = typeof amount === 'string' ? parseFloat(amount.replace(/\D/g, '')) : amount;
-    if(isNaN(numericAmount)) return amount;
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(numericAmount);
   };
 
   const filteredReminders = reminders.filter(r => {
@@ -198,7 +194,7 @@ export default function ClientReminderList() {
                   <div className="flex flex-col gap-2">
                     {reminder.amount && (
                       <span className="text-sm font-semibold text-zinc-300">
-                        {formatIDR(reminder.amount)}
+                        {formatCurrency(Number(reminder.amount.toString().replace(/\D/g, '')))}
                       </span>
                     )}
                     <div className="flex flex-wrap gap-2">

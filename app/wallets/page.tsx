@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSettings } from '../contexts/SettingsContext';
 
 export default function WalletsPage() {
+  const { formatCurrency } = useSettings();
   const [wallets, setWallets] = useState<{ id: string; name: string; balance: number }[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK'>('NEW');
@@ -54,15 +56,10 @@ export default function WalletsPage() {
         { id: '2', name: 'Gopay', balance: 150000 },
         { id: '3', name: 'Cash', balance: 350000 },
       ];
-      // eslint-disable-next-line
       setWallets(initial);
       localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
     }
   }, []);
-
-  const formatIDR = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -95,7 +92,7 @@ export default function WalletsPage() {
             </div>
             <div>
               <p className="text-sm text-zinc-400">{wallet.name}</p>
-              <h3 className="text-2xl font-bold text-white mt-1">{formatIDR(wallet.balance)}</h3>
+              <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(wallet.balance)}</h3>
             </div>
             <div className="mt-6 flex justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">

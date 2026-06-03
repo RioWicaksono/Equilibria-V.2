@@ -4,10 +4,7 @@ import { useState, useEffect, useMemo, memo } from 'react';
 import { Trash2, Edit2, CloudOff, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
-
-const formatIDR = (amount: number) => {
-  return 'Rp ' + (amount || 0).toLocaleString('id-ID');
-};
+import { useSettings } from '../contexts/SettingsContext';
 
 const ClientTransactionList = memo(function ClientTransactionList({ 
   initialTransactions,
@@ -17,7 +14,9 @@ const ClientTransactionList = memo(function ClientTransactionList({
   onDelete: (id: string) => void;
 }) {
   const router = useRouter();
+  const { formatCurrency } = useSettings();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
   const [editingItem, setEditingItem] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -62,13 +61,22 @@ const ClientTransactionList = memo(function ClientTransactionList({
   }, [allCombined]);
 
   const filteredTransactions = useMemo(() => {
-    return selectedTag 
-      ? allCombined.filter(t => {
-          const tags = extractTags((t.description || '') + ' ' + (t.category || ''));
-          return tags.includes(selectedTag);
-        })
-      : allCombined;
-  }, [selectedTag, allCombined]);
+    let result = allCombined;
+    if (selectedTag) {
+      result = result.filter(t => {
+        const tags = extractTags((t.description || '') + ' ' + (t.category || ''));
+        return tags.includes(selectedTag);
+      });
+    }
+    if (searchQuery.trim() !== '') {
+      const qs = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        (t.description || '').toLowerCase().includes(qs) || 
+        (t.category || '').toLowerCase().includes(qs)
+      );
+    }
+    return result;
+  }, [selectedTag, searchQuery, allCombined]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,29 +106,38 @@ const ClientTransactionList = memo(function ClientTransactionList({
 
   return (
     <div className="space-y-4 relative">
-      {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button
-            onClick={() => setSelectedTag(null)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              selectedTag === null ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
-            }`}
-          >
-            Semua
-          </button>
-          {allTags.map(tag => (
+      <div className="flex flex-col gap-4 mb-4">
+        <input 
+          type="text" 
+          placeholder="Cari nama atau kategori transaksi..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-4 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm"
+        />
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap gap-2">
             <button
-              key={tag}
-              onClick={() => setSelectedTag(tag)}
+              onClick={() => setSelectedTag(null)}
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                selectedTag === tag ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
+                selectedTag === null ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
               }`}
             >
-              {tag}
+              Semua
             </button>
-          ))}
-        </div>
-      )}
+            {allTags.map(tag => (
+              <button
+                key={tag}
+                onClick={() => setSelectedTag(tag)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  selectedTag === tag ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700'
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {filteredTransactions.length === 0 ? (
         <div className="text-center py-12 text-zinc-500">
@@ -157,7 +174,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
                 </div>
                 <div className="flex items-center justify-between sm:justify-end sm:space-x-6 w-full sm:w-auto mt-2 sm:mt-0">
                   <span className={`font-semibold ${t.type === 'INCOME' ? 'text-teal-400' : 'text-rose-400'}`}>
-                    {t.type === 'INCOME' ? '+' : '-'}{formatIDR(t.amount)}
+                    {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount)}
                   </span>
                   {!t.isOffline && (
                     <div className="flex items-center">
@@ -168,15 +185,17 @@ const ClientTransactionList = memo(function ClientTransactionList({
                           const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                           setEditingItem({ ...t, date: localIso });
                         }}
-                        className="text-zinc-500 hover:text-teal-400 transition-colors p-2"
+                        className="text-zinc-500 hover:text-teal-400 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
                       >
                         <Edit2 className="h-4 w-4" />
+                        <span className="text-xs">Ubah</span>
                       </button>
                       <button 
                         onClick={() => setDeletingId(t.id)} 
-                        className="text-zinc-500 hover:text-rose-500 transition-colors p-2"
+                        className="text-zinc-500 hover:text-rose-500 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
                       >
                         <Trash2 className="h-4 w-4" />
+                        <span className="text-xs">Hapus</span>
                       </button>
                     </div>
                   )}
