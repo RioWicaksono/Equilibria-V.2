@@ -7,6 +7,12 @@ import { v4 as uuidv4 } from 'uuid';
 // Abstract Factory pattern logic: 
 // Jika user sudah setup DATABASE_URL di Railway, sistem akan load Prisma DB.
 // Karena kita sedang di mode AI Studio Preview, kita gunakan InMemory sebagai default.
+export interface Budget {
+  id: string;
+  category: string;
+  limit: number;
+}
+
 const getRepository = (): ITransactionRepository => {
   const dbUrl = process.env.DATABASE_URL;
   // Use Prisma only if DATABASE_URL is set, starts with postgres, and doesn't contain Railway template strings
@@ -87,5 +93,23 @@ export class FinanceService {
 
   static async deleteTransaction(id: string): Promise<void> {
     await repository.delete(id);
+  }
+
+  // Budgets implementation (In-memory array for simplicity in this context)
+  private static budgets: Budget[] = [];
+
+  static async getBudgets(): Promise<Budget[]> {
+    return this.budgets;
+  }
+
+  static async setBudget(category: string, limit: number): Promise<Budget> {
+    const existingIndex = this.budgets.findIndex(b => b.category === category);
+    if (existingIndex >= 0) {
+      this.budgets[existingIndex].limit = limit;
+      return this.budgets[existingIndex];
+    }
+    const newBudget: Budget = { id: uuidv4(), category, limit };
+    this.budgets.push(newBudget);
+    return newBudget;
   }
 }

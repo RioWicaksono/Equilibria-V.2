@@ -40,7 +40,7 @@ export default async function TransactionsPage(props: {
         </div>
         <div className="flex gap-2">
            <ExportButton />
-           <TransactionModal onSaveLocal={() => {}} />
+           <TransactionModal />
         </div>
       </header>
 

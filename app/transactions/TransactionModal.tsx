@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-export default function TransactionModal({ onSaveLocal }: { onSaveLocal: (data: any) => void }) {
+export default function TransactionModal({ onSaveLocal }: { onSaveLocal?: (data: any) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
@@ -45,7 +45,9 @@ export default function TransactionModal({ onSaveLocal }: { onSaveLocal: (data: 
       isOffline: !navigator.onLine
     };
 
-    onSaveLocal(localData);
+    if (onSaveLocal) {
+      onSaveLocal(localData);
+    }
 
     try {
       if (navigator.onLine) {

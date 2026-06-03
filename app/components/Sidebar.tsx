@@ -56,7 +56,7 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
             Equilibria
           </h1>
           <p className="text-[10px] text-zinc-500 mt-1 uppercase tracking-widest">
-            Rio's Finance Tracker
+            Rio&apos;s Finance Tracker
           </p>
         </div>
         

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, memo } from 'react';
 import { Trash2, Edit2, CloudOff, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +9,7 @@ const formatIDR = (amount: number) => {
   return 'Rp ' + (amount || 0).toLocaleString('id-ID');
 };
 
-export default function ClientTransactionList({ 
+const ClientTransactionList = memo(function ClientTransactionList({ 
   initialTransactions,
   onDelete
 }: { 
@@ -47,23 +47,27 @@ export default function ClientTransactionList({
     return () => clearInterval(interval);
   }, [offlineQueue.length]);
 
-  const allCombined = [...offlineQueue, ...initialTransactions];
+  const allCombined = useMemo(() => [...offlineQueue, ...initialTransactions], [offlineQueue, initialTransactions]);
 
   const extractTags = (text: string) => {
     const matches = text.match(/#[\w]+/g);
     return matches ? matches.map(t => t.toLowerCase()) : [];
   };
 
-  const allTags = Array.from(new Set(allCombined.flatMap(t => {
-    return extractTags((t.description || '') + ' ' + (t.category || ''));
-  })));
+  const allTags = useMemo(() => {
+    return Array.from(new Set(allCombined.flatMap(t => {
+      return extractTags((t.description || '') + ' ' + (t.category || ''));
+    })));
+  }, [allCombined]);
 
-  const filteredTransactions = selectedTag 
-    ? allCombined.filter(t => {
-        const tags = extractTags((t.description || '') + ' ' + (t.category || ''));
-        return tags.includes(selectedTag);
-      })
-    : allCombined;
+  const filteredTransactions = useMemo(() => {
+    return selectedTag 
+      ? allCombined.filter(t => {
+          const tags = extractTags((t.description || '') + ' ' + (t.category || ''));
+          return tags.includes(selectedTag);
+        })
+      : allCombined;
+  }, [selectedTag, allCombined]);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,4 +286,6 @@ export default function ClientTransactionList({
       </AnimatePresence>
     </div>
   );
-}
+});
+
+export default ClientTransactionList;
