@@ -91,6 +91,8 @@ if (bot) {
   });
 }
 
+export const dynamic = 'force-dynamic';
+
 // Used for "Test Connection" and pulling status
 export async function GET(req: Request) {
   const url = new URL(req.url);

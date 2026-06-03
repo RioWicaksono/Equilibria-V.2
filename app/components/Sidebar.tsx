@@ -90,7 +90,7 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
           </div>
         )}
         
-        <nav className="flex-1 space-y-1 overflow-x-hidden">
+        <nav className="flex-1 space-y-1 overflow-x-hidden overflow-y-auto custom-scrollbar pb-20">
           <div className={`px-3 py-2 text-xs font-semibold text-zinc-600 uppercase tracking-wider mt-4 whitespace-nowrap ${isCollapsed ? 'text-center text-[10px] px-0' : ''}`}>
             {isCollapsed ? '---' : 'Main Menu'}
           </div>

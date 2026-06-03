@@ -1,12 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { RefreshCw } from 'lucide-react';
 
 export default function SystemStatus() {
   const [status, setStatus] = useState<'green' | 'yellow' | 'red'>('green');
+  const [telegramStatus, setTelegramStatus] = useState<'LOADING' | 'ACTIVE' | 'INACTIVE'>('LOADING');
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
+    let isActive = true;
+
+    const checkTelegram = async () => {
+      try {
+        const res = await fetch('/api/telegram-webhook');
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (isActive) {
+          setTelegramStatus(data.status as 'ACTIVE' | 'INACTIVE');
+        }
+      } catch (error) {
+        if (isActive) setTelegramStatus('INACTIVE');
+      }
+    };
+
     const checkStatus = async () => {
       if (!navigator.onLine) {
         setStatus('red');
@@ -41,6 +58,7 @@ export default function SystemStatus() {
         }
       }
       
+      checkTelegram();
       timeout = setTimeout(checkStatus, 15000); // Check every 15s
     };
 
@@ -50,6 +68,7 @@ export default function SystemStatus() {
 
     const handleOffline = () => {
       setStatus('red');
+      setTelegramStatus('INACTIVE');
     };
 
     window.addEventListener('online', handleOnline);
@@ -57,6 +76,7 @@ export default function SystemStatus() {
     checkStatus();
 
     return () => {
+      isActive = false;
       clearTimeout(timeout);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -69,10 +89,28 @@ export default function SystemStatus() {
     red: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
   };
 
+  const telegramColorClasses = {
+    LOADING: 'bg-zinc-400 shadow-[0_0_8px_#9ca3af]',
+    ACTIVE: 'bg-teal-400 shadow-[0_0_8px_#2DD4BF]',
+    INACTIVE: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
+  };
+
   return (
-    <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
-      <div className={`w-2 h-2 rounded-full ${colorClasses[status]}`} />
-      <span className="text-zinc-300 font-semibold text-xs mt-0.5">Sistem aktif</span>
+    <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
+        {telegramStatus === 'LOADING' ? (
+          <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />
+        ) : (
+          <div className={`w-2 h-2 rounded-full ${telegramColorClasses[telegramStatus]}`} />
+        )}
+        <span className="text-zinc-300 font-semibold text-xs mt-0.5">
+          Telegram: {telegramStatus === 'ACTIVE' ? 'Aktif' : telegramStatus === 'LOADING' ? 'Memeriksa' : 'Tidak Aktif'}
+        </span>
+      </div>
+      <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
+        <div className={`w-2 h-2 rounded-full ${colorClasses[status]}`} />
+        <span className="text-zinc-300 font-semibold text-xs mt-0.5">Sistem aktif</span>
+      </div>
     </div>
   );
 }

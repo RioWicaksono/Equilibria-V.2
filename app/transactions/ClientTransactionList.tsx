@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, memo } from 'react';
-import { Trash2, Edit2, CloudOff, X } from 'lucide-react';
+import { Trash2, Edit2, CloudOff, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 
@@ -20,6 +20,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
   const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -172,7 +173,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button 
-                        onClick={() => onDelete(t.id)} 
+                        onClick={() => setDeletingId(t.id)} 
                         className="text-zinc-500 hover:text-rose-500 transition-colors p-2"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -280,6 +281,54 @@ const ClientTransactionList = memo(function ClientTransactionList({
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletingId && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-[#141414] border border-[#262626] rounded-xl p-6 w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
+                  <AlertTriangle className="w-6 h-6 text-rose-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Hapus Transaksi?</h3>
+                  <p className="text-sm text-zinc-400 mt-2">
+                    Tindakan ini tidak dapat dibatalkan. Data transaksi ini akan dihapus secara permanen.
+                  </p>
+                </div>
+                <div className="flex w-full gap-3 pt-4">
+                  <button 
+                    onClick={() => setDeletingId(null)}
+                    className="flex-1 px-4 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-white font-medium text-sm transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    onClick={() => {
+                      onDelete(deletingId);
+                      setDeletingId(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold rounded-lg text-sm transition-colors"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}

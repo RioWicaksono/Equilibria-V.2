@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X } from 'lucide-react';
+import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function WalletsPage() {
   const [wallets, setWallets] = useState<{ id: string; name: string; balance: number }[]>([]);
@@ -9,6 +10,7 @@ export default function WalletsPage() {
   const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK'>('NEW');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', amount: '' });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleSave = () => {
     let updated;
@@ -32,6 +34,13 @@ export default function WalletsPage() {
     setWallets(updated);
     localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
     setIsModalOpen(false);
+  };
+
+  const handleDeleteWallet = (id: string) => {
+    const updated = wallets.filter(w => w.id !== id);
+    setWallets(updated);
+    localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
+    setDeletingId(null);
   };
 
   useEffect(() => {
@@ -77,6 +86,12 @@ export default function WalletsPage() {
               <div className="p-3 bg-[#1A1A1A] rounded-lg">
                 <CreditCard className="w-6 h-6 text-zinc-400" />
               </div>
+              <button 
+                onClick={() => setDeletingId(wallet.id)}
+                className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
             <div>
               <p className="text-sm text-zinc-400">{wallet.name}</p>
@@ -124,6 +139,51 @@ export default function WalletsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletingId && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-[#141414] border border-[#262626] rounded-xl p-6 w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
+                  <AlertTriangle className="w-6 h-6 text-rose-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Hapus Dompet?</h3>
+                  <p className="text-sm text-zinc-400 mt-2">
+                    Tindakan ini tidak dapat dibatalkan. Dompet dan saldonya akan dihapus secara permanen.
+                  </p>
+                </div>
+                <div className="flex w-full gap-3 pt-4">
+                  <button 
+                    onClick={() => setDeletingId(null)}
+                    className="flex-1 px-4 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-white font-medium text-sm transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    onClick={() => handleDeleteWallet(deletingId)}
+                    className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold rounded-lg text-sm transition-colors"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -102,6 +102,8 @@ if (bot) {
   });
 }
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {

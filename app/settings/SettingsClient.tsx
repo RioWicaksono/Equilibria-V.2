@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
+import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Lock, KeyRound } from 'lucide-react';
 
 export default function SettingsClient() {
   const [telegramStatus, setTelegramStatus] = useState<'LOADING' | 'ACTIVE' | 'INACTIVE'>('LOADING');
@@ -11,6 +11,86 @@ export default function SettingsClient() {
   const [showPayload, setShowPayload] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [telegramLogs, setTelegramLogs] = useState<Array<{ message: string, status: string, timestamp: string }>>([]);
+
+  // PIN State
+  const [currentPin, setCurrentPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSuccess, setPinSuccess] = useState('');
+  const [isChangingPin, setIsChangingPin] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    
+    const doFetchLogs = () => {
+      fetch('/api/telegram-webhook?logs=true')
+        .then(res => res.json())
+        .then(data => {
+          if (active && data.logs) setTelegramLogs(data.logs);
+        })
+        .catch(() => {});
+    };
+
+    const doFetchStatus = () => {
+      setTelegramStatus('LOADING');
+      fetch('/api/telegram-webhook')
+        .then(res => res.json())
+        .then(data => {
+          if (!active) return;
+          setTelegramStatus(data.status);
+          if (data.lastSync) setLastSync(data.lastSync);
+        })
+        .catch(() => {
+          if (active) setTelegramStatus('INACTIVE');
+        });
+        
+      doFetchLogs();
+    };
+
+    doFetchStatus();
+    
+    // Refresh logs periodically (e.g. every 10 seconds)
+    const interval = setInterval(doFetchLogs, 10000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleSavePin = () => {
+    setPinError('');
+    setPinSuccess('');
+    
+    const stored = localStorage.getItem('equilibria_pin');
+    const actualPin = stored ? atob(stored) : '123789';
+    
+    if (currentPin !== actualPin) {
+      setPinError('PIN saat ini salah');
+      return;
+    }
+    
+    if (newPin.length !== 6) {
+      setPinError('PIN baru harus 6 digit');
+      return;
+    }
+    
+    if (newPin !== confirmPin) {
+      setPinError('Konfirmasi PIN tidak cocok');
+      return;
+    }
+    
+    localStorage.setItem('equilibria_pin', btoa(newPin));
+    setPinSuccess('PIN berhasil diperbarui');
+    setCurrentPin('');
+    setNewPin('');
+    setConfirmPin('');
+    setIsChangingPin(false);
+    
+    setTimeout(() => {
+      setPinSuccess('');
+    }, 3000);
+  };
 
   const fetchStatus = () => {
     setTelegramStatus('LOADING');
@@ -34,13 +114,6 @@ export default function SettingsClient() {
       .catch(() => {});
   };
 
-  useEffect(() => {
-    fetchStatus();
-    // Refresh logs periodically (e.g. every 10 seconds)
-    const interval = setInterval(fetchLogs, 10000);
-    return () => clearInterval(interval);
-  }, []);
-
   const testConnection = async () => {
     setIsTesting(true);
     setTestPayload(null);
@@ -63,7 +136,98 @@ export default function SettingsClient() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-4 md:p-6">
-      {/* Existing Settings content goes here... */}
+      
+      {/* PIN Security Section */}
+      <div className="bg-[#141414] border border-[#262626] rounded-xl p-6">
+        <h3 className="text-lg font-bold text-white mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-teal-400" /> 
+            Pin Aplikasi
+          </div>
+        </h3>
+        
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-400">
+            PIN digunakan untuk mengunci aplikasi saat Anda meninggalkannya. Default PIN: <strong>123789</strong>
+          </p>
+
+          {!isChangingPin ? (
+            <button
+              onClick={() => setIsChangingPin(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <KeyRound className="w-4 h-4" /> Ubah PIN
+            </button>
+          ) : (
+            <div className="space-y-4 bg-[#1A1A1A] border border-[#262626] p-4 rounded-xl max-w-sm">
+              <div>
+                <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">PIN SAAT INI</label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={currentPin}
+                  onChange={(e) => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                  placeholder="******"
+                />
+              </div>
+              
+              <div>
+                <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">PIN BARU (6 DIGIT)</label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                  placeholder="******"
+                />
+              </div>
+
+              <div>
+                <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">KONFIRMASI PIN BARU</label>
+                <input
+                  type="password"
+                  maxLength={6}
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                  placeholder="******"
+                />
+              </div>
+
+              {pinError && <p className="text-rose-500 text-xs font-medium">{pinError}</p>}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSavePin}
+                  className="flex-1 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Simpan PIN
+                </button>
+                <button
+                  onClick={() => {
+                    setIsChangingPin(false);
+                    setPinError('');
+                    setCurrentPin('');
+                    setNewPin('');
+                    setConfirmPin('');
+                  }}
+                  className="px-4 py-2 bg-[#0A0A0A] hover:bg-zinc-800 border border-[#333] text-zinc-300 text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          )}
+
+          {pinSuccess && (
+            <p className="text-emerald-400 text-sm font-medium flex items-center gap-1.5 mt-2">
+              <CheckCircle className="w-4 h-4" /> {pinSuccess}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Telegram Integration Section */}
       <div className="bg-[#141414] border border-[#262626] rounded-xl p-6">
@@ -218,7 +382,7 @@ export default function SettingsClient() {
                 </div>
                 <p className="text-[11px] text-zinc-500 mt-3 flex items-start gap-1">
                   <CheckCircle className="w-3 h-3 text-blue-400 mt-0.5 shrink-0" />
-                  Sistem akan otomatis menentukan kategori berdasarkan kata kunci (cth: "makan" akan masuk kategori Food).
+                  Sistem akan otomatis menentukan kategori berdasarkan kata kunci (cth: &quot;makan&quot; akan masuk kategori Food).
                 </p>
               </div>
             </div>
