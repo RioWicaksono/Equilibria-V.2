@@ -14,7 +14,7 @@ export interface Budget {
 }
 
 const getRepository = (): ITransactionRepository => {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbUrl = process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL;
   // Use Prisma only if DATABASE_URL is set, starts with postgres, and doesn't contain Railway template strings
   if (dbUrl && dbUrl.startsWith('postgres') && !dbUrl.includes('${{')) {
     return new PrismaTransactionRepository();

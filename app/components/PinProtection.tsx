@@ -80,9 +80,26 @@ export default function PinProtection({ children }: { children: React.ReactNode 
   };
 
   const handleDelete = () => {
-    setPin(pin.slice(0, -1));
+    setPin(prev => prev.slice(0, -1));
     setError(false);
   };
+
+  // Keyboard support
+  useEffect(() => {
+    if (isAuthenticated) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key >= '0' && e.key <= '9') {
+        handleKeyPress(parseInt(e.key, 10));
+      } else if (e.key === 'Backspace') {
+        handleDelete();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, pin, error, correctPin]);
 
   if (!isClient) return null;
 

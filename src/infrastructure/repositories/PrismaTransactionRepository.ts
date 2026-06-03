@@ -9,7 +9,9 @@ const getPrisma = (): PrismaClient => {
     const globalForPrisma = globalThis as unknown as {
       prisma: PrismaClient | undefined;
     };
-    prismaClientInstance = globalForPrisma.prisma ?? new PrismaClient();
+    prismaClientInstance = globalForPrisma.prisma ?? new PrismaClient({
+      datasourceUrl: process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL,
+    });
     if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClientInstance;
   }
   return prismaClientInstance;

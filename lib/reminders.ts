@@ -3,7 +3,10 @@ export interface Reminder {
   title: string;
   date: string;
   amount: string;
-  urgent: boolean;
+  status: 'PENDING' | 'COMPLETED';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  frequency: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  urgent: boolean; // keep for backward compatibility or replace
 }
 
 export function getReminders(): Reminder[] {
@@ -11,15 +14,22 @@ export function getReminders(): Reminder[] {
   const stored = localStorage.getItem('equilibria_reminders');
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // Migrate old data
+      return parsed.map((p: any) => ({
+        ...p,
+        status: p.status || 'PENDING',
+        priority: p.priority || (p.urgent ? 'HIGH' : 'MEDIUM'),
+        frequency: p.frequency || 'ONCE'
+      }));
     } catch {
       return [];
     }
   }
   return [
-    { id: '1', title: 'Bayar Listrik', date: new Date(new Date().setDate(5)).toISOString(), amount: 'Rp 500.000', urgent: true },
-    { id: '2', title: 'Tagihan Internet', date: new Date(new Date().setDate(10)).toISOString(), amount: 'Rp 350.000', urgent: false },
-    { id: '3', title: 'Iuran Warga', date: new Date(new Date().setDate(15)).toISOString(), amount: 'Rp 50.000', urgent: false },
+    { id: '1', title: 'Bayar Listrik', date: new Date(new Date().setDate(5)).toISOString(), amount: '500000', urgent: true, status: 'PENDING', priority: 'HIGH', frequency: 'MONTHLY' },
+    { id: '2', title: 'Tagihan Internet', date: new Date(new Date().setDate(10)).toISOString(), amount: '350000', urgent: false, status: 'PENDING', priority: 'MEDIUM', frequency: 'MONTHLY' },
+    { id: '3', title: 'Iuran Warga', date: new Date(new Date().setDate(15)).toISOString(), amount: '50000', urgent: false, status: 'PENDING', priority: 'LOW', frequency: 'MONTHLY' },
   ];
 }
 

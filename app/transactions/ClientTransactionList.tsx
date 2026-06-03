@@ -229,7 +229,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
                   <input 
                     type="text" 
                     value={editingItem.amount} 
-                    onChange={(e) => setEditingItem({...editingItem, amount: e.target.value.replace(/\D/g, '')})}
+                    onChange={(e) => setEditingItem({...editingItem, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})}
                     required 
                     pattern="[0-9]*"
                     inputMode="numeric"

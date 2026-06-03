@@ -10,13 +10,13 @@ export default function TransactionFilters({ categories }: { categories: string[
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
-  const currentSearch = searchParams.get('q') || '';
-  const currentCategory = searchParams.get('category') || '';
+  const currentSearch = searchParams?.get('q') || '';
+  const currentCategory = searchParams?.get('category') || '';
 
   const [searchQuery, setSearchQuery] = useState(currentSearch);
 
   const updateFilter = useCallback((key: string, value: string) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams?.toString() || '');
     if (value) {
       params.set(key, value);
     } else {

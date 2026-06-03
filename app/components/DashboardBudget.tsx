@@ -108,7 +108,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
             <input 
               aria-label="Nominal limit maksimal"
               type="text" placeholder="Nominal limit maksimal" 
-              value={formData.limit} onChange={e => setFormData({...formData, limit: e.target.value.replace(/\D/g, '')})}
+              value={formData.limit} onChange={e => setFormData({...formData, limit: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})}
               className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded text-sm p-2 focus:border-indigo-500 outline-none"
             />
             <button 

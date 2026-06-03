@@ -20,16 +20,17 @@ export default function TransactionModal({ onSaveLocal }: { onSaveLocal?: (data:
   // Helper for strictly numeric input
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
-    setAmount(val);
+    setAmount(val.replace(/\B(?=(\d{3})+(?!\d))/g, '.'));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    const numericAmount = amount.replace(/\./g, '');
     const formData = new FormData();
     formData.append('type', type);
-    formData.append('amount', amount);
+    formData.append('amount', numericAmount);
     formData.append('category', category);
     formData.append('description', description);
     formData.append('date', date);
@@ -38,7 +39,7 @@ export default function TransactionModal({ onSaveLocal }: { onSaveLocal?: (data:
     const localData = {
       id: 'temp-' + Date.now().toString(),
       type,
-      amount: Number(amount),
+      amount: Number(numericAmount),
       category,
       description,
       date: new Date(date).toISOString(),
@@ -62,7 +63,7 @@ export default function TransactionModal({ onSaveLocal }: { onSaveLocal?: (data:
         // save to offline queue in local storage
         const queue = JSON.parse(localStorage.getItem('transaction_queue') || '[]');
         queue.push({
-          type, amount: Number(amount), category, description, date
+          type, amount: Number(numericAmount), category, description, date
         });
         localStorage.setItem('transaction_queue', JSON.stringify(queue));
       }

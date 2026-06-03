@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("RAILWAY_DATABASE_URL")
 }
 
 model Transaction {
@@ -14,5 +14,45 @@ model Transaction {
   category    String
   date        DateTime
   description String
+  createdAt   DateTime @default(now())
+  walletId    String?
+  Wallet      Wallet?  @relation(fields: [walletId], references: [id])
+}
+
+model Wallet {
+  id           String        @id @default(uuid())
+  name         String
+  balance      Float         @default(0)
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+}
+
+model FinancialGoal {
+  id             String   @id @default(uuid())
+  name           String
+  targetAmount   Float
+  currentAmount  Float    @default(0)
+  deadline       DateTime?
+  createdAt      DateTime @default(now())
+}
+
+model Debt {
+  id           String   @id @default(uuid())
+  name         String
+  amount       Float
+  type         String   // 'DEBT' | 'LOAN'
+  status       String   // 'UNPAID' | 'PAID'
+  dueDate      DateTime?
+  createdAt    DateTime @default(now())
+}
+
+model RecurringTransaction {
+  id          String   @id @default(uuid())
+  amount      Float
+  type        String   // 'INCOME' | 'EXPENSE'
+  category    String
+  description String
+  frequency   String   // 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+  nextDate    DateTime
   createdAt   DateTime @default(now())
 }
