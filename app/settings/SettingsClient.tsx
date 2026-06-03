@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Lock, KeyRound, Palette, Globe, Bell, Trash2, Shield, Blocks, Settings2, Save, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import JSZip from 'jszip';
 
 type TabType = 'general' | 'security' | 'integration' | 'advanced';
 
@@ -176,20 +175,26 @@ export default function SettingsClient() {
       }
     }
 
-    const zip = new JSZip();
-    zip.file('equilibria_backup.json', JSON.stringify(allData, null, 2));
+    try {
+      const JSZipModule = await import('jszip');
+      const JSZip = JSZipModule.default || JSZipModule;
+      const zip = new JSZip();
+      zip.file('equilibria_backup.json', JSON.stringify(allData, null, 2));
 
-    const content = await zip.generateAsync({ type: 'blob' });
-    const url = URL.createObjectURL(content);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `equilibria_backup_${new Date().toISOString().split('T')[0]}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Backup ZIP berhasil diunduh');
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `equilibria_backup_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Backup ZIP berhasil diunduh');
+    } catch (err) {
+      showToast('Gagal memproses backup ZIP');
+    }
   };
 
   const handleImportZip = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,6 +223,8 @@ export default function SettingsClient() {
 
     if (file.name.endsWith('.zip')) {
       try {
+        const JSZipModule = await import('jszip');
+        const JSZip = JSZipModule.default || JSZipModule;
         const zip = new JSZip();
         const loadedZip = await zip.loadAsync(file);
         const jsonFile = loadedZip.file('equilibria_backup.json');
@@ -472,39 +479,58 @@ export default function SettingsClient() {
                 </div>
                 <p className="text-sm text-zinc-400 mb-6">Kelola koneksi webhook dan log Telegram Bot untuk mencatat transaksi secara otomatis.</p>
                 
-                <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-6">
-                  <h4 className="text-sm font-bold text-white mb-4">Pengaturan API & Database Server</h4>
-                  <div className="space-y-4">
+                <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-6 mb-6 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
+                     <div className="p-2 bg-teal-500/10 rounded-lg">
+                       <Blocks className="w-5 h-5 text-teal-400" />
+                     </div>
+                     <div>
+                       <h4 className="text-sm font-bold text-white mb-0.5">Konfigurasi API & Database Server</h4>
+                       <p className="text-xs text-zinc-500">Hubungkan Equillibria dengan backend eksternal.</p>
+                     </div>
+                  </div>
+                  
+                  <div className="space-y-5">
                     <div>
-                      <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">URL DATABASE RAILWAY</label>
+                      <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
+                        <Globe className="w-3.5 h-3.5 text-zinc-500" /> URL Database Railway
+                      </label>
                       <input
                         type="url"
                         value={railwayUrl}
                         onChange={(e) => setRailwayUrl(e.target.value)}
-                        className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                        placeholder="https://..."
+                        className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-zinc-700 transition-shadow"
+                        placeholder="https://project.railway.app/"
                       />
+                      <p className="text-[10px] text-zinc-500 mt-1.5 ml-1">Masukkan URL instance database Railway Anda yang valid.</p>
                     </div>
+                    
                     <div>
-                      <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">BOT TELEGRAM API TOKEN</label>
+                      <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
+                        <KeyRound className="w-3.5 h-3.5 text-zinc-500" /> Bot Telegram API Token
+                      </label>
                       <input
                         type="password"
                         value={telegramToken}
                         onChange={(e) => setTelegramToken(e.target.value)}
-                        className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                        placeholder="Token dari BotFather"
+                        className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-zinc-700 transition-shadow"
+                        placeholder="1234567890:AAH... dari BotFather"
                       />
+                      <p className="text-[10px] text-zinc-500 mt-1.5 ml-1">Peringatan: Token ini harus dirahasiakan dan tidak disebarluaskan.</p>
                     </div>
-                    <button 
-                      onClick={() => {
-                        localStorage.setItem('equilibria_railway_url', railwayUrl);
-                        localStorage.setItem('equilibria_telegram_token', telegramToken);
-                        showToast('Pengaturan integrasi disimpan');
-                      }}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-teal-500/50 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg transition-colors"
-                    >
-                      <Save className="w-4 h-4" /> Simpan Integrasi
-                    </button>
+                    
+                    <div className="pt-3 border-t border-zinc-800 flex justify-end">
+                        <button 
+                          onClick={() => {
+                            localStorage.setItem('equilibria_railway_url', railwayUrl);
+                            localStorage.setItem('equilibria_telegram_token', telegramToken);
+                            showToast('Pengaturan integrasi disimpan');
+                          }}
+                          className="w-full sm:w-auto px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Save className="w-4 h-4" /> Simpan Integrasi
+                        </button>
+                    </div>
                   </div>
                 </div>
 

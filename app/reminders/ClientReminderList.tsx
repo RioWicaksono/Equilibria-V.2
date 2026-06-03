@@ -192,9 +192,9 @@ export default function ClientReminderList() {
 
                 <div className="mt-auto pt-4 border-t border-zinc-800/50 flex items-end justify-between">
                   <div className="flex flex-col gap-2">
-                    {reminder.amount && (
+                    {reminder.amount != null && (
                       <span className="text-sm font-semibold text-zinc-300">
-                        {formatCurrency(Number(reminder.amount.toString().replace(/\D/g, '')))}
+                        {formatCurrency(Number(String(reminder.amount).replace(/\D/g, '')))}
                       </span>
                     )}
                     <div className="flex flex-wrap gap-2">
