@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Lock, KeyRound, Palette, Globe, Bell, Trash2, Shield, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Cloud, Webhook, Zap, Clock, FileJson, DatabaseZap } from 'lucide-react';
+import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Lock, KeyRound, Palette, Globe, Bell, Trash2, Shield, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type TabType = 'general' | 'security' | 'integration' | 'advanced';
@@ -17,11 +17,7 @@ export default function SettingsClient() {
   const [telegramLogs, setTelegramLogs] = useState<Array<{ message: string, status: string, timestamp: string }>>([]);
 
   // Show/Hide password fields
-  const [showRailwayUrl, setShowRailwayUrl] = useState(false);
   const [showTelegramToken, setShowTelegramToken] = useState(false);
-
-  // API Configuration visibility
-  const [apiConfigVisible, setApiConfigVisible] = useState(false);
 
   // Integration status states
   const [databaseConnected, setDatabaseConnected] = useState(false);
@@ -32,7 +28,6 @@ export default function SettingsClient() {
   const [theme, setTheme] = useState('dark');
   const [currency, setCurrency] = useState('IDR');
   const [language, setLanguage] = useState('id');
-  const [railwayUrl, setRailwayUrl] = useState('');
   const [telegramToken, setTelegramToken] = useState('');
   const [toastMessage, setToastMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
@@ -45,7 +40,6 @@ export default function SettingsClient() {
     if (c) setCurrency(c);
     const l = localStorage.getItem('equilibria_lang');
     if (l) setLanguage(l);
-    setRailwayUrl(localStorage.getItem('equilibria_railway_url') || '');
     setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
   }, []);
 
@@ -508,7 +502,7 @@ export default function SettingsClient() {
             >
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="text-xl font-bold text-white"><Send className="w-5 h-5 inline-block mr-2 text-blue-400" /> Integrasi & Koneksi</h3>
+                  <h3 className="text-xl font-bold text-white"><Send className="w-5 h-5 inline-block mr-2 text-blue-400" /> Integrasi</h3>
                   <button
                     onClick={() => setShowHelpModal(true)}
                     className="text-zinc-400 hover:text-teal-400 transition-colors flex items-center gap-1 text-sm font-medium"
@@ -516,182 +510,145 @@ export default function SettingsClient() {
                     <HelpCircle className="w-4 h-4" /> Panduan
                   </button>
                 </div>
-                <p className="text-sm text-zinc-400 mb-5">Kelola koneksi webhook, database, dan layanan eksternal.</p>
+                <p className="text-sm text-zinc-400 mb-5">Kelola koneksi database dan layanan Telegram Bot.</p>
 
-                {/* System Status Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Database className="w-4 h-4 text-teal-400" />
-                        <span className="text-xs font-semibold text-zinc-400">Database</span>
+                {/* Database Status Card - Read Only */}
+                <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-teal-500/10 rounded-lg">
+                        <Database className="w-5 h-5 text-teal-400" />
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${databaseConnected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
-                        {databaseConnected ? 'CONNECTED' : 'DISCONNECTED'}
-                      </span>
+                      <div>
+                        <h4 className="text-sm font-bold text-white mb-0.5">Database PostgreSQL</h4>
+                        <p className="text-xs text-zinc-500">Terhubung otomatis ke Railway</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-zinc-500">PostgreSQL @ Railway</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
+                        databaseConnected ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
+                      }`}>
+                        {databaseConnected ? 'CONNECTED' : 'CONNECTING...'}
+                      </span>
+                      <button
+                        onClick={checkHealth}
+                        className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                        title="Refresh Status"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-zinc-800">
+                    <p className="text-[10px] text-zinc-500 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+                      Host: postgres.railway.internal:5432
+                    </p>
+                    <p className="text-[10px] text-zinc-600 mt-1">Database dikonfigurasi secara otomatis oleh Railway</p>
+                  </div>
+                </div>
+
+                {/* Telegram Status Card */}
+                <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-blue-500/10 rounded-lg">
+                        <Send className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white mb-0.5">Telegram Bot Integration</h4>
+                        <p className="text-xs text-zinc-500">Kirim transaksi via chat bot</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
+                      telegramStatus === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' :
+                      telegramStatus === 'INACTIVE' ? 'bg-rose-500/10 text-rose-400' :
+                      'bg-zinc-500/10 text-zinc-400'
+                    }`}>
+                      {telegramStatus === 'LOADING' ? 'CHECKING...' : telegramStatus}
+                    </span>
                   </div>
 
-                  <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-blue-400" />
-                        <span className="text-xs font-semibold text-zinc-400">API Health</span>
+                  {/* Telegram Token Input */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
+                        <KeyRound className="w-3.5 h-3.5 text-zinc-500" /> Bot API Token
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showTelegramToken ? 'text' : 'password'}
+                          value={telegramToken}
+                          onChange={(e) => setTelegramToken(e.target.value)}
+                          className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg pl-4 pr-10 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-zinc-700 transition-shadow"
+                          placeholder="1234567890:AAH... dari BotFather"
+                        />
+                        <button
+                          onClick={() => setShowTelegramToken(!showTelegramToken)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                        >
+                          {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      <p className="text-[10px] text-zinc-500 mt-1.5 ml-1">Dapatkan token dari @BotFather di Telegram</p>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => {
+                          localStorage.setItem('equilibria_telegram_token', telegramToken);
+                          showToast('Token Telegram disimpan');
+                        }}
+                        className="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Save className="w-4 h-4" /> Simpan Token
+                      </button>
+                      <button
+                        onClick={testConnection}
+                        disabled={isTesting}
+                        className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isTesting ? 'animate-spin' : ''}`} />
+                        {isTesting ? 'Menguji...' : 'Uji Koneksi'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* API Health Status */}
+                <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 bg-purple-500/10 rounded-lg">
+                        <Zap className="w-5 h-5 text-purple-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white mb-0.5">API Health</h4>
+                        <p className="text-xs text-zinc-500">Status endpoint aplikasi</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${
                         apiHealthStatus === 'healthy' ? 'bg-emerald-500/10 text-emerald-400' :
                         apiHealthStatus === 'unhealthy' ? 'bg-rose-500/10 text-rose-400' :
                         'bg-zinc-500/10 text-zinc-400'
                       }`}>
-                        {apiHealthStatus.toUpperCase()}
+                        {apiHealthStatus === 'unknown' ? 'CHECKING...' : apiHealthStatus.toUpperCase()}
                       </span>
-                    </div>
-                    <p className="text-xs text-zinc-500">Last check: {lastHealthCheck || 'Never'}</p>
-                  </div>
-
-                  <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Send className="w-4 h-4 text-purple-400" />
-                        <span className="text-xs font-semibold text-zinc-400">Telegram</span>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                        telegramStatus === 'ACTIVE' ? 'bg-emerald-500/10 text-emerald-400' :
-                        telegramStatus === 'INACTIVE' ? 'bg-rose-500/10 text-rose-400' :
-                        'bg-zinc-500/10 text-zinc-400'
-                      }`}>
-                        {telegramStatus}
-                      </span>
-                    </div>
-                    <p className="text-xs text-zinc-500">Webhook status</p>
-                  </div>
-                </div>
-
-                {/* API Configuration Section - Collapsible */}
-                <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5 shadow-sm">
-                  <div className="flex items-center justify-between mb-5 border-b border-zinc-800 pb-4">
-                     <div className="flex items-center gap-3">
-                       <div className="p-2 bg-teal-500/10 rounded-lg">
-                         <DatabaseZap className="w-5 h-5 text-teal-400" />
-                       </div>
-                       <div>
-                         <h4 className="text-sm font-bold text-white mb-0.5">Konfigurasi API & Database Server</h4>
-                         <p className="text-xs text-zinc-500">Hubungkan Equilibria dengan backend eksternal.</p>
-                       </div>
-                     </div>
-                     <button
-                       onClick={() => setApiConfigVisible(!apiConfigVisible)}
-                       className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-xs font-medium rounded-lg transition-colors"
-                     >
-                       {apiConfigVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                       {apiConfigVisible ? 'Sembunyikan' : 'Tampilkan'}
-                     </button>
-                  </div>
-
-                  <AnimatePresence>
-                    {apiConfigVisible && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
+                      <button
+                        onClick={checkHealth}
+                        className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors"
+                        title="Refresh Health"
                       >
-                        <div className="space-y-5 pt-2">
-                          <div>
-                            <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
-                              <Globe className="w-3.5 h-3.5 text-zinc-500" /> URL Database Railway
-                            </label>
-                            <div className="relative">
-                              <input
-                                type={showRailwayUrl ? 'text' : 'password'}
-                                value={railwayUrl}
-                                onChange={(e) => setRailwayUrl(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg pl-4 pr-10 py-3 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-zinc-700 transition-shadow"
-                                placeholder="postgresql://user:pass@host:5432/db"
-                              />
-                              <button
-                                onClick={() => setShowRailwayUrl(!showRailwayUrl)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                              >
-                                {showRailwayUrl ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-zinc-500 mt-1.5 ml-1">Format: postgresql://user:password@host:port/database</p>
-                          </div>
-
-                          <div>
-                            <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
-                              <KeyRound className="w-3.5 h-3.5 text-zinc-500" /> Bot Telegram API Token
-                            </label>
-                            <div className="relative">
-                              <input
-                                type={showTelegramToken ? 'text' : 'password'}
-                                value={telegramToken}
-                                onChange={(e) => setTelegramToken(e.target.value)}
-                                className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg pl-4 pr-10 py-3 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 placeholder-zinc-700 transition-shadow"
-                                placeholder="1234567890:AAH... dari BotFather"
-                              />
-                              <button
-                                onClick={() => setShowTelegramToken(!showTelegramToken)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                              >
-                                {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-zinc-500 mt-1.5 ml-1">Peringatan: Token ini harus dirahasiakan dan tidak disebarluaskan.</p>
-                          </div>
-
-                          <div className="pt-3 border-t border-zinc-800 flex justify-end">
-                              <button
-                                onClick={() => {
-                                  localStorage.setItem('equilibria_railway_url', railwayUrl);
-                                  localStorage.setItem('equilibria_telegram_token', telegramToken);
-                                  showToast('Pengaturan integrasi disimpan');
-                                }}
-                                className="w-full sm:w-auto px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-                              >
-                                <Save className="w-4 h-4" /> Simpan Konfigurasi
-                              </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Connection Status & Test */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5">
-                  <div>
-                    <h4 className="text-sm font-bold text-white mb-2 max-sm:mb-4 flex items-center gap-2">
-                      Status Koneksi:
-                      {telegramStatus === 'LOADING' ? (
-                        <span className="text-zinc-500 flex items-center gap-1.5"><span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-zinc-500"></span></span> Memeriksa...</span>
-                      ) : telegramStatus === 'ACTIVE' ? (
-                        <span className="text-emerald-400 flex items-center gap-1.5 font-medium"><span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span> Aktif</span>
-                      ) : (
-                        <span className="text-rose-400 flex items-center gap-1.5 font-medium"><span className="relative flex h-2.5 w-2.5"><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span></span> Tidak Aktif</span>
-                      )}
-                    </h4>
-                    <p className="text-xs text-zinc-400">Terakhir disinkronkan: {lastSync ? new Date(lastSync).toLocaleString('id-ID') : 'Belum Pernah'}</p>
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="flex gap-2 mt-4 sm:mt-0">
-                    <button
-                      onClick={checkHealth}
-                      className="flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white text-sm font-medium rounded-lg transition-colors"
-                    >
-                      <RefreshCw className="w-4 h-4" /> Refresh
-                    </button>
-                    <button
-                      onClick={testConnection}
-                      disabled={isTesting}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isTesting ? 'animate-spin' : ''}`} />
-                      Uji Koneksi
-                    </button>
-                  </div>
+                  {lastHealthCheck && (
+                    <p className="text-[10px] text-zinc-500 mt-3 pt-3 border-t border-zinc-800">
+                      Last check: {lastHealthCheck}
+                    </p>
+                  )}
                 </div>
 
                 {testPayload && (
