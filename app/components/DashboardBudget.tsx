@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Target, Plus, X, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Budget } from '@/src/application/use-cases/FinanceService';
+import { Budget } from '@/domain/entities/Budget';
 import { useSettings } from '../contexts/SettingsContext';
 
 interface DashboardBudgetProps {
@@ -48,9 +48,9 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
           <h3 className="text-lg font-bold text-white">Anggaran Kategori</h3>
         </div>
         {!isAdding && (
-          <button 
+          <button
             aria-label="Tambah Limit Anggaran"
-            onClick={() => setIsAdding(true)} 
+            onClick={() => setIsAdding(true)}
             className="p-1.5 bg-zinc-800 text-zinc-300 hover:text-indigo-400 rounded-md transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -62,13 +62,13 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
         {budgets.length === 0 && !isAdding && (
           <div className="text-center text-sm text-zinc-500 py-4">Belum ada anggaran bulanan yang diatur.</div>
         )}
-        
+
         {budgets.map((budget) => {
           const spent = categoryTotals[budget.category] || 0;
           const progress = Math.min((spent / budget.limit) * 100, 100);
           const isNearLimit = progress >= 80;
           const isOverLimit = progress >= 100;
-          
+
           return (
             <div key={budget.id} role="listitem" className="p-4 rounded-lg border border-zinc-800/50 bg-[#1A1A1A]">
               <div className="flex justify-between items-center mb-2">
@@ -78,7 +78,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
                 </span>
               </div>
               <div className="h-2 w-full bg-zinc-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}>
-                <div 
+                <div
                   className={`h-full transition-all duration-500 ${isOverLimit ? 'bg-rose-500' : isNearLimit ? 'bg-amber-500' : 'bg-indigo-500'}`}
                   style={{ width: `${progress}%` }}
                 />
@@ -99,22 +99,22 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
               <h4 className="text-sm font-bold text-white">Atur Limit Bulanan</h4>
               <button aria-label="Batal setur anggaran" onClick={() => setIsAdding(false)} className="text-zinc-500 hover:text-zinc-300"><X className="w-4 h-4" /></button>
             </div>
-            <input 
+            <input
               aria-label="Kategori transaksi"
-              type="text" placeholder="Kategori (Misal: Makan)" 
+              type="text" placeholder="Kategori (Misal: Makan)"
               value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
               className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded text-sm p-2 focus:border-indigo-500 outline-none"
             />
-            <input 
+            <input
               aria-label="Nominal limit maksimal"
-              type="text" placeholder="Nominal limit maksimal" 
+              type="text" placeholder="Nominal limit maksimal"
               value={formData.limit} onChange={e => setFormData({...formData, limit: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})}
               className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded text-sm p-2 focus:border-indigo-500 outline-none"
             />
-            <button 
+            <button
               aria-label={isSubmitting ? "Sedang Menyimpan..." : "Simpan Limit"}
               disabled={isSubmitting || !formData.category || !formData.limit}
-              onClick={handleSave} 
+              onClick={handleSave}
               className="w-full py-2 bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-bold rounded disabled:opacity-50"
             >
               Simpan Limit

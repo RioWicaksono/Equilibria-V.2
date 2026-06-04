@@ -6,7 +6,7 @@ export interface Reminder {
   status: 'PENDING' | 'COMPLETED';
   priority: 'LOW' | 'MEDIUM' | 'HIGH';
   frequency: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
-  urgent: boolean; // keep for backward compatibility or replace
+  urgent: boolean;
 }
 
 export function getReminders(): Reminder[] {
@@ -15,7 +15,6 @@ export function getReminders(): Reminder[] {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      // Migrate old data
       return parsed.map((p: any) => ({
         ...p,
         status: p.status || 'PENDING',

@@ -1,7 +1,7 @@
-import { Transaction } from '../../domain/models/Transaction';
-import { ITransactionRepository } from '../../domain/repositories/ITransactionRepository';
+import { Transaction } from '../../domain/entities/Transaction';
+import { ITransactionRepository, TransactionFilter } from '../../domain/repositories/ITransactionRepository';
+import { TransactionType } from '../../domain/value-objects/TransactionType';
 
-// Gunakan global object untuk mencegah data hilang saat Next.js HMR reloads di development
 const globalForStore = globalThis as unknown as {
   _transactionsStore: Transaction[] | undefined;
 };
@@ -10,7 +10,7 @@ const defaultData: Transaction[] = [
   {
     id: '1',
     amount: 15000000,
-    type: 'INCOME',
+    type: 'INCOME' as TransactionType,
     category: 'Gaji Utama',
     date: new Date(),
     description: 'Tech Company Inc.',
@@ -19,7 +19,7 @@ const defaultData: Transaction[] = [
   {
     id: '2',
     amount: 150000,
-    type: 'EXPENSE',
+    type: 'EXPENSE' as TransactionType,
     category: 'Makan',
     date: new Date(),
     description: 'Makan Siang',
@@ -46,6 +46,16 @@ export class InMemoryTransactionRepository implements ITransactionRepository {
 
   async findById(id: string): Promise<Transaction | null> {
     return store.find((t) => t.id === id) || null;
+  }
+
+  async findByFilter(filter: TransactionFilter): Promise<Transaction[]> {
+    return store.filter((t) => {
+      if (filter.type && t.type !== filter.type) return false;
+      if (filter.category && t.category !== filter.category) return false;
+      if (filter.startDate && t.date < filter.startDate) return false;
+      if (filter.endDate && t.date > filter.endDate) return false;
+      return true;
+    });
   }
 
   async delete(id: string): Promise<void> {

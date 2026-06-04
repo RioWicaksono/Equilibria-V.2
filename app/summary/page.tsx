@@ -1,4 +1,4 @@
-import { FinanceService } from '@/src/application/use-cases/FinanceService';
+import { getFinanceService } from '@/application/services/FinanceService';
 import SummaryClient from './SummaryClient';
 import { headers } from 'next/headers';
 
@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function SummaryPage() {
   await headers();
-  const allTransactions = await FinanceService.getTransactions();
+  const financeService = getFinanceService();
+  const allTransactions = await financeService.getTransactions();
 
   return (
     <div className="space-y-8">

@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { FinanceService } from '@/src/application/use-cases/FinanceService';
+import { getFinanceService } from '@/application/services/FinanceService';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // A quick check to see if we can read from the DB without errors
-    await FinanceService.getSummary();
-    return NextResponse.json({ status: 'ok' });
+    const financeService = getFinanceService();
+    await financeService.getSummary();
+    return NextResponse.json({ health: 'ok' });
   } catch (error) {
-    return NextResponse.json({ status: 'error' }, { status: 500 });
+    return NextResponse.json({ health: 'error' }, { status: 500 });
   }
 }

@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { id } from 'date-fns/locale';
-import { getReminders } from '@/lib/reminders';
-import { Bell } from 'lucide-react';
+import { getReminders } from '@/infrastructure/storage/LocalStorageReminders';
 
 interface DashboardCalendarProps {
   transactions: any[];
@@ -24,7 +23,6 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
     return () => window.removeEventListener('reminders-updated', updateReminders);
   }, []);
 
-  // Find dates that have transactions
   const transactionDates = transactions.map(t => new Date(t.date));
 
   return (

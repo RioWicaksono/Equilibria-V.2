@@ -1,7 +1,11 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --color-primary: #2dd4bf; /* teal-400 */
+@layer base {
+  :root {
+    --color-primary: #2dd4bf;
+  }
 }
 
 /* Custom Scrollbar for better UI on overflowing items */

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Reminder, getReminders, saveReminders } from '@/lib/reminders';
-import { Bell, Edit2, Trash2, Plus, X, Search, Calendar, CheckCircle2, Circle, AlertCircle, RefreshCw, Filter } from 'lucide-react';
+import { Reminder, getReminders, saveReminders } from '@/infrastructure/storage/LocalStorageReminders';
+import { Bell, Edit2, Trash2, Plus, X, Search, Calendar, CheckCircle2, Circle, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -12,10 +12,10 @@ export default function ClientReminderList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
   const [filterPriority, setFilterPriority] = useState<'ALL' | 'LOW' | 'MEDIUM' | 'HIGH'>('ALL');
-  
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState<Partial<Reminder>>({
     title: '',
     date: new Date().toISOString().split('T')[0],
@@ -29,24 +29,22 @@ export default function ClientReminderList() {
   useEffect(() => {
     const handleUpdate = () => {
       setReminders(getReminders());
-    }
+    };
     handleUpdate();
     window.addEventListener('reminders-updated', handleUpdate);
-    return () => {
-      window.removeEventListener('reminders-updated', handleUpdate);
-    };
+    return () => window.removeEventListener('reminders-updated', handleUpdate);
   }, []);
 
   const handleSave = () => {
     if (!formData.title || !formData.date) return;
-    
+
     let updated;
     if (isEditing) {
       updated = reminders.map(r => r.id === isEditing ? { ...r, ...formData } as Reminder : r);
     } else {
       updated = [...reminders, { ...formData, id: crypto.randomUUID() } as Reminder];
     }
-    
+
     saveReminders(updated);
     setReminders(updated);
     setIsEditing(null);
@@ -55,14 +53,14 @@ export default function ClientReminderList() {
   };
 
   const handleDelete = (id: string) => {
-    if(!window.confirm('Yakin ingin menghapus pengingat ini?')) return;
+    if (!window.confirm('Yakin ingin menghapus pengingat ini?')) return;
     const updated = reminders.filter(r => r.id !== id);
     saveReminders(updated);
     setReminders(updated);
   };
 
   const toggleStatus = (id: string, currentStatus: string) => {
-    const updated = reminders.map(r => 
+    const updated = reminders.map(r =>
       r.id === id ? { ...r, status: currentStatus === 'PENDING' ? 'COMPLETED' : 'PENDING' } as Reminder : r
     );
     saveReminders(updated);
@@ -76,14 +74,14 @@ export default function ClientReminderList() {
   };
 
   const resetForm = () => {
-    setFormData({ 
-      title: '', 
-      date: new Date().toISOString().split('T')[0], 
-      amount: '', 
+    setFormData({
+      title: '',
+      date: new Date().toISOString().split('T')[0],
+      amount: '',
       status: 'PENDING',
       priority: 'MEDIUM',
       frequency: 'ONCE',
-      urgent: false 
+      urgent: false
     });
   };
 
@@ -119,7 +117,7 @@ export default function ClientReminderList() {
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-            <input 
+            <input
               type="text"
               placeholder="Cari pengingat..."
               value={searchQuery}
@@ -149,7 +147,7 @@ export default function ClientReminderList() {
             </select>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => { resetForm(); setIsEditing(null); setIsModalOpen(true); }}
           className="shrink-0 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-colors w-full md:w-auto shadow-[0_0_15px_rgba(45,212,191,0.2)]"
         >
@@ -162,17 +160,17 @@ export default function ClientReminderList() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence>
             {filteredReminders.map((reminder) => (
-              <motion.div 
+              <motion.div
                 layout
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                key={reminder.id} 
+                key={reminder.id}
                 className={`group relative flex flex-col p-5 rounded-xl border transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.03)] hover:-translate-y-1 ${reminder.status === 'COMPLETED' ? 'bg-[#141414]/50 border-zinc-800/50 opacity-60 hover:opacity-100' : 'bg-[#1A1A1A] border-[#262626] hover:border-zinc-700'}`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <button 
+                    <button
                       onClick={() => toggleStatus(reminder.id, reminder.status)}
                       className={`shrink-0 transition-colors ${reminder.status === 'COMPLETED' ? 'text-teal-500' : 'text-zinc-500 hover:text-teal-400'}`}
                     >
@@ -214,8 +212,7 @@ export default function ClientReminderList() {
                     <button onClick={() => handleDelete(reminder.id)} className="p-2 text-zinc-400 hover:text-rose-400 rounded-lg hover:bg-zinc-800 bg-zinc-900 shadow-sm border border-zinc-800"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
-                
-                {/* Visual indicator for high urgency overdue */}
+
                 {reminder.status === 'PENDING' && reminder.priority === 'HIGH' && new Date(reminder.date) < new Date() && (
                   <div className="absolute top-0 right-0 w-2 h-full bg-rose-500 rounded-r-xl opacity-80 shadow-[0_0_10px_rgba(244,63,94,0.5)]"></div>
                 )}
@@ -230,7 +227,7 @@ export default function ClientReminderList() {
           </div>
           <h3 className="text-lg font-bold text-white mb-2">Tidak ada pengingat</h3>
           <p className="text-zinc-500 text-sm max-w-sm mb-6">Mulai tambahkan tagihan atau pengingat penting agar keuangan Anda tetap teratur.</p>
-          <button 
+          <button
             onClick={() => { resetForm(); setIsEditing(null); setIsModalOpen(true); }}
             className="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg transition-colors border border-zinc-700 flex items-center gap-2"
           >
@@ -243,7 +240,7 @@ export default function ClientReminderList() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -261,11 +258,11 @@ export default function ClientReminderList() {
               <div className="p-5 space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama / Judul</label>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     placeholder="Contoh: Tagihan Listrik"
-                    value={formData.title} 
-                    onChange={e => setFormData({...formData, title: e.target.value})}
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
                     className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none"
                   />
                 </div>
@@ -273,23 +270,23 @@ export default function ClientReminderList() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tanggal</label>
-                    <input 
-                      type="date" 
-                      value={formData.date?.split('T')[0]} 
-                      onChange={e => setFormData({...formData, date: e.target.value})}
+                    <input
+                      type="date"
+                      value={formData.date?.split('T')[0]}
+                      onChange={e => setFormData({ ...formData, date: e.target.value })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>
-                    <input 
-                      type="text" 
-                      placeholder="Rp..." 
-                      value={formData.amount} 
+                    <input
+                      type="text"
+                      placeholder="Rp..."
+                      value={formData.amount}
                       onChange={e => {
                         const val = e.target.value.replace(/\D/g, '');
                         const formattedVal = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                        setFormData({...formData, amount: formattedVal});
+                        setFormData({ ...formData, amount: formattedVal });
                       }}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none"
                     />
@@ -299,9 +296,9 @@ export default function ClientReminderList() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Prioritas</label>
-                    <select 
+                    <select
                       value={formData.priority}
-                      onChange={e => setFormData({...formData, priority: e.target.value as any})}
+                      onChange={e => setFormData({ ...formData, priority: e.target.value as any })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm outline-none focus:border-teal-500"
                     >
                       <option value="LOW">Rendah</option>
@@ -311,9 +308,9 @@ export default function ClientReminderList() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Frekuensi</label>
-                    <select 
+                    <select
                       value={formData.frequency}
-                      onChange={e => setFormData({...formData, frequency: e.target.value as any})}
+                      onChange={e => setFormData({ ...formData, frequency: e.target.value as any })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm outline-none focus:border-teal-500"
                     >
                       <option value="ONCE">Sekali</option>
@@ -324,13 +321,13 @@ export default function ClientReminderList() {
                     </select>
                   </div>
                 </div>
-                
+
                 {isEditing && (
                   <div className="space-y-1.5 pt-2 border-t border-zinc-800/50">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</label>
-                    <select 
+                    <select
                       value={formData.status}
-                      onChange={e => setFormData({...formData, status: e.target.value as any})}
+                      onChange={e => setFormData({ ...formData, status: e.target.value as any })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm outline-none focus:border-teal-500"
                     >
                       <option value="PENDING">Pending</option>
@@ -341,13 +338,13 @@ export default function ClientReminderList() {
               </div>
 
               <div className="p-5 border-t border-zinc-800/80 bg-[#1A1A1A] flex justify-end gap-3 rounded-b-xl">
-                <button 
+                <button
                   onClick={() => setIsModalOpen(false)}
                   className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg transition-colors border border-zinc-700"
                 >
                   Batal
                 </button>
-                <button 
+                <button
                   onClick={handleSave}
                   disabled={!formData.title || !formData.date}
                   className="px-6 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(45,212,191,0.2)]"

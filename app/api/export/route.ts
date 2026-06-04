@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { FinanceService } from '@/src/application/use-cases/FinanceService';
+import { FinanceService } from '@/application/services/FinanceService';
 import * as xlsx from 'xlsx';
+
+const financeService = new FinanceService();
 
 export const dynamic = 'force-dynamic';
 
@@ -8,11 +10,11 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const monthQuery = searchParams.get('month'); // YYYY-MM
-    
-    let transactions = await FinanceService.getTransactions();
+
+    let transactions = await financeService.getTransactions();
 
     if (monthQuery) {
-      transactions = transactions.filter(t => {
+      transactions = transactions.filter((t: any) => {
         const d = new Date(t.date);
         const yyyymm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         return yyyymm === monthQuery;
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
     }
 
     // Map the transactions to a flatter structure for the sheet
-    const data = transactions.map((t) => ({
+    const data = transactions.map((t: any) => ({
       ID: t.id,
       Tanggal: new Date(t.date).toLocaleDateString('id-ID'),
       Jenis: t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran',

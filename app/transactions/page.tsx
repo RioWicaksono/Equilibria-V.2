@@ -1,4 +1,4 @@
-import { FinanceService } from '@/src/application/use-cases/FinanceService';
+import { getFinanceService } from '@/application/services/FinanceService';
 import { revalidatePath } from 'next/cache';
 import { headers } from 'next/headers';
 import ExportButton from './ExportButton';
@@ -12,20 +12,21 @@ export default async function TransactionsPage(props: {
 }) {
   const searchParams = await props.searchParams;
   await headers();
-  const allTransactions = await FinanceService.getTransactions();
-  
+  const financeService = getFinanceService();
+  const allTransactions = await financeService.getTransactions();
+
   // Apply logic to show only today by default
   const requestedDate = typeof searchParams?.date === 'string' ? searchParams.date : new Date().toISOString().split('T')[0];
-  
+
   const transactions = allTransactions.filter(t => {
-    // API returns local timezone string or iso string. Let's match YYYY-MM-DD
     const tDate = new Date(t.date).toISOString().split('T')[0];
     return tDate === requestedDate;
   });
 
   async function deleteTransaction(id: string) {
     'use server';
-    await FinanceService.deleteTransaction(id);
+    const financeService = getFinanceService();
+    await financeService.deleteTransaction(id);
     revalidatePath('/transactions');
     revalidatePath('/');
     revalidatePath('/summary');
@@ -39,8 +40,8 @@ export default async function TransactionsPage(props: {
           <p className="text-sm text-zinc-500 mt-1">Catat dan kelola riwayat harian Anda.</p>
         </div>
         <div className="flex gap-2">
-           <ExportButton />
-           <TransactionModal />
+          <ExportButton />
+          <TransactionModal />
         </div>
       </header>
 
@@ -48,8 +49,8 @@ export default async function TransactionsPage(props: {
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-white">Riwayat ({new Date(requestedDate).toLocaleDateString('id-ID')})</h3>
         </div>
-        
-        <ClientTransactionList 
+
+        <ClientTransactionList
           initialTransactions={transactions}
           onDelete={deleteTransaction}
         />

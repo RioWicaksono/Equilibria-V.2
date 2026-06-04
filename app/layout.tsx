@@ -1,12 +1,9 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import Sidebar from './components/Sidebar';
 import PWARegistration from './components/PWARegistration';
 import PinProtection from './components/PinProtection';
 import { SettingsProvider } from './contexts/SettingsContext';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -35,11 +32,19 @@ export default function RootLayout({
   const isRailway = !!(process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres') && !process.env.DATABASE_URL.includes('${{'));
 
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <head>
         <link rel="apple-touch-icon" href="/icon.svg" />
+        <style>{`
+          :root {
+            --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+          }
+          body {
+            font-family: var(--font-sans);
+          }
+        `}</style>
       </head>
-      <body className={`${inter.variable} font-sans bg-[#0A0A0A] text-[#E5E5E5] min-h-screen flex flex-col md:flex-row overflow-hidden`}>
+      <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5] min-h-screen flex flex-col md:flex-row overflow-hidden">
         <PWARegistration />
         <SettingsProvider>
           <PinProtection>
