@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
 export default function DebtsPage() {
   const { formatCurrency } = useSettings();
   const [debts, setDebts] = useState<{ id: string; name: string; amount: number; paidAmount: number; type: 'DEBT' | 'LOAN'; status: 'UNPAID' | 'PAID' }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<{ name: string; amount: string; type: 'DEBT' | 'LOAN' }>({ name: '', amount: '', type: 'DEBT' });
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -15,55 +16,125 @@ export default function DebtsPage() {
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
   const [editingDebt, setEditingDebt] = useState<typeof debts[0] | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    if (!formData.name || !formData.amount) return;
-    const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
+  useEffect(() => {
+    fetchDebts();
+  }, []);
 
-    if (editingDebt) {
-      const updated = debts.map(d => d.id === editingDebt.id
-        ? { ...d, name: formData.name, amount: amountVal, type: formData.type }
-        : d
-      );
-      setDebts(updated);
-      localStorage.setItem('equilibria_debts', JSON.stringify(updated));
-    } else {
-      const updated: typeof debts = [
-        ...debts,
-        { id: crypto.randomUUID(), name: formData.name, amount: amountVal, paidAmount: 0, type: formData.type, status: 'UNPAID' }
-      ];
-      setDebts(updated);
-      localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+  const fetchDebts = async () => {
+    try {
+      const res = await fetch('/api/debts');
+      const data = await res.json();
+      if (data.debts && data.debts.length > 0) {
+        setDebts(data.debts);
+      } else {
+        const stored = localStorage.getItem('equilibria_debts');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
+        } else {
+          const initial: { id: string; name: string; amount: number; paidAmount: number; type: 'DEBT' | 'LOAN'; status: 'UNPAID' | 'PAID' }[] = [
+            { id: '1', name: 'Pinjam ke Budi', amount: 500000, paidAmount: 0, type: 'DEBT', status: 'UNPAID' },
+            { id: '2', name: 'Bayar Makan Siang Andi', amount: 150000, paidAmount: 50000, type: 'LOAN', status: 'UNPAID' },
+          ];
+          setDebts(initial);
+          localStorage.setItem('equilibria_debts', JSON.stringify(initial));
+        }
+      }
+    } catch (error) {
+      const stored = localStorage.getItem('equilibria_debts');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setIsModalOpen(false);
-    setEditingDebt(null);
   };
 
-  const handlePay = () => {
+  const handleSave = async () => {
+    if (!formData.name || !formData.amount) return;
+    setIsSaving(true);
+    const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
+
+    try {
+      if (editingDebt) {
+        const res = await fetch('/api/debts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingDebt.id, name: formData.name, amount: amountVal, type: formData.type }),
+        });
+        const data = await res.json();
+        if (data.debt) {
+          const updated = debts.map(d => d.id === editingDebt.id ? { ...d, name: formData.name, amount: amountVal, type: formData.type } : d);
+          setDebts(updated);
+          localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+        }
+      } else {
+        const res = await fetch('/api/debts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: formData.name, amount: amountVal, type: formData.type }),
+        });
+        const data = await res.json();
+        if (data.debt) {
+          const updated = [...debts, { ...data.debt, paidAmount: 0 }];
+          setDebts(updated);
+          localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving debt:', error);
+    } finally {
+      setIsSaving(false);
+      setIsModalOpen(false);
+      setEditingDebt(null);
+    }
+  };
+
+  const handlePay = async () => {
     if (!selectedDebtId || !payAmount) return;
     const pVal = parseFloat(payAmount.replace(/\D/g, '')) || 0;
 
-    let updated = debts.map(d => {
-        if (d.id === selectedDebtId) {
-            const newPaid = (d.paidAmount || 0) + pVal;
-            return { ...d, paidAmount: newPaid };
+    try {
+      const debt = debts.find(d => d.id === selectedDebtId);
+      if (debt) {
+        const newPaid = (debt.paidAmount || 0) + pVal;
+        const res = await fetch('/api/debts', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedDebtId, paidAmount: newPaid, status: newPaid >= debt.amount ? 'PAID' : 'UNPAID' }),
+        });
+        const data = await res.json();
+        if (data.debt) {
+          let updated = debts.map(d => d.id === selectedDebtId ? data.debt : d);
+          updated = updated.filter(d => d.status !== 'PAID');
+          setDebts(updated);
+          localStorage.setItem('equilibria_debts', JSON.stringify(updated));
         }
-        return d;
-    });
-
-    updated = updated.filter(d => d.amount - (d.paidAmount || 0) > 0);
-
-    setDebts(updated);
-    localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+      }
+    } catch (error) {
+      console.error('Error paying debt:', error);
+    }
     setIsPayModalOpen(false);
     setPayAmount('');
     setSelectedDebtId(null);
   };
 
-  const handleDeleteDebt = (id: string) => {
-    const updated = debts.filter(d => d.id !== id);
-    setDebts(updated);
-    localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+  const handleDeleteDebt = async (id: string) => {
+    try {
+      await fetch('/api/debts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const updated = debts.filter(d => d.id !== id);
+      setDebts(updated);
+      localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error deleting debt:', error);
+    }
     setDeletingId(null);
   };
 
@@ -72,21 +143,6 @@ export default function DebtsPage() {
     setFormData({ name: debt.name, amount: debt.amount.toString(), type: debt.type });
     setIsModalOpen(true);
   };
-
-  useEffect(() => {
-    const stored = localStorage.getItem('equilibria_debts');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
-    } else {
-      const initial: typeof debts = [
-        { id: '1', name: 'Pinjam ke Budi', amount: 500000, paidAmount: 0, type: 'DEBT', status: 'UNPAID' },
-        { id: '2', name: 'Bayar Makan Siang Andi', amount: 150000, paidAmount: 50000, type: 'LOAN', status: 'UNPAID' },
-      ];
-      setDebts(initial);
-      localStorage.setItem('equilibria_debts', JSON.stringify(initial));
-    }
-  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -98,12 +154,17 @@ export default function DebtsPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Kelola pinjaman dan uang yang dipinjamkan ke orang lain.</p>
         </div>
-        <button onClick={() => { setFormData({ name: '', amount: '', type: 'DEBT' }); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setFormData({ name: '', amount: '', type: 'DEBT' }); setEditingDebt(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Catat Transaksi Baru
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         
         {/* Kolom Hutang (Kiri) */}
         <div className="space-y-4">
@@ -202,6 +263,7 @@ export default function DebtsPage() {
         </div>
 
       </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

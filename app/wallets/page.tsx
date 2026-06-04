@@ -1,51 +1,127 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle, Pencil } from 'lucide-react';
+import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle, Pencil, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
 export default function WalletsPage() {
   const { formatCurrency } = useSettings();
   const [wallets, setWallets] = useState<{ id: string; name: string; balance: number }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK' | 'EDIT'>('NEW');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', amount: '' });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingWallet, setEditingWallet] = useState<{ id: string; name: string; balance: number } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    let updated;
-    const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
+  // Fetch wallets from API
+  useEffect(() => {
+    fetchWallets();
+  }, []);
 
-    if (modalType === 'NEW') {
-      if (!formData.name) return;
-      updated = [...wallets, { id: crypto.randomUUID(), name: formData.name, balance: amountVal }];
-    } else if (modalType === 'EDIT' && editingWallet) {
-      updated = wallets.map(w => w.id === editingWallet.id ? { ...w, name: formData.name, balance: amountVal } : w);
-    } else {
-      updated = wallets.map(w => {
-        if (w.id === selectedWalletId) {
-          return {
-            ...w,
-            balance: typeof w.balance !== 'number' ? 0 :
-               modalType === 'TOPUP' ? w.balance + amountVal : Math.max(0, w.balance - amountVal)
-          };
+  const fetchWallets = async () => {
+    try {
+      const res = await fetch('/api/wallets');
+      const data = await res.json();
+      if (data.wallets && data.wallets.length > 0) {
+        setWallets(data.wallets);
+      } else {
+        // Fallback to localStorage if no data in DB
+        const stored = localStorage.getItem('equilibria_wallets');
+        if (stored) {
+          setWallets(JSON.parse(stored));
+        } else {
+          // Set initial data
+          const initial = [
+            { id: '1', name: 'BCA Utama', balance: 5000000 },
+            { id: '2', name: 'Gopay', balance: 150000 },
+            { id: '3', name: 'Cash', balance: 350000 },
+          ];
+          setWallets(initial);
+          localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
         }
-        return w;
-      });
+      }
+    } catch (error) {
+      // Fallback to localStorage on error
+      const stored = localStorage.getItem('equilibria_wallets');
+      if (stored) {
+        setWallets(JSON.parse(stored));
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setWallets(updated);
-    localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
-    setIsModalOpen(false);
-    setEditingWallet(null);
   };
 
-  const handleDeleteWallet = (id: string) => {
-    const updated = wallets.filter(w => w.id !== id);
-    setWallets(updated);
-    localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
+  const handleSave = async () => {
+    setIsSaving(true);
+    const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
+
+    try {
+      if (modalType === 'NEW') {
+        const res = await fetch('/api/wallets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: formData.name, balance: amountVal }),
+        });
+        const data = await res.json();
+        if (data.wallet) {
+          setWallets([...wallets, data.wallet]);
+          localStorage.setItem('equilibria_wallets', JSON.stringify([...wallets, data.wallet]));
+        }
+      } else if (modalType === 'EDIT' && editingWallet) {
+        const res = await fetch('/api/wallets', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingWallet.id, name: formData.name, balance: amountVal }),
+        });
+        const data = await res.json();
+        if (data.wallet) {
+          const updated = wallets.map(w => w.id === editingWallet.id ? data.wallet : w);
+          setWallets(updated);
+          localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
+        }
+      } else if (selectedWalletId) {
+        const wallet = wallets.find(w => w.id === selectedWalletId);
+        if (wallet) {
+          const newBalance = modalType === 'TOPUP' ? wallet.balance + amountVal : Math.max(0, wallet.balance - amountVal);
+          const res = await fetch('/api/wallets', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: selectedWalletId, balance: newBalance }),
+          });
+          const data = await res.json();
+          if (data.wallet) {
+            const updated = wallets.map(w => w.id === selectedWalletId ? data.wallet : w);
+            setWallets(updated);
+            localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error saving wallet:', error);
+    } finally {
+      setIsSaving(false);
+      setIsModalOpen(false);
+      setEditingWallet(null);
+    }
+  };
+
+  const handleDeleteWallet = async (id: string) => {
+    try {
+      await fetch('/api/wallets', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const updated = wallets.filter(w => w.id !== id);
+      setWallets(updated);
+      localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error deleting wallet:', error);
+    }
     setDeletingId(null);
   };
 
@@ -55,22 +131,6 @@ export default function WalletsPage() {
     setModalType('EDIT');
     setIsModalOpen(true);
   };
-
-  useEffect(() => {
-    const stored = localStorage.getItem('equilibria_wallets');
-    if (stored) {
-      // eslint-disable-next-line
-      setWallets(JSON.parse(stored));
-    } else {
-      const initial = [
-        { id: '1', name: 'BCA Utama', balance: 5000000 },
-        { id: '2', name: 'Gopay', balance: 150000 },
-        { id: '3', name: 'Cash', balance: 350000 },
-      ];
-      setWallets(initial);
-      localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
-    }
-  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -87,43 +147,49 @@ export default function WalletsPage() {
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {wallets.map(wallet => (
-          <div key={wallet.id} className="bg-[#141414] border border-[#262626] rounded-xl p-6 relative group hover:border-teal-500/50 transition-colors">
-            <div className="flex justify-between items-start mb-6">
-              <div className="p-3 bg-[#1A1A1A] rounded-lg">
-                <CreditCard className="w-6 h-6 text-zinc-400" />
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {wallets.map(wallet => (
+            <div key={wallet.id} className="bg-[#141414] border border-[#262626] rounded-xl p-6 relative group hover:border-teal-500/50 transition-colors">
+              <div className="flex justify-between items-start mb-6">
+                <div className="p-3 bg-[#1A1A1A] rounded-lg">
+                  <CreditCard className="w-6 h-6 text-zinc-400" />
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => openEditModal(wallet)}
+                    className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeletingId(wallet.id)}
+                    className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => openEditModal(wallet)}
-                  className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setDeletingId(wallet.id)}
-                  className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+              <div>
+                <p className="text-sm text-zinc-400">{wallet.name}</p>
+                <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(wallet.balance)}</h3>
+              </div>
+              <div className="mt-6 flex justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">
+                   <ArrowDownRight className="w-4 h-4" /> Tarik
+                 </button>
+                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TOPUP'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-teal-400 flex items-center justify-center gap-1">
+                   <ArrowUpRight className="w-4 h-4" /> Topup
+                 </button>
               </div>
             </div>
-            <div>
-              <p className="text-sm text-zinc-400">{wallet.name}</p>
-              <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(wallet.balance)}</h3>
-            </div>
-            <div className="mt-6 flex justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-               <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">
-                 <ArrowDownRight className="w-4 h-4" /> Tarik
-               </button>
-               <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TOPUP'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-teal-400 flex items-center justify-center gap-1">
-                 <ArrowUpRight className="w-4 h-4" /> Topup
-               </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -158,7 +224,10 @@ export default function WalletsPage() {
             </div>
             <div className="p-5 border-t border-zinc-800/80 bg-[#1A1A1A] flex justify-end gap-3 rounded-b-xl">
               <button onClick={() => { setIsModalOpen(false); setEditingWallet(null); }} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg">Batal</button>
-              <button disabled={modalType === 'NEW' || modalType === 'EDIT' ? (!formData.name || !formData.amount) : !formData.amount} onClick={handleSave} className="px-6 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg disabled:opacity-50">Simpan</button>
+              <button disabled={isSaving || (modalType === 'NEW' || modalType === 'EDIT' ? (!formData.name || !formData.amount) : !formData.amount)} onClick={handleSave} className="px-6 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg disabled:opacity-50 flex items-center gap-2">
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Simpan
+              </button>
             </div>
           </div>
         </div>

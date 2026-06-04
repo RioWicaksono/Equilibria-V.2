@@ -1,48 +1,104 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Repeat, Plus, CalendarClock, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Repeat, Plus, CalendarClock, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
 export default function RecurringPage() {
   const { formatCurrency } = useSettings();
   const [recurring, setRecurring] = useState<{ id: string; name: string; amount: number; frequency: string; nextDate: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', frequency: 'Bulanan', nextDate: '' });
   const [editingItem, setEditingItem] = useState<typeof recurring[0] | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    if (!formData.name || !formData.amount || !formData.nextDate) return;
-    const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
+  useEffect(() => {
+    fetchRecurring();
+  }, []);
 
-    if (editingItem) {
-      const updated = recurring.map(r => r.id === editingItem.id
-        ? { ...r, name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate }
-        : r
-      );
-      setRecurring(updated);
-      localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
-    } else {
-      const updated = [...recurring, {
-        id: crypto.randomUUID(),
-        name: formData.name,
-        amount: amountVal,
-        frequency: formData.frequency,
-        nextDate: formData.nextDate
-      }];
-      setRecurring(updated);
-      localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
+  const fetchRecurring = async () => {
+    try {
+      const res = await fetch('/api/recurring');
+      const data = await res.json();
+      if (data.recurring && data.recurring.length > 0) {
+        setRecurring(data.recurring);
+      } else {
+        const stored = localStorage.getItem('equilibria_recurring');
+        if (stored) {
+          setRecurring(JSON.parse(stored));
+        } else {
+          const initial = [
+            { id: '1', name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15' },
+            { id: '2', name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10' },
+          ];
+          setRecurring(initial);
+          localStorage.setItem('equilibria_recurring', JSON.stringify(initial));
+        }
+      }
+    } catch (error) {
+      const stored = localStorage.getItem('equilibria_recurring');
+      if (stored) setRecurring(JSON.parse(stored));
+    } finally {
+      setIsLoading(false);
     }
-    setIsModalOpen(false);
-    setEditingItem(null);
   };
 
-  const handleDeleteItem = (id: string) => {
-    const updated = recurring.filter(r => r.id !== id);
-    setRecurring(updated);
-    localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
+  const handleSave = async () => {
+    if (!formData.name || !formData.amount || !formData.nextDate) return;
+    setIsSaving(true);
+    const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
+
+    try {
+      if (editingItem) {
+        const res = await fetch('/api/recurring', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingItem.id, name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate }),
+        });
+        const data = await res.json();
+        if (data.recurring) {
+          const updated = recurring.map(r => r.id === editingItem.id ? data.recurring : r);
+          setRecurring(updated);
+          localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
+        }
+      } else {
+        const res = await fetch('/api/recurring', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate }),
+        });
+        const data = await res.json();
+        if (data.recurring) {
+          const updated = [...recurring, data.recurring];
+          setRecurring(updated);
+          localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving recurring:', error);
+    } finally {
+      setIsSaving(false);
+      setIsModalOpen(false);
+      setEditingItem(null);
+    }
+  };
+
+  const handleDeleteItem = async (id: string) => {
+    try {
+      await fetch('/api/recurring', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      const updated = recurring.filter(r => r.id !== id);
+      setRecurring(updated);
+      localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
+    } catch (error) {
+      console.error('Error deleting recurring:', error);
+    }
     setDeletingId(null);
   };
 
@@ -51,20 +107,6 @@ export default function RecurringPage() {
     setFormData({ name: item.name, amount: item.amount.toString(), frequency: item.frequency, nextDate: item.nextDate });
     setIsModalOpen(true);
   };
-
-  useEffect(() => {
-    const stored = localStorage.getItem('equilibria_recurring');
-    if (stored) {
-      setRecurring(JSON.parse(stored));
-    } else {
-      const initial = [
-        { id: '1', name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15' },
-        { id: '2', name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10' },
-      ];
-      setRecurring(initial);
-      localStorage.setItem('equilibria_recurring', JSON.stringify(initial));
-    }
-  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
@@ -76,12 +118,17 @@ export default function RecurringPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Kelola langganan bulanan dan transaksi rutin yang otomatis tercatat.</p>
         </div>
-        <button onClick={() => { setFormData({ name: '', amount: '', frequency: 'Bulanan', nextDate: new Date().toISOString().split('T')[0] }); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setFormData({ name: '', amount: '', frequency: 'Bulanan', nextDate: new Date().toISOString().split('T')[0] }); setEditingItem(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Buat Jadwal
         </button>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {recurring.map(item => (
           <div key={item.id} className="bg-[#141414] border border-[#262626] rounded-xl p-5 flex flex-col justify-between gap-4 relative overflow-hidden group hover:border-zinc-700 transition-colors">
              <div className="flex justify-between items-start">
@@ -111,6 +158,7 @@ export default function RecurringPage() {
           </div>
         ))}
       </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
