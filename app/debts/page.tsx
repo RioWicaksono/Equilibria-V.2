@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X } from 'lucide-react';
+import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
 export default function DebtsPage() {
@@ -12,23 +13,36 @@ export default function DebtsPage() {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
+  const [editingDebt, setEditingDebt] = useState<typeof debts[0] | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleSave = () => {
     if (!formData.name || !formData.amount) return;
     const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
-    const updated: typeof debts = [
-      ...debts, 
-      { id: crypto.randomUUID(), name: formData.name, amount: amountVal, paidAmount: 0, type: formData.type, status: 'UNPAID' }
-    ];
-    setDebts(updated);
-    localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+
+    if (editingDebt) {
+      const updated = debts.map(d => d.id === editingDebt.id
+        ? { ...d, name: formData.name, amount: amountVal, type: formData.type }
+        : d
+      );
+      setDebts(updated);
+      localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+    } else {
+      const updated: typeof debts = [
+        ...debts,
+        { id: crypto.randomUUID(), name: formData.name, amount: amountVal, paidAmount: 0, type: formData.type, status: 'UNPAID' }
+      ];
+      setDebts(updated);
+      localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+    }
     setIsModalOpen(false);
+    setEditingDebt(null);
   };
 
   const handlePay = () => {
     if (!selectedDebtId || !payAmount) return;
     const pVal = parseFloat(payAmount.replace(/\D/g, '')) || 0;
-    
+
     let updated = debts.map(d => {
         if (d.id === selectedDebtId) {
             const newPaid = (d.paidAmount || 0) + pVal;
@@ -36,8 +50,7 @@ export default function DebtsPage() {
         }
         return d;
     });
-    
-    // Auto-remove if fully paid
+
     updated = updated.filter(d => d.amount - (d.paidAmount || 0) > 0);
 
     setDebts(updated);
@@ -47,11 +60,23 @@ export default function DebtsPage() {
     setSelectedDebtId(null);
   };
 
+  const handleDeleteDebt = (id: string) => {
+    const updated = debts.filter(d => d.id !== id);
+    setDebts(updated);
+    localStorage.setItem('equilibria_debts', JSON.stringify(updated));
+    setDeletingId(null);
+  };
+
+  const openEditModal = (debt: typeof debts[0]) => {
+    setEditingDebt(debt);
+    setFormData({ name: debt.name, amount: debt.amount.toString(), type: debt.type });
+    setIsModalOpen(true);
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem('equilibria_debts');
     if (stored) {
       const parsed = JSON.parse(stored);
-      // eslint-disable-next-line
       setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
     } else {
       const initial: typeof debts = [
@@ -96,6 +121,14 @@ export default function DebtsPage() {
                     <h4 className="font-bold text-white text-base">{debt.name}</h4>
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded mt-2 inline-block">Hutang Harus Dibayar</span>
                   </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEditModal(debt)} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeletingId(debt.id)} className="p-1.5 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                   <div className="text-right">
                     <p className="text-xl font-bold text-rose-400">{formatCurrency(debt.amount - (debt.paidAmount || 0))}</p>
                     <p className="text-xs text-zinc-500 font-medium">Sisa Tagihan</p>
@@ -136,6 +169,14 @@ export default function DebtsPage() {
                     <h4 className="font-bold text-white text-base">{debt.name}</h4>
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-teal-500/10 text-teal-400 rounded mt-2 inline-block">Piutang Menunggu</span>
                   </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEditModal(debt)} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setDeletingId(debt.id)} className="p-1.5 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                   <div className="text-right">
                     <p className="text-xl font-bold text-teal-400">{formatCurrency(debt.amount - (debt.paidAmount || 0))}</p>
                     <p className="text-xs text-zinc-500 font-medium">Sisa Menunggu</p>
@@ -166,8 +207,8 @@ export default function DebtsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-[#141414] border border-[#262626] rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative">
             <div className="flex justify-between items-center p-5 border-b border-zinc-800/80">
-              <h3 className="font-bold text-lg text-white">Catat Hutang/Piutang Baru</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-400 hover:text-white transition-colors">
+              <h3 className="font-bold text-lg text-white">{editingDebt ? 'Edit Hutang/Piutang' : 'Catat Hutang/Piutang Baru'}</h3>
+              <button onClick={() => { setIsModalOpen(false); setEditingDebt(null); }} className="text-zinc-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -194,7 +235,7 @@ export default function DebtsPage() {
               </div>
             </div>
             <div className="p-5 border-t border-zinc-800/80 bg-[#1A1A1A] flex justify-end gap-3 rounded-b-xl">
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg">Batal</button>
+              <button onClick={() => { setIsModalOpen(false); setEditingDebt(null); }} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg">Batal</button>
               <button disabled={!formData.name || !formData.amount} onClick={handleSave} className="px-6 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg disabled:opacity-50">Simpan</button>
             </div>
           </div>
@@ -223,6 +264,51 @@ export default function DebtsPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletingId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-[#141414] border border-[#262626] rounded-xl p-6 w-full max-w-sm shadow-2xl"
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
+                  <AlertTriangle className="w-6 h-6 text-rose-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Hapus {debts.find(d => d.id === deletingId)?.type === 'DEBT' ? 'Hutang' : 'Piutang'}?</h3>
+                  <p className="text-sm text-zinc-400 mt-2">
+                    Tindakan ini tidak dapat dibatalkan. Data akan dihapus secara permanen.
+                  </p>
+                </div>
+                <div className="flex w-full gap-3 pt-4">
+                  <button
+                    onClick={() => setDeletingId(null)}
+                    className="flex-1 px-4 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-white font-medium text-sm transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDebt(deletingId)}
+                    className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold rounded-lg text-sm transition-colors"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

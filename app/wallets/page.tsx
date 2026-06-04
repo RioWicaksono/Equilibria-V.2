@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle } from 'lucide-react';
+import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -9,25 +9,28 @@ export default function WalletsPage() {
   const { formatCurrency } = useSettings();
   const [wallets, setWallets] = useState<{ id: string; name: string; balance: number }[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK'>('NEW');
+  const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK' | 'EDIT'>('NEW');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: '', amount: '' });
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingWallet, setEditingWallet] = useState<{ id: string; name: string; balance: number } | null>(null);
 
   const handleSave = () => {
     let updated;
     const amountVal = parseFloat(formData.amount.replace(/\D/g, '')) || 0;
-    
+
     if (modalType === 'NEW') {
       if (!formData.name) return;
       updated = [...wallets, { id: crypto.randomUUID(), name: formData.name, balance: amountVal }];
+    } else if (modalType === 'EDIT' && editingWallet) {
+      updated = wallets.map(w => w.id === editingWallet.id ? { ...w, name: formData.name, balance: amountVal } : w);
     } else {
       updated = wallets.map(w => {
         if (w.id === selectedWalletId) {
-          return { 
-            ...w, 
-            balance: typeof w.balance !== 'number' ? 0 : 
-               modalType === 'TOPUP' ? w.balance + amountVal : Math.max(0, w.balance - amountVal) 
+          return {
+            ...w,
+            balance: typeof w.balance !== 'number' ? 0 :
+               modalType === 'TOPUP' ? w.balance + amountVal : Math.max(0, w.balance - amountVal)
           };
         }
         return w;
@@ -36,6 +39,7 @@ export default function WalletsPage() {
     setWallets(updated);
     localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
     setIsModalOpen(false);
+    setEditingWallet(null);
   };
 
   const handleDeleteWallet = (id: string) => {
@@ -43,6 +47,13 @@ export default function WalletsPage() {
     setWallets(updated);
     localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
     setDeletingId(null);
+  };
+
+  const openEditModal = (wallet: typeof wallets[0]) => {
+    setEditingWallet(wallet);
+    setFormData({ name: wallet.name, amount: wallet.balance.toString() });
+    setModalType('EDIT');
+    setIsModalOpen(true);
   };
 
   useEffect(() => {
@@ -83,12 +94,20 @@ export default function WalletsPage() {
               <div className="p-3 bg-[#1A1A1A] rounded-lg">
                 <CreditCard className="w-6 h-6 text-zinc-400" />
               </div>
-              <button 
-                onClick={() => setDeletingId(wallet.id)}
-                className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => openEditModal(wallet)}
+                  className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setDeletingId(wallet.id)}
+                  className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <div>
               <p className="text-sm text-zinc-400">{wallet.name}</p>
@@ -111,27 +130,35 @@ export default function WalletsPage() {
           <div className="bg-[#141414] border border-[#262626] rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative">
             <div className="flex justify-between items-center p-5 border-b border-zinc-800/80">
               <h3 className="font-bold text-lg text-white">
-                {modalType === 'NEW' ? 'Tambah Dompet Baru' : modalType === 'TOPUP' ? 'Topup Dompet' : 'Tarik Saldo'}
+                {modalType === 'NEW' ? 'Tambah Dompet Baru' : modalType === 'EDIT' ? 'Edit Dompet' : modalType === 'TOPUP' ? 'Topup Dompet' : 'Tarik Saldo'}
               </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-400 hover:text-white transition-colors">
+              <button onClick={() => { setIsModalOpen(false); setEditingWallet(null); }} className="text-zinc-400 hover:text-white transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-5 space-y-4">
-              {modalType === 'NEW' && (
+              {modalType === 'NEW' || modalType === 'EDIT' ? (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama Dompet</label>
                   <input type="text" placeholder="Contoh: BCA Utama" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
                 </div>
+              ) : null}
+              {(modalType === 'NEW' || modalType === 'EDIT') && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Saldo Awal</label>
+                  <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                </div>
               )}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>
-                <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
-              </div>
+              {(modalType === 'TOPUP' || modalType === 'TARIK') && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>
+                  <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                </div>
+              )}
             </div>
             <div className="p-5 border-t border-zinc-800/80 bg-[#1A1A1A] flex justify-end gap-3 rounded-b-xl">
-              <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg">Batal</button>
-              <button disabled={modalType === 'NEW' ? (!formData.name || !formData.amount) : !formData.amount} onClick={handleSave} className="px-6 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg disabled:opacity-50">Simpan</button>
+              <button onClick={() => { setIsModalOpen(false); setEditingWallet(null); }} className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-sm font-medium rounded-lg">Batal</button>
+              <button disabled={modalType === 'NEW' || modalType === 'EDIT' ? (!formData.name || !formData.amount) : !formData.amount} onClick={handleSave} className="px-6 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg disabled:opacity-50">Simpan</button>
             </div>
           </div>
         </div>
@@ -140,13 +167,13 @@ export default function WalletsPage() {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deletingId && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
@@ -163,13 +190,13 @@ export default function WalletsPage() {
                   </p>
                 </div>
                 <div className="flex w-full gap-3 pt-4">
-                  <button 
+                  <button
                     onClick={() => setDeletingId(null)}
                     className="flex-1 px-4 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-white font-medium text-sm transition-colors"
                   >
                     Batal
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleDeleteWallet(deletingId)}
                     className="flex-1 px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white font-bold rounded-lg text-sm transition-colors"
                   >
