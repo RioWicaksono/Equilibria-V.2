@@ -25,7 +25,7 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
       {/* Mobile Header Toggle */}
       <div className="md:hidden flex items-center justify-between p-4 bg-[#0D0D0D] border-b border-[#262626]">
         <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          <span className="w-8 h-8 flex items-center justify-center font-black bg-[#000000] text-[#faff04] border border-[#faff04] rounded-[20px]">
+          <span className="w-8 h-8 flex items-center justify-center font-black bg-[#0A0A0A] text-[#faff04] border-2 border-[#faff04] rounded-full">
             E
           </span> 
           Equilibria

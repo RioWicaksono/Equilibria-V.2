@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Database } from 'lucide-react';
 
 export default function SystemStatus() {
-  const [status, setStatus] = useState<'green' | 'yellow' | 'red'>('green');
+  const [systemStatus, setSystemStatus] = useState<'green' | 'yellow' | 'red'>('green');
   const [telegramStatus, setTelegramStatus] = useState<'LOADING' | 'ACTIVE' | 'INACTIVE'>('LOADING');
+  const [databaseStatus, setDatabaseStatus] = useState<'LOADING' | 'CONNECTED' | 'DISCONNECTED'>('LOADING');
 
   useEffect(() => {
     let timeout: NodeJS.Timeout;
@@ -24,11 +25,26 @@ export default function SystemStatus() {
       }
     };
 
+    const checkDatabase = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (res.ok) {
+          const data = await res.json();
+          if (isActive) {
+            setDatabaseStatus(data.health === 'ok' || data.status === 'ok' ? 'CONNECTED' : 'DISCONNECTED');
+          }
+        } else {
+          if (isActive) setDatabaseStatus('DISCONNECTED');
+        }
+      } catch {
+        if (isActive) setDatabaseStatus('DISCONNECTED');
+      }
+    };
+
     const checkStatus = async () => {
       if (!navigator.onLine) {
-        setStatus('red');
+        setSystemStatus('red');
       } else {
-        // Check network stability using Network Information API if available
         const connection = (navigator as any).connection;
         let isUnstable = false;
         if (connection) {
@@ -39,27 +55,27 @@ export default function SystemStatus() {
 
         try {
           const controller = new AbortController();
-          const id = setTimeout(() => controller.abort(), 5000); // 5s timeout
+          const id = setTimeout(() => controller.abort(), 5000);
           const res = await fetch('/api/health', { signal: controller.signal });
           clearTimeout(id);
-          
+
           if (!res.ok) {
-            setStatus('red');
+            setSystemStatus('red');
           } else {
-            setStatus(isUnstable ? 'yellow' : 'green');
+            setSystemStatus(isUnstable ? 'yellow' : 'green');
           }
         } catch (error) {
-          // fetch failed or timed out
           if (error instanceof Error && error.name === 'AbortError') {
-            setStatus('yellow'); // Network is just very slow over 5s
+            setSystemStatus('yellow');
           } else {
-            setStatus('red');
+            setSystemStatus('red');
           }
         }
       }
-      
+
       checkTelegram();
-      timeout = setTimeout(checkStatus, 15000); // Check every 15s
+      checkDatabase();
+      timeout = setTimeout(checkStatus, 15000);
     };
 
     const handleOnline = () => {
@@ -67,8 +83,9 @@ export default function SystemStatus() {
     };
 
     const handleOffline = () => {
-      setStatus('red');
+      setSystemStatus('red');
       setTelegramStatus('INACTIVE');
+      setDatabaseStatus('DISCONNECTED');
     };
 
     window.addEventListener('online', handleOnline);
@@ -83,10 +100,16 @@ export default function SystemStatus() {
     };
   }, []);
 
-  const colorClasses = {
+  const statusColorClasses = {
     green: 'bg-teal-400 shadow-[0_0_8px_#2DD4BF]',
     yellow: 'bg-amber-400 shadow-[0_0_8px_#fbbf24]',
     red: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
+  };
+
+  const statusTextClasses = {
+    green: 'Aktif',
+    yellow: 'Lemah',
+    red: 'Offline'
   };
 
   const telegramColorClasses = {
@@ -95,8 +118,27 @@ export default function SystemStatus() {
     INACTIVE: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
   };
 
+  const telegramTextClasses = {
+    LOADING: 'Memeriksa',
+    ACTIVE: 'Aktif',
+    INACTIVE: 'Tidak Aktif'
+  };
+
+  const databaseColorClasses = {
+    LOADING: 'bg-zinc-400 shadow-[0_0_8px_#9ca3af]',
+    CONNECTED: 'bg-teal-400 shadow-[0_0_8px_#2DD4BF]',
+    DISCONNECTED: 'bg-rose-500 shadow-[0_0_8px_#f43f5e]'
+  };
+
+  const databaseTextClasses = {
+    LOADING: 'Menyambung...',
+    CONNECTED: 'Terhubung',
+    DISCONNECTED: 'Terputus'
+  };
+
   return (
     <div className="flex flex-col sm:flex-row gap-2">
+      {/* Telegram Status */}
       <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
         {telegramStatus === 'LOADING' ? (
           <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />
@@ -104,12 +146,26 @@ export default function SystemStatus() {
           <div className={`w-2 h-2 rounded-full ${telegramColorClasses[telegramStatus]}`} />
         )}
         <span className="text-zinc-300 font-semibold text-xs mt-0.5">
-          Telegram: {telegramStatus === 'ACTIVE' ? 'Aktif' : telegramStatus === 'LOADING' ? 'Memeriksa' : 'Tidak Aktif'}
+          Telegram: {telegramTextClasses[telegramStatus]}
         </span>
       </div>
+
+      {/* Database Status */}
       <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
-        <div className={`w-2 h-2 rounded-full ${colorClasses[status]}`} />
-        <span className="text-zinc-300 font-semibold text-xs mt-0.5">Sistem aktif</span>
+        {databaseStatus === 'LOADING' ? (
+          <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />
+        ) : (
+          <div className={`w-2 h-2 rounded-full ${databaseColorClasses[databaseStatus]}`} />
+        )}
+        <span className="text-zinc-300 font-semibold text-xs mt-0.5">
+          Database: {databaseTextClasses[databaseStatus]}
+        </span>
+      </div>
+
+      {/* System Status */}
+      <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
+        <div className={`w-2 h-2 rounded-full ${statusColorClasses[systemStatus]}`} />
+        <span className="text-zinc-300 font-semibold text-xs mt-0.5">Sistem: {statusTextClasses[systemStatus]}</span>
       </div>
     </div>
   );

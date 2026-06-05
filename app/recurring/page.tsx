@@ -5,13 +5,22 @@ import { Repeat, Plus, CalendarClock, X, Pencil, Trash2, AlertTriangle, Loader2 
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
+interface RecurringItem {
+  id: string;
+  name: string;
+  amount: number;
+  frequency: string;
+  nextDate: string;
+  description?: string;
+}
+
 export default function RecurringPage() {
   const { formatCurrency } = useSettings();
-  const [recurring, setRecurring] = useState<{ id: string; name: string; amount: number; frequency: string; nextDate: string }[]>([]);
+  const [recurring, setRecurring] = useState<RecurringItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', amount: '', frequency: 'Bulanan', nextDate: '' });
-  const [editingItem, setEditingItem] = useState<typeof recurring[0] | null>(null);
+  const [formData, setFormData] = useState({ name: '', amount: '', frequency: 'Bulanan', nextDate: '', description: '' });
+  const [editingItem, setEditingItem] = useState<RecurringItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -30,9 +39,9 @@ export default function RecurringPage() {
         if (stored) {
           setRecurring(JSON.parse(stored));
         } else {
-          const initial = [
-            { id: '1', name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15' },
-            { id: '2', name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10' },
+          const initial: RecurringItem[] = [
+            { id: '1', name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15', description: 'Hiburan streaming movie dan series' },
+            { id: '2', name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10', description: 'Sewa kamar kos bulanan' },
           ];
           setRecurring(initial);
           localStorage.setItem('equilibria_recurring', JSON.stringify(initial));
@@ -56,11 +65,12 @@ export default function RecurringPage() {
         const res = await fetch('/api/recurring', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingItem.id, name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate }),
+          body: JSON.stringify({ id: editingItem.id, name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate, description: formData.description }),
         });
         const data = await res.json();
         if (data.recurring) {
-          const updated = recurring.map(r => r.id === editingItem.id ? data.recurring : r);
+          const updatedItem = { ...data.recurring, description: formData.description };
+          const updated = recurring.map(r => r.id === editingItem.id ? updatedItem : r);
           setRecurring(updated);
           localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
         }
@@ -68,11 +78,12 @@ export default function RecurringPage() {
         const res = await fetch('/api/recurring', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate }),
+          body: JSON.stringify({ name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate, description: formData.description }),
         });
         const data = await res.json();
         if (data.recurring) {
-          const updated = [...recurring, data.recurring];
+          const newItem = { ...data.recurring, description: formData.description };
+          const updated = [...recurring, newItem];
           setRecurring(updated);
           localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
         }
@@ -102,9 +113,9 @@ export default function RecurringPage() {
     setDeletingId(null);
   };
 
-  const openEditModal = (item: typeof recurring[0]) => {
+  const openEditModal = (item: RecurringItem) => {
     setEditingItem(item);
-    setFormData({ name: item.name, amount: item.amount.toString(), frequency: item.frequency, nextDate: item.nextDate });
+    setFormData({ name: item.name, amount: item.amount.toString(), frequency: item.frequency, nextDate: item.nextDate, description: item.description || '' });
     setIsModalOpen(true);
   };
 
@@ -118,7 +129,7 @@ export default function RecurringPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Kelola langganan bulanan dan transaksi rutin yang otomatis tercatat.</p>
         </div>
-        <button onClick={() => { setFormData({ name: '', amount: '', frequency: 'Bulanan', nextDate: new Date().toISOString().split('T')[0] }); setEditingItem(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setFormData({ name: '', amount: '', frequency: 'Bulanan', nextDate: new Date().toISOString().split('T')[0], description: '' }); setEditingItem(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Buat Jadwal
         </button>
       </header>
@@ -132,8 +143,11 @@ export default function RecurringPage() {
         {recurring.map(item => (
           <div key={item.id} className="bg-[#141414] border border-[#262626] rounded-xl p-5 flex flex-col justify-between gap-4 relative overflow-hidden group hover:border-zinc-700 transition-colors">
              <div className="flex justify-between items-start">
-               <div>
+               <div className="flex-1">
                  <h4 className="font-bold text-white text-base mb-1">{item.name}</h4>
+                 {item.description && (
+                   <p className="text-xs text-zinc-500 mt-1 line-clamp-2 mb-2">{item.description}</p>
+                 )}
                  <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded">
                    <Repeat className="w-3 h-3" /> {item.frequency}
                  </span>
@@ -148,7 +162,7 @@ export default function RecurringPage() {
                </div>
                <p className="text-lg font-bold text-rose-400">- {formatCurrency(item.amount)}</p>
              </div>
-             
+
              <div className="mt-4 pt-4 border-t border-[#262626] flex justify-between items-center text-sm">
                <div className="flex items-center gap-2 text-zinc-500">
                  <CalendarClock className="w-4 h-4" />
@@ -175,10 +189,19 @@ export default function RecurringPage() {
                 <input type="text" placeholder="Contoh: Langganan Netflix" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>
-                <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Deskripsi</label>
+                <textarea
+                  placeholder="Contoh: Hiburan streaming movie dan series"
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none resize-none h-16"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>
+                  <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Frekuensi</label>
                   <select value={formData.frequency} onChange={e => setFormData({...formData, frequency: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none">
@@ -188,10 +211,10 @@ export default function RecurringPage() {
                     <option value="Tahunan">Tahunan</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Mulai Tanggal</label>
-                  <input type="date" value={formData.nextDate} onChange={e => setFormData({...formData, nextDate: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
-                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Mulai Tanggal</label>
+                <input type="date" value={formData.nextDate} onChange={e => setFormData({...formData, nextDate: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
               </div>
             </div>
             <div className="p-5 border-t border-zinc-800/80 bg-[#1A1A1A] flex justify-end gap-3 rounded-b-xl">

@@ -1,20 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X, Pencil, Trash2, AlertTriangle, Loader2, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
+interface DebtItem {
+  id: string;
+  name: string;
+  amount: number;
+  paidAmount: number;
+  type: 'DEBT' | 'LOAN';
+  status: 'UNPAID' | 'PAID';
+  description?: string;
+  loanDate?: string;
+  dueDate?: string;
+}
+
 export default function DebtsPage() {
   const { formatCurrency } = useSettings();
-  const [debts, setDebts] = useState<{ id: string; name: string; amount: number; paidAmount: number; type: 'DEBT' | 'LOAN'; status: 'UNPAID' | 'PAID' }[]>([]);
+  const [debts, setDebts] = useState<DebtItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<{ name: string; amount: string; type: 'DEBT' | 'LOAN' }>({ name: '', amount: '', type: 'DEBT' });
+  const [formData, setFormData] = useState<{ name: string; amount: string; type: 'DEBT' | 'LOAN'; description: string; loanDate: string; dueDate: string }>({ name: '', amount: '', type: 'DEBT', description: '', loanDate: '', dueDate: '' });
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
-  const [editingDebt, setEditingDebt] = useState<typeof debts[0] | null>(null);
+  const [editingDebt, setEditingDebt] = useState<DebtItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -34,9 +46,9 @@ export default function DebtsPage() {
           const parsed = JSON.parse(stored);
           setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
         } else {
-          const initial: { id: string; name: string; amount: number; paidAmount: number; type: 'DEBT' | 'LOAN'; status: 'UNPAID' | 'PAID' }[] = [
-            { id: '1', name: 'Pinjam ke Budi', amount: 500000, paidAmount: 0, type: 'DEBT', status: 'UNPAID' },
-            { id: '2', name: 'Bayar Makan Siang Andi', amount: 150000, paidAmount: 50000, type: 'LOAN', status: 'UNPAID' },
+          const initial: DebtItem[] = [
+            { id: '1', name: 'Pinjam ke Budi', amount: 500000, paidAmount: 0, type: 'DEBT', status: 'UNPAID', description: 'Pinjam untuk modal usaha', loanDate: '2026-06-01', dueDate: '2026-07-01' },
+            { id: '2', name: 'Bayar Makan Siang Andi', amount: 150000, paidAmount: 50000, type: 'LOAN', status: 'UNPAID', description: 'Uang makan siang bersama kolega', loanDate: '2026-05-15', dueDate: '2026-06-15' },
           ];
           setDebts(initial);
           localStorage.setItem('equilibria_debts', JSON.stringify(initial));
@@ -63,11 +75,11 @@ export default function DebtsPage() {
         const res = await fetch('/api/debts', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingDebt.id, name: formData.name, amount: amountVal, type: formData.type }),
+          body: JSON.stringify({ id: editingDebt.id, name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }),
         });
         const data = await res.json();
         if (data.debt) {
-          const updated = debts.map(d => d.id === editingDebt.id ? { ...d, name: formData.name, amount: amountVal, type: formData.type } : d);
+          const updated = debts.map(d => d.id === editingDebt.id ? { ...d, name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate } : d);
           setDebts(updated);
           localStorage.setItem('equilibria_debts', JSON.stringify(updated));
         }
@@ -75,11 +87,11 @@ export default function DebtsPage() {
         const res = await fetch('/api/debts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: formData.name, amount: amountVal, type: formData.type }),
+          body: JSON.stringify({ name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }),
         });
         const data = await res.json();
         if (data.debt) {
-          const updated = [...debts, { ...data.debt, paidAmount: 0 }];
+          const updated = [...debts, { ...data.debt, paidAmount: 0, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }];
           setDebts(updated);
           localStorage.setItem('equilibria_debts', JSON.stringify(updated));
         }
@@ -138,9 +150,16 @@ export default function DebtsPage() {
     setDeletingId(null);
   };
 
-  const openEditModal = (debt: typeof debts[0]) => {
+  const openEditModal = (debt: DebtItem) => {
     setEditingDebt(debt);
-    setFormData({ name: debt.name, amount: debt.amount.toString(), type: debt.type });
+    setFormData({
+      name: debt.name,
+      amount: debt.amount.toString(),
+      type: debt.type,
+      description: debt.description || '',
+      loanDate: debt.loanDate || '',
+      dueDate: debt.dueDate || ''
+    });
     setIsModalOpen(true);
   };
 
@@ -154,7 +173,7 @@ export default function DebtsPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Kelola pinjaman dan uang yang dipinjamkan ke orang lain.</p>
         </div>
-        <button onClick={() => { setFormData({ name: '', amount: '', type: 'DEBT' }); setEditingDebt(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setFormData({ name: '', amount: '', type: 'DEBT', description: '', loanDate: '', dueDate: '' }); setEditingDebt(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Catat Transaksi Baru
         </button>
       </header>
@@ -178,8 +197,11 @@ export default function DebtsPage() {
             ) : debts.filter(d => d.type === 'DEBT').map(debt => (
               <div key={debt.id} className="bg-[#141414] border border-[#262626] rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden group hover:border-rose-500/30 transition-colors">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-bold text-white text-base">{debt.name}</h4>
+                    {debt.description && (
+                      <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{debt.description}</p>
+                    )}
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-rose-500/10 text-rose-400 rounded mt-2 inline-block">Hutang Harus Dibayar</span>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -199,7 +221,23 @@ export default function DebtsPage() {
                 <div className="w-full bg-[#1A1A1A] h-1.5 rounded-full overflow-hidden mt-1">
                   <div className="bg-rose-500 h-full rounded-full" style={{ width: `${Math.min(100, ((debt.paidAmount || 0) / debt.amount) * 100)}%` }} />
                 </div>
-                
+
+                {(debt.loanDate || debt.dueDate) && (
+                  <div className="flex items-center gap-4 text-xs text-zinc-500 pt-2 border-t border-[#262626]">
+                    {debt.loanDate && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>Pinjam: {new Date(debt.loanDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
+                    {debt.dueDate && (
+                      <div className="flex items-center gap-1">
+                        <span>Jatuh Tempo: {new Date(debt.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between pt-3 border-t border-[#262626]">
                   <div className="text-xs">
                     <p className="text-zinc-500">Total: <span className="text-zinc-300">{formatCurrency(debt.amount)}</span></p>
@@ -226,8 +264,11 @@ export default function DebtsPage() {
             ) : debts.filter(d => d.type === 'LOAN').map(debt => (
               <div key={debt.id} className="bg-[#141414] border border-[#262626] rounded-xl p-5 flex flex-col gap-4 relative overflow-hidden group hover:border-teal-500/30 transition-colors">
                 <div className="flex justify-between items-start">
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-bold text-white text-base">{debt.name}</h4>
+                    {debt.description && (
+                      <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{debt.description}</p>
+                    )}
                     <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-teal-500/10 text-teal-400 rounded mt-2 inline-block">Piutang Menunggu</span>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -278,6 +319,25 @@ export default function DebtsPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama / Catatan</label>
                 <input type="text" placeholder="Contoh: Pinjam ke Budi" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Deskripsi</label>
+                <textarea
+                  placeholder="Contoh: Pinjam untuk modal usaha"
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none resize-none h-16"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tanggal Peminjaman</label>
+                  <input type="date" value={formData.loanDate} onChange={e => setFormData({...formData, loanDate: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Jatuh Tempo</label>
+                  <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>

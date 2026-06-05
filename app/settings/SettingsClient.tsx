@@ -25,34 +25,23 @@ export default function SettingsClient() {
   const [lastHealthCheck, setLastHealthCheck] = useState<string | null>(null);
 
   // Mock Settings State
-  const [theme, setTheme] = useState('dark');
   const [currency, setCurrency] = useState('IDR');
-  const [language, setLanguage] = useState('id');
   const [telegramToken, setTelegramToken] = useState('');
   const [toastMessage, setToastMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   useEffect(() => {
     // Load general settings
-    const t = localStorage.getItem('equilibria_theme');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (t) setTheme(t);
     const c = localStorage.getItem('equilibria_currency');
     if (c) setCurrency(c);
-    const l = localStorage.getItem('equilibria_lang');
-    if (l) setLanguage(l);
     setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
   }, []);
 
   const handleSettingChange = (key: string, value: string) => {
-    if (key === 'theme') setTheme(value);
     if (key === 'currency') setCurrency(value);
-    if (key === 'lang') setLanguage(value);
   };
 
   const handleSaveGeneral = () => {
-    localStorage.setItem('equilibria_theme', theme);
     localStorage.setItem('equilibria_currency', currency);
-    localStorage.setItem('equilibria_lang', language);
     window.dispatchEvent(new Event('settingsUpdated'));
     showToast(`Pengaturan Umum disimpan`);
   };
@@ -72,9 +61,28 @@ export default function SettingsClient() {
   const [pinSuccess, setPinSuccess] = useState('');
   const [isChangingPin, setIsChangingPin] = useState(false);
 
+  // Auto-lock timeout state
+  const [autoLockTimeout, setAutoLockTimeout] = useState(5);
+  const [showTimeoutDropdown, setShowTimeoutDropdown] = useState(false);
+
+  const timeoutOptions = [
+    { value: 0, label: 'Tidak Pernah' },
+    { value: 1, label: '1 menit' },
+    { value: 5, label: '5 menit' },
+    { value: 10, label: '10 menit' },
+    { value: 15, label: '15 menit' },
+    { value: 30, label: '30 menit' },
+  ];
+
+  useEffect(() => {
+    // Load auto-lock timeout
+    const timeout = localStorage.getItem('equilibria_auto_lock_timeout');
+    if (timeout) setAutoLockTimeout(parseInt(timeout));
+  }, []);
+
   useEffect(() => {
     let active = true;
-    
+
     const doFetchLogs = () => {
       fetch('/api/telegram-webhook?logs=true')
         .then(res => res.json())
@@ -113,35 +121,47 @@ export default function SettingsClient() {
   const handleSavePin = () => {
     setPinError('');
     setPinSuccess('');
-    
+
     const stored = localStorage.getItem('equilibria_pin');
     const actualPin = stored ? atob(stored) : '123789';
-    
-    if (currentPin !== actualPin) {
+
+    if (!stored && currentPin !== actualPin && currentPin !== '') {
       setPinError('PIN saat ini salah');
       return;
     }
-    
+
+    if (stored && currentPin !== actualPin) {
+      setPinError('PIN saat ini salah');
+      return;
+    }
+
     if (newPin.length !== 6) {
       setPinError('PIN baru harus 6 digit');
       return;
     }
-    
+
     if (newPin !== confirmPin) {
       setPinError('Konfirmasi PIN tidak cocok');
       return;
     }
-    
+
     localStorage.setItem('equilibria_pin', btoa(newPin));
     setPinSuccess('PIN berhasil diperbarui');
     setCurrentPin('');
     setNewPin('');
     setConfirmPin('');
     setIsChangingPin(false);
-    
+
     setTimeout(() => {
       setPinSuccess('');
     }, 3000);
+  };
+
+  const handleSaveTimeout = () => {
+    localStorage.setItem('equilibria_auto_lock_timeout', autoLockTimeout.toString());
+    window.dispatchEvent(new Event('settingsUpdated'));
+    showToast(`Pengaturan auto-lock disimpan (${autoLockTimeout === 0 ? 'Dinonaktifkan' : `${autoLockTimeout} menit`})`);
+    setShowTimeoutDropdown(false);
   };
 
   const testConnection = async () => {
@@ -345,25 +365,16 @@ export default function SettingsClient() {
       <div className="flex-1 w-full bg-[#141414] border border-[#262626] rounded-2xl p-6 min-h-[500px]">
         <AnimatePresence mode="wait">
           {activeTab === 'general' && (
-            <motion.div 
+            <motion.div
               key="general"
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
               className="space-y-8"
             >
               <div>
-                <h3 className="text-xl font-bold text-white mb-1"><Palette className="w-5 h-5 inline-block mr-2 text-teal-400" /> Preferensi Tampilan</h3>
-                <p className="text-sm text-zinc-400 mb-6">Sesuaikan tampilan dan pengaturan lokal aplikasi sesuai keinginan Anda.</p>
-                
+                <h3 className="text-xl font-bold text-white mb-1"><Palette className="w-5 h-5 inline-block mr-2 text-teal-400" /> Preferensi Aplikasi</h3>
+                <p className="text-sm text-zinc-400 mb-6">Konfigurasi dasar aplikasi Equilibria.</p>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-zinc-300">Tema Gelap/Terang</label>
-                    <select value={theme} onChange={(e) => handleSettingChange('theme', e.target.value)} className="w-full bg-[#1A1A1A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-teal-500 outline-none">
-                      <option value="dark">🌙 Dark Mode</option>
-                      <option value="light">☀️ Light Mode (Segera)</option>
-                      <option value="system">💻 System Default</option>
-                    </select>
-                  </div>
-                  
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-zinc-300">Mata Uang Utama</label>
                     <select value={currency} onChange={(e) => handleSettingChange('currency', e.target.value)} className="w-full bg-[#1A1A1A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:ring-1 focus:ring-teal-500 outline-none">
@@ -377,16 +388,16 @@ export default function SettingsClient() {
                     <label className="text-sm font-medium text-zinc-300">Bahasa</label>
                     <div className="relative">
                       <Globe className="w-4 h-4 absolute left-3 top-3 text-zinc-400" />
-                      <select value={language} onChange={(e) => handleSettingChange('lang', e.target.value)} className="w-full bg-[#1A1A1A] border border-[#333] text-white rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-1 focus:ring-teal-500 outline-none">
+                      <select value="id" disabled className="w-full bg-[#1A1A1A] border border-[#333] text-zinc-500 rounded-lg pl-9 pr-3 py-2.5 text-sm outline-none cursor-not-allowed">
                         <option value="id">Bahasa Indonesia</option>
-                        <option value="en">English (US)</option>
                       </select>
                     </div>
+                    <p className="text-xs text-zinc-600">Hanya Bahasa Indonesia yang tersedia</p>
                   </div>
 
                   <div className="space-y-2 flex flex-col justify-end">
                     <button onClick={handleSaveGeneral} className="w-full flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-400 text-black font-semibold rounded-lg px-3 py-2.5 text-sm transition-colors mt-6">
-                      <Save className="w-4 h-4" /> Simpan Tampilan
+                      <Save className="w-4 h-4" /> Simpan Pengaturan
                     </button>
                     <button onClick={handleTestPush} className="w-full flex items-center justify-center gap-2 bg-[#1A1A1A] border border-[#333] hover:border-teal-500/50 text-white rounded-lg px-3 py-2.5 text-sm transition-colors mt-2">
                       <Bell className="w-4 h-4 text-teal-400" /> Uji Coba Push Notifikasi
@@ -398,21 +409,51 @@ export default function SettingsClient() {
           )}
 
           {activeTab === 'security' && (
-            <motion.div 
+            <motion.div
               key="security"
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
               className="space-y-8"
             >
               <div>
                 <h3 className="text-xl font-bold text-white mb-1"><Lock className="w-5 h-5 inline-block mr-2 text-teal-400" /> Keamanan & PIN</h3>
-                <p className="text-sm text-zinc-400 mb-6">Atur PIN perlindungan untuk membatasi akses saat aplikasi ditinggalkan.</p>
-                
+                <p className="text-sm text-zinc-400 mb-6">Atur PIN perlindungan dan auto-lock untuk keamanan aplikasi.</p>
+
+                {/* Auto-Lock Timeout Setting */}
+                <div className="bg-[#1A1A1A] border border-[#262626] rounded-xl p-5 w-full max-w-md mb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-white font-medium">Auto-Lock Timeout</p>
+                      <p className="text-xs text-zinc-400 mt-1">Aplikasi akan terkunci otomatis setelah waktu tertentu tidak aktif.</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 relative">
+                    <div className="relative">
+                      <select
+                        value={autoLockTimeout}
+                        onChange={(e) => setAutoLockTimeout(parseInt(e.target.value))}
+                        className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                      >
+                        {timeoutOptions.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleSaveTimeout}
+                      className="w-full mt-3 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Save className="w-4 h-4" /> Simpan Auto-Lock
+                    </button>
+                  </div>
+                </div>
+
+                {/* PIN Change Section */}
                 <div className="bg-[#1A1A1A] border border-[#262626] rounded-xl p-5 w-full max-w-md">
                   {!isChangingPin ? (
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
                         <p className="text-sm text-white font-medium">Ubah PIN Aplikasi</p>
-                        <p className="text-xs text-zinc-400 mt-1">Default PIN: <strong>123789</strong></p>
+                        <p className="text-xs text-zinc-500 mt-1">PIN digunakan untuk membuka aplikasi dan mengakses data.</p>
                       </div>
                       <button
                         onClick={() => setIsChangingPin(true)}
@@ -424,7 +465,7 @@ export default function SettingsClient() {
                   ) : (
                     <div className="space-y-4">
                       <div>
-                        <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">PIN SAAT INI</label>
+                        <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">MASUKKAN PIN SAAT INI</label>
                         <input
                           type="password"
                           maxLength={6}
@@ -433,8 +474,11 @@ export default function SettingsClient() {
                           className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
                           placeholder="******"
                         />
+                        {!localStorage.getItem('equilibria_pin') && (
+                          <p className="text-[10px] text-zinc-600 mt-1">Hint: Default PIN adalah 123789</p>
+                        )}
                       </div>
-                      
+
                       <div>
                         <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">PIN BARU (6 DIGIT)</label>
                         <input
@@ -552,8 +596,8 @@ export default function SettingsClient() {
                 <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 bg-blue-500/10 rounded-lg">
-                        <Send className="w-5 h-5 text-blue-400" />
+                      <div className={`p-2.5 rounded-lg ${telegramStatus === 'ACTIVE' ? 'bg-emerald-500/10' : 'bg-blue-500/10'}`}>
+                        <Send className={`w-5 h-5 ${telegramStatus === 'ACTIVE' ? 'text-emerald-400' : 'text-blue-400'}`} />
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-white mb-0.5">Telegram Bot Integration</h4>
@@ -565,7 +609,7 @@ export default function SettingsClient() {
                       telegramStatus === 'INACTIVE' ? 'bg-rose-500/10 text-rose-400' :
                       'bg-zinc-500/10 text-zinc-400'
                     }`}>
-                      {telegramStatus === 'LOADING' ? 'CHECKING...' : telegramStatus}
+                      {telegramStatus === 'LOADING' ? 'CHECKING...' : telegramStatus === 'ACTIVE' ? 'ACTIVE' : telegramStatus === 'INACTIVE' ? 'INACTIVE' : telegramStatus}
                     </span>
                   </div>
 
@@ -575,21 +619,42 @@ export default function SettingsClient() {
                       <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
                         <KeyRound className="w-3.5 h-3.5 text-zinc-500" /> Bot API Token
                       </label>
-                      <div className="relative">
-                        <input
-                          type={showTelegramToken ? 'text' : 'password'}
-                          value={telegramToken}
-                          onChange={(e) => setTelegramToken(e.target.value)}
-                          className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg pl-4 pr-10 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-zinc-700 transition-shadow"
-                          placeholder="1234567890:AAH... dari BotFather"
-                        />
-                        <button
-                          onClick={() => setShowTelegramToken(!showTelegramToken)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
-                        >
-                          {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
+                      {telegramStatus === 'ACTIVE' && localStorage.getItem('equilibria_telegram_token') ? (
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-emerald-400" />
+                              <span className="text-sm text-emerald-400 font-medium">Bot Telegram Aktif</span>
+                            </div>
+                            <button
+                              onClick={() => setShowTelegramToken(!showTelegramToken)}
+                              className="text-zinc-500 hover:text-white transition-colors text-xs flex items-center gap-1"
+                            >
+                              {showTelegramToken ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              {showTelegramToken ? 'Sembunyikan' : 'Lihat'}
+                            </button>
+                          </div>
+                          <p className="text-xs text-zinc-500 mt-2 font-mono">
+                            {showTelegramToken ? localStorage.getItem('equilibria_telegram_token') : `${localStorage.getItem('equilibria_telegram_token')?.substring(0, 10)}...${localStorage.getItem('equilibria_telegram_token')?.substring(localStorage.getItem('equilibria_telegram_token')!.length - 5)}`}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <input
+                            type={showTelegramToken ? 'text' : 'password'}
+                            value={telegramToken}
+                            onChange={(e) => setTelegramToken(e.target.value)}
+                            className="w-full bg-[#0A0A0A] border border-zinc-800 text-white rounded-lg pl-4 pr-10 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-zinc-700 transition-shadow"
+                            placeholder="1234567890:AAH... dari BotFather"
+                          />
+                          <button
+                            onClick={() => setShowTelegramToken(!showTelegramToken)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                          >
+                            {showTelegramToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      )}
                       <p className="text-[10px] text-zinc-500 mt-1.5 ml-1">Dapatkan token dari @BotFather di Telegram</p>
                     </div>
 
@@ -598,6 +663,11 @@ export default function SettingsClient() {
                         onClick={() => {
                           localStorage.setItem('equilibria_telegram_token', telegramToken);
                           showToast('Token Telegram disimpan');
+                          // Refresh status
+                          fetch('/api/telegram-webhook')
+                            .then(res => res.json())
+                            .then(data => setTelegramStatus(data.status))
+                            .catch(() => setTelegramStatus('INACTIVE'));
                         }}
                         className="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                       >

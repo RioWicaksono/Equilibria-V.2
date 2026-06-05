@@ -5,13 +5,22 @@ import { Target, Plus, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
+interface GoalItem {
+  id: string;
+  name: string;
+  targetAmount: number;
+  currentAmount: number;
+  deadline: string;
+  description?: string;
+}
+
 export default function GoalsPage() {
   const { formatCurrency } = useSettings();
-  const [goals, setGoals] = useState<{ id: string; name: string; targetAmount: number; currentAmount: number; deadline: string }[]>([]);
+  const [goals, setGoals] = useState<GoalItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ name: '', targetAmount: '', currentAmount: '', deadline: '' });
-  const [editingGoal, setEditingGoal] = useState<typeof goals[0] | null>(null);
+  const [formData, setFormData] = useState({ name: '', targetAmount: '', currentAmount: '', deadline: '', description: '' });
+  const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -30,9 +39,9 @@ export default function GoalsPage() {
         if (stored) {
           setGoals(JSON.parse(stored));
         } else {
-          const initial = [
-            { id: '1', name: 'Dana Darurat', targetAmount: 20000000, currentAmount: 5000000, deadline: '2026-12-31' },
-            { id: '2', name: 'Liburan ke Bali', targetAmount: 7000000, currentAmount: 1500000, deadline: '2026-08-15' },
+          const initial: GoalItem[] = [
+            { id: '1', name: 'Dana Darurat', targetAmount: 20000000, currentAmount: 5000000, deadline: '2026-12-31', description: 'Dana cadangan untuk keadaan darurat' },
+            { id: '2', name: 'Liburan ke Bali', targetAmount: 7000000, currentAmount: 1500000, deadline: '2026-08-15', description: 'Tabungan untuk berwisata ke Bali bersama keluarga' },
           ];
           setGoals(initial);
           localStorage.setItem('equilibria_goals', JSON.stringify(initial));
@@ -57,11 +66,12 @@ export default function GoalsPage() {
         const res = await fetch('/api/goals', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingGoal.id, name: formData.name, targetAmount: targetVal, currentAmount: currentVal, deadline: formData.deadline }),
+          body: JSON.stringify({ id: editingGoal.id, name: formData.name, targetAmount: targetVal, currentAmount: currentVal, deadline: formData.deadline, description: formData.description }),
         });
         const data = await res.json();
         if (data.goal) {
-          const updated = goals.map(g => g.id === editingGoal.id ? data.goal : g);
+          const updatedGoal = { ...data.goal, description: formData.description };
+          const updated = goals.map(g => g.id === editingGoal.id ? updatedGoal : g);
           setGoals(updated);
           localStorage.setItem('equilibria_goals', JSON.stringify(updated));
         }
@@ -69,11 +79,12 @@ export default function GoalsPage() {
         const res = await fetch('/api/goals', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: formData.name, targetAmount: targetVal, currentAmount: currentVal, deadline: formData.deadline }),
+          body: JSON.stringify({ name: formData.name, targetAmount: targetVal, currentAmount: currentVal, deadline: formData.deadline, description: formData.description }),
         });
         const data = await res.json();
         if (data.goal) {
-          const updated = [...goals, data.goal];
+          const newGoal = { ...data.goal, description: formData.description };
+          const updated = [...goals, newGoal];
           setGoals(updated);
           localStorage.setItem('equilibria_goals', JSON.stringify(updated));
         }
@@ -103,13 +114,14 @@ export default function GoalsPage() {
     setDeletingId(null);
   };
 
-  const openEditModal = (goal: typeof goals[0]) => {
+  const openEditModal = (goal: GoalItem) => {
     setEditingGoal(goal);
     setFormData({
       name: goal.name,
       targetAmount: goal.targetAmount.toString(),
       currentAmount: goal.currentAmount.toString(),
-      deadline: goal.deadline
+      deadline: goal.deadline,
+      description: goal.description || ''
     });
     setIsModalOpen(true);
   };
@@ -124,7 +136,7 @@ export default function GoalsPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Pantau progress pencapaian finansial Anda secara berkala.</p>
         </div>
-        <button onClick={() => { setFormData({ name: '', targetAmount: '', currentAmount: '', deadline: new Date().toISOString().split('T')[0] }); setEditingGoal(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setFormData({ name: '', targetAmount: '', currentAmount: '', deadline: new Date().toISOString().split('T')[0], description: '' }); setEditingGoal(null); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Tambah Target
         </button>
       </header>
@@ -140,7 +152,12 @@ export default function GoalsPage() {
           return (
             <div key={goal.id} className="bg-[#141414] border border-[#262626] rounded-xl p-6 relative group hover:border-teal-500/50 transition-colors">
                <div className="flex justify-between items-start mb-4">
-                 <h3 className="font-bold text-lg text-white">{goal.name}</h3>
+                 <div className="flex-1">
+                   <h3 className="font-bold text-lg text-white">{goal.name}</h3>
+                   {goal.description && (
+                     <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{goal.description}</p>
+                   )}
+                 </div>
                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                    <button onClick={() => openEditModal(goal)} className="p-1.5 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors">
                      <Pencil className="w-4 h-4" />
@@ -149,23 +166,24 @@ export default function GoalsPage() {
                      <Trash2 className="w-4 h-4" />
                    </button>
                  </div>
-                 <span className="text-xs font-semibold px-2 py-1 bg-zinc-800 text-zinc-400 rounded">
-                   Target: {new Date(goal.deadline).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
-                 </span>
                </div>
-               
-               <div className="flex justify-between text-sm mb-2">
+               <div className="flex justify-between text-sm mb-2 mt-2">
                  <span className="text-teal-400 font-medium">{formatCurrency(goal.currentAmount)}</span>
                  <span className="text-zinc-500">{formatCurrency(goal.targetAmount)}</span>
                </div>
-               
+
                <div className="h-2 w-full bg-[#1A1A1A] border border-[#262626] rounded-full overflow-hidden">
                  <div className="h-full bg-teal-500 rounded-full transition-all duration-1000 relative" style={{ width: `${percentage}%` }}>
                    <div className="absolute inset-0 bg-white/20 w-full animate-[shimmer_2s_infinite]"></div>
                  </div>
                </div>
-               
-               <p className="text-right text-xs mt-2 font-bold text-zinc-400">{percentage}% Tercapai</p>
+
+               <div className="flex justify-between items-center mt-2">
+                 <p className="text-xs font-bold text-zinc-400">{percentage}% Tercapai</p>
+                 <span className="text-xs font-semibold px-2 py-1 bg-zinc-800 text-zinc-400 rounded">
+                   {new Date(goal.deadline).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}
+                 </span>
+               </div>
             </div>
           );
         })}
@@ -185,6 +203,15 @@ export default function GoalsPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama Target</label>
                 <input type="text" placeholder="Contoh: Beli Rumah" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Deskripsi</label>
+                <textarea
+                  placeholder="Contoh: Tabungan untuk membeli rumah pertama"
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                  className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none resize-none h-20"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">

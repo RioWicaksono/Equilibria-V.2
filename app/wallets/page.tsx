@@ -5,16 +5,23 @@ import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, Aler
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
+interface WalletItem {
+  id: string;
+  name: string;
+  balance: number;
+  description?: string;
+}
+
 export default function WalletsPage() {
   const { formatCurrency } = useSettings();
-  const [wallets, setWallets] = useState<{ id: string; name: string; balance: number }[]>([]);
+  const [wallets, setWallets] = useState<WalletItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK' | 'EDIT'>('NEW');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', amount: '' });
+  const [formData, setFormData] = useState({ name: '', amount: '', description: '' });
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingWallet, setEditingWallet] = useState<{ id: string; name: string; balance: number } | null>(null);
+  const [editingWallet, setEditingWallet] = useState<WalletItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch wallets from API
@@ -35,10 +42,10 @@ export default function WalletsPage() {
           setWallets(JSON.parse(stored));
         } else {
           // Set initial data
-          const initial = [
-            { id: '1', name: 'BCA Utama', balance: 5000000 },
-            { id: '2', name: 'Gopay', balance: 150000 },
-            { id: '3', name: 'Cash', balance: 350000 },
+          const initial: WalletItem[] = [
+            { id: '1', name: 'BCA Utama', balance: 5000000, description: 'Rekening utama untuk transaksi harian' },
+            { id: '2', name: 'Gopay', balance: 150000, description: 'Dompet digital untuk pembayaran online' },
+            { id: '3', name: 'Cash', balance: 350000, description: 'Uang tunai di dompet' },
           ];
           setWallets(initial);
           localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
@@ -64,22 +71,25 @@ export default function WalletsPage() {
         const res = await fetch('/api/wallets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: formData.name, balance: amountVal }),
+          body: JSON.stringify({ name: formData.name, balance: amountVal, description: formData.description }),
         });
         const data = await res.json();
         if (data.wallet) {
-          setWallets([...wallets, data.wallet]);
-          localStorage.setItem('equilibria_wallets', JSON.stringify([...wallets, data.wallet]));
+          const newWallet = { ...data.wallet, description: formData.description };
+          const updated = [...wallets, newWallet];
+          setWallets(updated);
+          localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
         }
       } else if (modalType === 'EDIT' && editingWallet) {
         const res = await fetch('/api/wallets', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: editingWallet.id, name: formData.name, balance: amountVal }),
+          body: JSON.stringify({ id: editingWallet.id, name: formData.name, balance: amountVal, description: formData.description }),
         });
         const data = await res.json();
         if (data.wallet) {
-          const updated = wallets.map(w => w.id === editingWallet.id ? data.wallet : w);
+          const updatedWallet = { ...data.wallet, description: formData.description };
+          const updated = wallets.map(w => w.id === editingWallet.id ? updatedWallet : w);
           setWallets(updated);
           localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
         }
@@ -125,9 +135,9 @@ export default function WalletsPage() {
     setDeletingId(null);
   };
 
-  const openEditModal = (wallet: typeof wallets[0]) => {
+  const openEditModal = (wallet: WalletItem) => {
     setEditingWallet(wallet);
-    setFormData({ name: wallet.name, amount: wallet.balance.toString() });
+    setFormData({ name: wallet.name, amount: wallet.balance.toString(), description: wallet.description || '' });
     setModalType('EDIT');
     setIsModalOpen(true);
   };
@@ -142,7 +152,7 @@ export default function WalletsPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Kelola berbagai rekening dan dompet digital dalam satu tempat.</p>
         </div>
-        <button onClick={() => { setModalType('NEW'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setModalType('NEW'); setFormData({ name: '', amount: '', description: '' }); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Tambah Dompet
         </button>
       </header>
@@ -177,12 +187,15 @@ export default function WalletsPage() {
               <div>
                 <p className="text-sm text-zinc-400">{wallet.name}</p>
                 <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(wallet.balance)}</h3>
+                {wallet.description && (
+                  <p className="text-xs text-zinc-500 mt-2 line-clamp-2">{wallet.description}</p>
+                )}
               </div>
               <div className="mt-6 flex justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">
+                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '', description: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">
                    <ArrowDownRight className="w-4 h-4" /> Tarik
                  </button>
-                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TOPUP'); setFormData({ name: '', amount: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-teal-400 flex items-center justify-center gap-1">
+                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TOPUP'); setFormData({ name: '', amount: '', description: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-teal-400 flex items-center justify-center gap-1">
                    <ArrowUpRight className="w-4 h-4" /> Topup
                  </button>
               </div>
@@ -204,17 +217,26 @@ export default function WalletsPage() {
             </div>
             <div className="p-5 space-y-4">
               {modalType === 'NEW' || modalType === 'EDIT' ? (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama Dompet</label>
-                  <input type="text" placeholder="Contoh: BCA Utama" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
-                </div>
+                <>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama Dompet</label>
+                    <input type="text" placeholder="Contoh: BCA Utama" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Deskripsi</label>
+                    <textarea
+                      placeholder="Contoh: Rekening utama untuk transaksi harian"
+                      value={formData.description}
+                      onChange={e => setFormData({...formData, description: e.target.value})}
+                      className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none resize-none h-20"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Saldo Awal</label>
+                    <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                  </div>
+                </>
               ) : null}
-              {(modalType === 'NEW' || modalType === 'EDIT') && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Saldo Awal</label>
-                  <input type="text" placeholder="Rp..." value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
-                </div>
-              )}
               {(modalType === 'TOPUP' || modalType === 'TARIK') && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nominal</label>
