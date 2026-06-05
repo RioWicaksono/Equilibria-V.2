@@ -10,7 +10,17 @@ interface WalletItem {
   name: string;
   balance: number;
   description?: string;
+  currency?: string;
 }
+
+const CURRENCIES = [
+  { code: 'IDR', symbol: 'Rp', name: 'Rupiah Indonesia', rate: 1 },
+  { code: 'USD', symbol: '$', name: 'US Dollar', rate: 16000 },
+  { code: 'EUR', symbol: '€', name: 'Euro', rate: 17500 },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', rate: 12000 },
+  { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', rate: 3500 },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', rate: 110 },
+];
 
 export default function WalletsPage() {
   const { formatCurrency } = useSettings();
@@ -19,7 +29,7 @@ export default function WalletsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'NEW' | 'TOPUP' | 'TARIK' | 'EDIT'>('NEW');
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', amount: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', amount: '', description: '', currency: 'IDR' });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingWallet, setEditingWallet] = useState<WalletItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,11 +51,12 @@ export default function WalletsPage() {
         if (stored) {
           setWallets(JSON.parse(stored));
         } else {
-          // Set initial data
+          // Set initial data with multi-currency
           const initial: WalletItem[] = [
-            { id: '1', name: 'BCA Utama', balance: 5000000, description: 'Rekening utama untuk transaksi harian' },
-            { id: '2', name: 'Gopay', balance: 150000, description: 'Dompet digital untuk pembayaran online' },
-            { id: '3', name: 'Cash', balance: 350000, description: 'Uang tunai di dompet' },
+            { id: '1', name: 'BCA Utama', balance: 5000000, description: 'Rekening utama untuk transaksi harian', currency: 'IDR' },
+            { id: '2', name: 'Gopay', balance: 150000, description: 'Dompet digital untuk pembayaran online', currency: 'IDR' },
+            { id: '3', name: 'Cash', balance: 350000, description: 'Uang tunai di dompet', currency: 'IDR' },
+            { id: '4', name: 'Travel Fund', balance: 100, description: 'Dollar savings for travel', currency: 'USD' },
           ];
           setWallets(initial);
           localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
@@ -137,7 +148,7 @@ export default function WalletsPage() {
 
   const openEditModal = (wallet: WalletItem) => {
     setEditingWallet(wallet);
-    setFormData({ name: wallet.name, amount: wallet.balance.toString(), description: wallet.description || '' });
+    setFormData({ name: wallet.name, amount: wallet.balance.toString(), description: wallet.description || '', currency: wallet.currency || 'IDR' });
     setModalType('EDIT');
     setIsModalOpen(true);
   };
@@ -152,7 +163,7 @@ export default function WalletsPage() {
           </h2>
           <p className="text-sm text-zinc-500 mt-1">Kelola berbagai rekening dan dompet digital dalam satu tempat.</p>
         </div>
-        <button onClick={() => { setModalType('NEW'); setFormData({ name: '', amount: '', description: '' }); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
+        <button onClick={() => { setModalType('NEW'); setFormData({ name: '', amount: '', description: '', currency: 'IDR' }); setIsModalOpen(true); }} className="px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-bold rounded-lg flex items-center gap-2 transition-colors">
           <Plus className="w-4 h-4" /> Tambah Dompet
         </button>
       </header>
@@ -163,46 +174,55 @@ export default function WalletsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {wallets.map(wallet => (
-            <div key={wallet.id} className="bg-[#141414] border border-[#262626] rounded-xl p-6 relative group hover:border-teal-500/50 transition-colors">
-              <div className="flex justify-between items-start mb-6">
-                <div className="p-3 bg-[#1A1A1A] rounded-lg">
-                  <CreditCard className="w-6 h-6 text-zinc-400" />
+          {wallets.map(wallet => {
+            const currency = CURRENCIES.find(c => c.code === (wallet.currency || 'IDR')) || CURRENCIES[0];
+            const displayBalance = currency.code === 'IDR'
+              ? formatCurrency(wallet.balance)
+              : `${currency.symbol} ${wallet.balance.toLocaleString('id-ID')}`;
+            return (
+              <div key={wallet.id} className="bg-[#141414] border border-[#262626] rounded-xl p-6 relative group hover:border-teal-500/50 transition-colors">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="p-3 bg-[#1A1A1A] rounded-lg">
+                    <CreditCard className="w-6 h-6 text-zinc-400" />
+                  </div>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => openEditModal(wallet)}
+                      className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => setDeletingId(wallet.id)}
+                      className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <button
-                    onClick={() => openEditModal(wallet)}
-                    className="p-2 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setDeletingId(wallet.id)}
-                    className="p-2 text-zinc-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                <div>
+                  <p className="text-sm text-zinc-400">{wallet.name}</p>
+                  <h3 className="text-2xl font-bold text-white mt-1">{displayBalance}</h3>
+                  <span className="text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded mt-1 inline-block">
+                    {currency.code}
+                  </span>
+                  {wallet.description && (
+                    <p className="text-xs text-zinc-500 mt-2 line-clamp-2">{wallet.description}</p>
+                  )}
                 </div>
-              </div>
-              <div>
-                <p className="text-sm text-zinc-400">{wallet.name}</p>
-                <h3 className="text-2xl font-bold text-white mt-1">{formatCurrency(wallet.balance)}</h3>
-                {wallet.description && (
-                  <p className="text-xs text-zinc-500 mt-2 line-clamp-2">{wallet.description}</p>
-                )}
-              </div>
               <div className="mt-6 flex justify-between gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '', description: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">
-                   <ArrowDownRight className="w-4 h-4" /> Tarik
-                 </button>
-                 <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TOPUP'); setFormData({ name: '', amount: '', description: '' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-teal-400 flex items-center justify-center gap-1">
-                   <ArrowUpRight className="w-4 h-4" /> Topup
-                 </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+                   <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TARIK'); setFormData({ name: '', amount: '', description: '', currency: wallet.currency || 'IDR' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-rose-400 flex items-center justify-center gap-1">
+                     <ArrowDownRight className="w-4 h-4" /> Tarik
+                   </button>
+                   <button onClick={() => { setSelectedWalletId(wallet.id); setModalType('TOPUP'); setFormData({ name: '', amount: '', description: '', currency: wallet.currency || 'IDR' }); setIsModalOpen(true); }} className="flex-1 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-xs font-semibold text-teal-400 flex items-center justify-center gap-1">
+                     <ArrowUpRight className="w-4 h-4" /> Topup
+                   </button>
+                 </div>
+               </div>
+             );
+           })}
+         </div>
+       )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -221,6 +241,18 @@ export default function WalletsPage() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Nama Dompet</label>
                     <input type="text" placeholder="Contoh: BCA Utama" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Mata Uang</label>
+                    <select
+                      value={formData.currency}
+                      onChange={e => setFormData({...formData, currency: e.target.value})}
+                      className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none"
+                    >
+                      {CURRENCIES.map(c => (
+                        <option key={c.code} value={c.code}>{c.symbol} {c.code} - {c.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Deskripsi</label>
