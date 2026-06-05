@@ -116,8 +116,8 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
             <ArrowLeftRight className="h-5 w-5 flex-shrink-0" />
             {!isCollapsed && <span>Transaksi</span>}
           </Link>
-          <Link 
-            href="/summary" 
+          <Link
+            href="/summary"
             onClick={closeMenu}
             title="Summary Report"
             className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
@@ -127,12 +127,23 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             {!isCollapsed && <span>Summary Report</span>}
           </Link>
+          <Link
+            href="/statistics"
+            onClick={closeMenu}
+            title="Statistik"
+            className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
+              pathname === '/statistics' ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            {!isCollapsed && <span>Statistik</span>}
+          </Link>
 
           <div className={`px-3 py-2 text-xs font-semibold text-zinc-600 uppercase tracking-wider mt-6 whitespace-nowrap ${isCollapsed ? 'text-center text-[10px] px-0' : ''}`}>
             {isCollapsed ? '---' : 'Fitur Cerdas'}
           </div>
-          <Link 
-            href="/wallets" 
+          <Link
+            href="/wallets"
             onClick={closeMenu}
             title="Multi-Dompet"
             className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
@@ -141,6 +152,17 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
             {!isCollapsed && <span>Multi-Dompet</span>}
+          </Link>
+          <Link
+            href="/budgets"
+            onClick={closeMenu}
+            title="Budget"
+            className={`flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
+              pathname === '/budgets' ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:bg-zinc-800'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+            {!isCollapsed && <span>Budget</span>}
           </Link>
           <Link 
             href="/goals" 
