@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { checkRateLimit } from '@/lib/rate-limit';
+
+// Rate limit store (in production, use Redis or similar)
+const rateLimitStore = new Map<string, { count: number; timestamp: number }>();
 
 // Rate limit config
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 100; // per minute
 
-// Paths that don't require auth
+// Paths that don't require rate limiting
 const PUBLIC_PATHS = [
   '/api/health',
   '/api/docs',
@@ -17,6 +19,72 @@ const SENSITIVE_PATHS = [
   '/api/telegram',
   '/api/telegram-webhook',
 ];
+
+/**
+ * Get client IP from request
+ */
+function getClientIP(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  const realIP = req.headers.get('x-real-ip');
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+
+  return realIP || 'unknown';
+}
+
+/**
+ * Check rate limit for a client
+ */
+function checkRateLimit(
+  req: NextRequest,
+  windowMs: number,
+  maxRequests: number
+): { allowed: boolean; remaining: number; resetTime: number } {
+  const ip = getClientIP(req);
+  const now = Date.now();
+
+  const record = rateLimitStore.get(ip);
+
+  // No record exists - create new one
+  if (!record) {
+    rateLimitStore.set(ip, { count: 1, timestamp: now });
+    return {
+      allowed: true,
+      remaining: maxRequests - 1,
+      resetTime: now + windowMs,
+    };
+  }
+
+  // Check if window has expired
+  if (now - record.timestamp > windowMs) {
+    rateLimitStore.set(ip, { count: 1, timestamp: now });
+    return {
+      allowed: true,
+      remaining: maxRequests - 1,
+      resetTime: now + windowMs,
+    };
+  }
+
+  // Increment count
+  record.count++;
+
+  // Check if limit exceeded
+  if (record.count > maxRequests) {
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: record.timestamp + windowMs,
+    };
+  }
+
+  return {
+    allowed: true,
+    remaining: maxRequests - record.count,
+    resetTime: record.timestamp + windowMs,
+  };
+}
 
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
@@ -30,14 +98,11 @@ export async function middleware(req: NextRequest) {
   const isPublicPath = PUBLIC_PATHS.some(p => path.startsWith(p));
 
   if (!isPublicPath) {
-    // 1. Apply rate limiting to non-public API routes
+    // Apply rate limiting to non-public API routes
     const isSensitive = SENSITIVE_PATHS.some(p => path.startsWith(p));
     const maxRequests = isSensitive ? 30 : RATE_LIMIT_MAX_REQUESTS;
 
-    const rateLimitResult = checkRateLimit(req, {
-      windowMs: RATE_LIMIT_WINDOW_MS,
-      maxRequests,
-    });
+    const rateLimitResult = checkRateLimit(req, RATE_LIMIT_WINDOW_MS, maxRequests);
 
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
@@ -59,7 +124,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // 2. Add security headers to all responses
+  // Add security headers to all responses
   const response = NextResponse.next();
 
   response.headers.set('X-Content-Type-Options', 'nosniff');
