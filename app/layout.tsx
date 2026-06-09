@@ -47,21 +47,19 @@ export default function RootLayout({
           }
           body {
             font-family: var(--font-sans);
-            height: 100dvh;
-            overflow: hidden;
           }
         `}</style>
       </head>
-      <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5] h-dvh overflow-hidden">
+      <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5]">
         <PWARegistration />
         <SettingsProvider>
           <PinProtection>
-            <div className="flex h-full w-full overflow-hidden">
+            <div className="flex min-h-screen">
               <Sidebar systemStatus={{ isVercel }} />
 
               {/* Main Content Area */}
-              <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-5 flex flex-col relative w-full min-w-0 no-scrollbar">
-                <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col min-w-0">
+              <main className="flex-1 overflow-x-hidden pt-12 md:pt-0 pb-20 md:pb-0">
+                <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-5">
                   {children}
                 </div>
               </main>

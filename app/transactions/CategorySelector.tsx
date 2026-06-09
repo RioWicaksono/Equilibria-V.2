@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Search } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { ALL_DEFAULT_CATEGORIES, getCategoriesByType } from '@/domain/value-objects/TransactionCategory';
+import { Plus, X, Search, Edit3 } from 'lucide-react';
+import { ALL_DEFAULT_CATEGORIES, getCategoriesByType, Category } from '@/domain/value-objects/TransactionCategory';
 
 interface CategorySelectorProps {
   value: string;
@@ -14,12 +13,60 @@ interface CategorySelectorProps {
 
 export default function CategorySelector({ value, onChange, type }: CategorySelectorProps) {
   const [search, setSearch] = useState('');
-  const categories = getCategoriesByType(type);
-  const filteredCategories = categories.filter(c =>
+  const [customCategories, setCustomCategories] = useState<Category[]>([]);
+  const [isAddingCustom, setIsAddingCustom] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
+
+  // Load custom categories from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('equilibria_custom_categories');
+    if (stored) {
+      try {
+        setCustomCategories(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to load custom categories', e);
+      }
+    }
+  }, []);
+
+  // Combine default and custom categories
+  const allCategories = [
+    ...getCategoriesByType(type),
+    ...customCategories.filter(c => {
+      const defaultIds = getCategoriesByType(type).map(dc => dc.id);
+      return !defaultIds.includes(c.id);
+    })
+  ];
+
+  const filteredCategories = allCategories.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const selectedCategory = categories.find(c => c.id === value);
+  const selectedCategory = allCategories.find(c => c.id === value);
+
+  const handleAddCustomCategory = () => {
+    if (!newCategoryName.trim()) return;
+
+    const newCategory: Category = {
+      id: `custom_${Date.now()}`,
+      name: newCategoryName.trim(),
+      icon: newCategoryIcon || '📁',
+      type: type
+    };
+
+    const updated = [...customCategories, newCategory];
+    setCustomCategories(updated);
+    localStorage.setItem('equilibria_custom_categories', JSON.stringify(updated));
+
+    // Select the new category
+    onChange(newCategory.id);
+    setNewCategoryName('');
+    setNewCategoryIcon('📁');
+    setIsAddingCustom(false);
+    setSearch('');
+    document.getElementById('category-dropdown')?.classList.add('hidden');
+  };
 
   return (
     <div className="space-y-2">
@@ -33,7 +80,10 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
         {selectedCategory ? (
           <>
             <span className="text-lg">{selectedCategory.icon}</span>
-            <span className="text-sm">{selectedCategory.name}</span>
+            <span className="text-sm flex-1">{selectedCategory.name}</span>
+            {selectedCategory.id.startsWith('custom_') && (
+              <span className="text-[10px] bg-teal-500/20 text-teal-400 px-2 py-0.5 rounded-full">Custom</span>
+            )}
           </>
         ) : (
           <span className="text-sm text-zinc-500">Pilih kategori...</span>
@@ -56,6 +106,70 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
           </div>
         </div>
 
+        {/* Add Custom Category Button */}
+        <div className="p-2 border-b border-[#262626]">
+          <button
+            type="button"
+            onClick={() => setIsAddingCustom(!isAddingCustom)}
+            className="w-full flex items-center justify-center gap-2 py-2 bg-teal-500/10 hover:bg-teal-500/20 text-teal-400 rounded-lg text-xs font-medium transition-colors border border-dashed border-teal-500/30"
+          >
+            <Plus className="w-4 h-4" />
+            Tambah Kategori Baru
+          </button>
+        </div>
+
+        {/* Add Custom Category Form */}
+        <AnimatePresence>
+          {isAddingCustom && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="p-3 bg-teal-500/5 border-b border-teal-500/20"
+            >
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  placeholder="Nama kategori baru"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-teal-500"
+                  autoFocus
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Icon (emoji)"
+                    value={newCategoryIcon}
+                    onChange={(e) => setNewCategoryIcon(e.target.value)}
+                    className="w-16 bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2 text-center text-lg focus:outline-none focus:border-teal-500"
+                    maxLength={2}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomCategory}
+                    disabled={!newCategoryName.trim()}
+                    className="flex-1 bg-teal-500 hover:bg-teal-400 disabled:bg-zinc-700 text-black font-bold py-2 rounded-lg text-xs transition-colors"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingCustom(false);
+                      setNewCategoryName('');
+                      setNewCategoryIcon('📁');
+                    }}
+                    className="px-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg text-xs transition-colors"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Category Grid */}
         <div className="max-h-60 overflow-y-auto p-2 custom-scrollbar">
           <div className="grid grid-cols-2 gap-1">
@@ -75,7 +189,29 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
                 }`}
               >
                 <span className="text-lg">{category.icon}</span>
-                <span className="text-xs truncate">{category.name}</span>
+                <span className="text-xs truncate flex-1">{category.name}</span>
+                {category.id.startsWith('custom_') && (
+                  <Edit3 className="w-3 h-3 text-teal-400/50" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Icons for Custom Category */}
+        <div className="p-2 border-t border-[#262626]">
+          <p className="text-[10px] text-zinc-500 mb-2">Icon untuk kategori baru:</p>
+          <div className="flex flex-wrap gap-1">
+            {['💰', '🛒', '🍔', '🚗', '🏠', '💊', '📱', '✈️', '🎮', '👕', '🎓', '🎁'].map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => setNewCategoryIcon(emoji)}
+                className={`w-8 h-8 flex items-center justify-center text-lg rounded hover:bg-zinc-800 transition-colors ${
+                  newCategoryIcon === emoji ? 'bg-teal-500/20 border border-teal-500/30' : ''
+                }`}
+              >
+                {emoji}
               </button>
             ))}
           </div>

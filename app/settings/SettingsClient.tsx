@@ -28,16 +28,29 @@ export default function SettingsClient() {
   const [currency, setCurrency] = useState('IDR');
   const [telegramToken, setTelegramToken] = useState('');
   const [toastMessage, setToastMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
     // Load general settings
     const c = localStorage.getItem('equilibria_currency');
     if (c) setCurrency(c);
     setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
+    const t = localStorage.getItem('equilibria_theme');
+    if (t) setTheme(t);
   }, []);
 
   const handleSettingChange = (key: string, value: string) => {
     if (key === 'currency') setCurrency(value);
+    if (key === 'theme') {
+      setTheme(value);
+      localStorage.setItem('equilibria_theme', value);
+      if (value === 'light') {
+        document.body.classList.add('light-mode');
+      } else {
+        document.body.classList.remove('light-mode');
+      }
+      window.dispatchEvent(new Event('settingsUpdated'));
+    }
   };
 
   const handleSaveGeneral = () => {
@@ -404,6 +417,34 @@ export default function SettingsClient() {
                       <option value="USD">USD - US Dollar</option>
                       <option value="EUR">EUR - Euro</option>
                     </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-300">Tema Aplikasi</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSettingChange('theme', 'dark')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                          theme === 'dark'
+                            ? 'bg-teal-500/20 border-teal-500/30 text-teal-400'
+                            : 'bg-[#1A1A1A] border-[#333] text-zinc-400 hover:border-[#444]'
+                        }`}
+                      >
+<span className="w-4 h-4 rounded-full bg-[#0A0A0A] border border-zinc-600" />
+                        Dark
+                      </button>
+                      <button
+                        onClick={() => handleSettingChange('theme', 'light')}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                          theme === 'light'
+                            ? 'bg-teal-500/20 border-teal-500/30 text-teal-400'
+                            : 'bg-[#1A1A1A] border-[#333] text-zinc-400 hover:border-[#444]'
+                        }`}
+                      >
+                        <span className="w-4 h-4 rounded-full bg-white border border-zinc-300" />
+                        Light
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

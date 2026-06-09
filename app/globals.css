@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* Light Mode Theme Variables */
+body.light-mode {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #e5e5e5;
+  --text-primary: #171717;
+  --text-secondary: #404040;
+  --text-muted: #737373;
+  --border-color: #d4d4d4;
+  --accent-color: #0d9488;
+}
+
+/* Light Mode Styles */
+body.light-mode {
+  background-color: #ffffff;
+  color: #171717;
+}
+
+body.light-mode *::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+body.light-mode *::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+}
+
+body.light-mode *::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .no-scrollbar,
 .custom-scrollbar {

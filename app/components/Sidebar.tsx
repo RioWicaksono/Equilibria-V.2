@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, ArrowLeftRight, Menu, X, ChevronLeft, ChevronRight, Lock, FileText, BarChart3, Wallet, Target, CreditCard, RefreshCw, Bell, Settings } from 'lucide-react';
@@ -59,6 +59,11 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
 
+  // Close sidebar on route change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
@@ -68,17 +73,37 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
     window.location.reload();
   };
 
+  const navItems = [
+    { href: '/', icon: <LayoutDashboard className="h-4 w-4" />, label: 'Dashboard' },
+    { href: '/transactions', icon: <ArrowLeftRight className="h-4 w-4" />, label: 'Transaksi' },
+    { href: '/summary', icon: <SummaryIcon />, label: 'Summary' },
+    { href: '/statistics', icon: <StatisticsIcon />, label: 'Statistik' },
+    { href: '/wallets', icon: <Wallet className="h-4 w-4" />, label: 'Dompet' },
+    { href: '/budgets', icon: <CreditCard className="h-4 w-4" />, label: 'Budget' },
+    { href: '/goals', icon: <GoalsIcon />, label: 'Target' },
+    { href: '/debts', icon: <CreditCard className="h-4 w-4" />, label: 'Hutang' },
+    { href: '/recurring', icon: <RecurringIcon />, label: 'Auto' },
+    { href: '/reminders', icon: <RemindersIcon />, label: 'Reminder' },
+    { href: '/settings', icon: <SettingsIcon />, label: 'Pengaturan' },
+  ];
+
+  const isActive = (href: string) => pathname === href;
+
   return (
     <>
-      {/* Mobile Header Toggle */}
-      <div className="md:hidden flex items-center justify-between p-3 bg-[#0D0D0D] border-b border-[#262626]">
-        <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          <span className="w-7 h-7 flex items-center justify-center font-black bg-[#0A0A0A] text-[#faff04] border-2 border-[#faff04] rounded-full">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-3 py-2 bg-[#0A0A0A] border-b border-[#262626]">
+        <div className="flex items-center gap-2">
+          <span className="w-6 h-6 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-md text-xs">
             E
           </span>
-          Equilibria
-        </h1>
-        <button onClick={toggleMenu} className="text-zinc-400 hover:text-white p-1.5">
+          <span className="text-sm font-bold text-white">Equilibria</span>
+        </div>
+        <button
+          onClick={toggleMenu}
+          className="text-zinc-400 hover:text-white p-2 -mr-2"
+          aria-label="Toggle menu"
+        >
           {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
       </div>
@@ -86,138 +111,72 @@ export default function Sidebar({ systemStatus }: SidebarProps) {
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 md:hidden"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 md:hidden"
           onClick={closeMenu}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed md:static inset-y-0 left-0 z-50
-        bg-[#0D0D0D] border-r border-[#262626] flex flex-col p-2.5 md:p-4 flex-shrink-0 md:min-h-screen
-        transform transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-16 md:w-20' : 'w-52 md:w-60'}
+        fixed md:relative inset-y-0 left-0 z-50
+        bg-[#0A0A0A] border-r border-[#262626] flex flex-col
+        transform transition-transform duration-300 ease-out
+        ${isCollapsed ? 'w-16 md:w-16' : 'w-56 md:w-56'}
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        pt-12 md:pt-0
       `}>
-        <div className={`mb-4 md:mb-6 hidden md:flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          <div className="flex items-center gap-2">
-            <span className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center font-black bg-[#000000] text-[#faff04] border border-[#faff04] rounded-[16px] md:rounded-[20px] flex-shrink-0">
-              E
-            </span>
-            {!isCollapsed && (
-              <div className="flex flex-col overflow-hidden whitespace-nowrap">
-                <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">
-                  Equilibria
-                </h1>
-                <p className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest">
-                  Rio's Finance
-                </p>
-              </div>
-            )}
+        {/* Desktop Logo */}
+        <div className="hidden md:flex items-center gap-2 px-3 py-3 border-b border-[#262626]">
+          <span className="w-7 h-7 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-xs">
+            E
+          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-bold text-white truncate">Equilibria</span>
+            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Finance App</span>
           </div>
-          {!isCollapsed && (
-            <button
-              onClick={toggleCollapse}
-              className="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
-              title="Collapse"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          )}
         </div>
 
-        {isCollapsed && (
-          <div className="mb-4 hidden md:flex justify-center">
-            <button
-              onClick={toggleCollapse}
-              className="text-zinc-400 hover:text-white p-1.5 rounded hover:bg-zinc-800 transition-colors"
-              title="Expand"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar px-2 py-2">
+          <div className="space-y-0.5">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeMenu}
+                className={`
+                  flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors
+                  ${isActive(item.href)
+                    ? 'bg-teal-500/10 text-teal-400'
+                    : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200'}
+                `}
+              >
+                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="truncate">{item.label}</span>
+              </Link>
+            ))}
           </div>
-        )}
-
-        <nav className="flex-1 space-y-0.5 overflow-x-hidden overflow-y-auto custom-scrollbar pb-16 md:pb-20">
-          <div className={`px-2 py-1.5 text-[9px] font-semibold text-zinc-600 uppercase tracking-wider mt-2 whitespace-nowrap ${isCollapsed ? 'text-center px-0' : ''}`}>
-            {isCollapsed ? '---' : 'Menu'}
-          </div>
-
-          {/* Nav Items - Compact */}
-          {[
-            { href: '/', icon: <LayoutDashboard className="h-4 w-4" />, label: 'Dashboard' },
-            { href: '/transactions', icon: <ArrowLeftRight className="h-4 w-4" />, label: 'Transaksi' },
-            { href: '/summary', icon: <SummaryIcon />, label: 'Summary' },
-            { href: '/statistics', icon: <StatisticsIcon />, label: 'Statistik' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={closeMenu}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
-                pathname === item.href ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:bg-zinc-800'
-              }`}
-            >
-              {item.icon}
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          ))}
-
-          <div className={`px-2 py-1.5 text-[9px] font-semibold text-zinc-600 uppercase tracking-wider mt-3 whitespace-nowrap ${isCollapsed ? 'text-center px-0' : ''}`}>
-            {isCollapsed ? '---' : 'Fitur'}
-          </div>
-
-          {[
-            { href: '/wallets', icon: <Wallet className="h-4 w-4" />, label: 'Dompet' },
-            { href: '/budgets', icon: <CreditCard className="h-4 w-4" />, label: 'Budget' },
-            { href: '/goals', icon: <GoalsIcon />, label: 'Target' },
-            { href: '/debts', icon: <CreditCard className="h-4 w-4" />, label: 'Hutang' },
-            { href: '/recurring', icon: <RecurringIcon />, label: 'Auto' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={closeMenu}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
-                pathname === item.href ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:bg-zinc-800'
-              }`}
-            >
-              {item.icon}
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          ))}
-
-          <div className={`px-2 py-1.5 text-[9px] font-semibold text-zinc-600 uppercase tracking-wider mt-3 whitespace-nowrap ${isCollapsed ? 'text-center px-0' : ''}`}>
-            {isCollapsed ? '---' : 'Lain'}
-          </div>
-
-          {[
-            { href: '/reminders', icon: <RemindersIcon />, label: 'Reminder' },
-            { href: '/settings', icon: <SettingsIcon />, label: 'Pengaturan' },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={closeMenu}
-              className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${isCollapsed ? 'justify-center' : ''} ${
-                pathname === item.href ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:bg-zinc-800'
-              }`}
-            >
-              {item.icon}
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          ))}
 
           {/* Lock Button */}
           <button
             onClick={handleLock}
             title="Kunci Aplikasi"
-            className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors w-full mt-3 border border-rose-500/30 hover:border-rose-500/50 hover:bg-rose-500/10 text-rose-400 ${isCollapsed ? 'justify-center' : ''}`}
+            className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors w-full mt-3 border border-rose-500/30 hover:border-rose-500/50 hover:bg-rose-500/10 text-rose-400"
           >
             <Lock className="h-4 w-4 flex-shrink-0" />
-            {!isCollapsed && <span>Kunci</span>}
+            <span>Kunci</span>
           </button>
         </nav>
+
+        {/* Collapse Button (Desktop only) */}
+        <button
+          onClick={toggleCollapse}
+          className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 items-center justify-center bg-[#1a1a1a] border border-[#333] rounded-full text-zinc-400 hover:text-white hover:border-teal-500/50 transition-colors z-10"
+          title={isCollapsed ? 'Expand' : 'Collapse'}
+        >
+          {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+        </button>
       </aside>
     </>
   );
