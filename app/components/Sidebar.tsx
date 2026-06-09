@@ -50,7 +50,7 @@ interface NavItem {
 
 interface SidebarProps {
   systemStatus: {
-    isRailway: boolean;
+    isVercel: boolean;
   };
 }
 
