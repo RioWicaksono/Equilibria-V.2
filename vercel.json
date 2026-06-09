@@ -12,5 +12,11 @@
       "path": "/api/cron/check-overdue-debts",
       "schedule": "0 10 * * *"
     }
-  ]
+  ],
+  "experimentalServices": {
+    "web": {
+      "routePrefix": "/",
+      "framework": "nextjs"
+    }
+  }
 }

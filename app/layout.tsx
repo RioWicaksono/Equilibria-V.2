@@ -34,7 +34,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isRailway = !!(process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres') && !process.env.DATABASE_URL.includes('${{'));
+  const isVercel = !!(process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres') && !process.env.DATABASE_URL.includes('${{'));
 
   return (
     <html lang="id" suppressHydrationWarning>
@@ -57,7 +57,7 @@ export default function RootLayout({
         <SettingsProvider>
           <PinProtection>
             <div className="flex h-full w-full overflow-hidden">
-              <Sidebar systemStatus={{ isRailway }} />
+              <Sidebar systemStatus={{ isVercel }} />
 
               {/* Main Content Area */}
               <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-5 flex flex-col relative w-full min-w-0 no-scrollbar">

@@ -14,7 +14,7 @@ export type RepositoryFactory = () => {
 const defaultFactory: RepositoryFactory = () => {
   // Check if we're in a server context and have valid DB URL
   const dbUrl = typeof process !== 'undefined'
-    ? (process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL)
+    ? process.env.DATABASE_URL
     : null;
   const usePrisma = dbUrl && dbUrl.startsWith('postgres') && !dbUrl.includes('${{') && !dbUrl.includes('undefined');
 
