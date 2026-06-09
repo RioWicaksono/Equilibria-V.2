@@ -23,11 +23,15 @@ const nextConfig = {
       },
     ],
   },
-  transpilePackages: ['motion'],
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@': path.resolve(__dirname, 'src'),
+      '@/lib': path.resolve(__dirname, 'lib'),
+      '@/lib/': path.resolve(__dirname, 'lib/'),
+      '@/domain': path.resolve(__dirname, 'src/domain'),
+      '@/application': path.resolve(__dirname, 'src/application'),
+      '@/infrastructure': path.resolve(__dirname, 'src/infrastructure'),
     };
     return config;
   },

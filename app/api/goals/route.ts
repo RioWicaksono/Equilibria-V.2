@@ -3,18 +3,24 @@ import prisma from '@/infrastructure/database/PrismaClient';
 
 export async function GET() {
   try {
+    if (!prisma) {
+      return NextResponse.json({ goals: [], error: 'Database not configured' }, { status: 200 });
+    }
     const goals = await prisma.financialGoal.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json({ goals });
   } catch (error) {
     console.error('[GET /api/goals]', error);
-    return NextResponse.json({ error: 'Failed to fetch goals' }, { status: 500 });
+    return NextResponse.json({ goals: [], error: 'Database not available - using local fallback' }, { status: 200 });
   }
 }
 
 export async function POST(req: Request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
     const { name, targetAmount, currentAmount, deadline } = await req.json();
     if (!name || !targetAmount) {
       return NextResponse.json({ error: 'Name and targetAmount are required' }, { status: 400 });
@@ -37,6 +43,9 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
     const { id, name, targetAmount, currentAmount, deadline } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
@@ -59,6 +68,9 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 

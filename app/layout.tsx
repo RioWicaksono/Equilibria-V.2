@@ -47,21 +47,25 @@ export default function RootLayout({
           }
           body {
             font-family: var(--font-sans);
+            height: 100dvh;
+            overflow: hidden;
           }
         `}</style>
       </head>
-      <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5] min-h-screen flex flex-col md:flex-row overflow-hidden">
+      <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5] h-dvh overflow-hidden">
         <PWARegistration />
         <SettingsProvider>
           <PinProtection>
-            <Sidebar systemStatus={{ isRailway }} />
+            <div className="flex h-full w-full overflow-hidden">
+              <Sidebar systemStatus={{ isRailway }} />
 
-            {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col relative w-full h-full no-scrollbar">
-              <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col">
-                {children}
-              </div>
-            </main>
+              {/* Main Content Area */}
+              <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-5 flex flex-col relative w-full min-w-0 no-scrollbar">
+                <div className="w-full max-w-7xl mx-auto flex-1 flex flex-col min-w-0">
+                  {children}
+                </div>
+              </main>
+            </div>
           </PinProtection>
         </SettingsProvider>
       </body>

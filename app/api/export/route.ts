@@ -1,52 +1,99 @@
-import { NextResponse } from 'next/server';
-import { FinanceService } from '@/application/services/FinanceService';
-import * as xlsx from 'xlsx';
-
-const financeService = new FinanceService();
+import { NextRequest, NextResponse } from 'next/server';
+import { getFinanceService } from '@/application/services/FinanceService';
+import { ExportQuerySchema } from '@/lib/validation';
+import { exportToCSV, exportToXLSX, exportToJSON, getExportFilename } from '@/lib/export';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const monthQuery = searchParams.get('month'); // YYYY-MM
+    const searchParams = request.nextUrl.searchParams;
+    const format = searchParams.get('format') || 'csv';
+    const type = searchParams.get('type') || 'all';
+    const month = searchParams.get('month');
 
-    let transactions = await financeService.getTransactions();
+    // Validate query parameters
+    const validation = ExportQuerySchema.safeParse({
+      format,
+      type,
+      startDate: searchParams.get('startDate'),
+      endDate: searchParams.get('endDate'),
+    });
 
-    if (monthQuery) {
-      transactions = transactions.filter((t: any) => {
-        const d = new Date(t.date);
-        const yyyymm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        return yyyymm === monthQuery;
-      });
+    if (!validation.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'Parameter tidak valid',
+        details: validation.error.flatten().fieldErrors,
+      }, { status: 400 });
     }
 
-    // Map the transactions to a flatter structure for the sheet
-    const data = transactions.map((t: any) => ({
-      ID: t.id,
-      Tanggal: new Date(t.date).toLocaleDateString('id-ID'),
-      Jenis: t.type === 'INCOME' ? 'Pemasukan' : 'Pengeluaran',
-      Kategori: t.category,
-      Keterangan: t.description || '-',
-      Amount: t.amount,
-    }));
+    const financeService = getFinanceService();
 
-    const worksheet = xlsx.utils.json_to_sheet(data);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Transaksi');
+    // Fetch transactions
+    let transactions: any[] = [];
+    if (type === 'all' || type === 'transactions') {
+      transactions = await financeService.getTransactions();
 
-    // Write the workbook to a buffer
-    const buf = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      // Filter by month if specified
+      if (month) {
+        transactions = transactions.filter((t: any) => {
+          const d = new Date(t.date);
+          const yyyymm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          return yyyymm === month;
+        });
+      }
+    }
 
-    return new NextResponse(buf, {
+    const exportData = {
+      transactions: transactions.map((t: any) => ({
+        id: t.id,
+        amount: t.amount,
+        type: t.type,
+        category: t.category,
+        description: t.description,
+        date: t.date,
+      })),
+      wallets: [],
+      goals: [],
+      debts: [],
+      recurring: [],
+    };
+
+    const filename = getExportFilename(type, format);
+
+    // Generate export based on format
+    let content: string | Uint8Array;
+    let contentType: string;
+
+    switch (format) {
+      case 'xlsx':
+        content = exportToXLSX(exportData, type);
+        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        break;
+      case 'json':
+        content = exportToJSON(exportData);
+        contentType = 'application/json';
+        break;
+      case 'csv':
+      default:
+        content = exportToCSV(exportData, type);
+        contentType = 'text/csv';
+        break;
+    }
+
+    return new NextResponse(content, {
       status: 200,
       headers: {
-        'Content-Disposition': 'attachment; filename="Laporan_Keuangan.xlsx"',
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
   } catch (error) {
     console.error('Export error:', error);
-    return NextResponse.json({ error: 'Failed to export data' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: 'Gagal mengekspor data',
+    }, { status: 500 });
   }
 }

@@ -12,16 +12,23 @@ export type RepositoryFactory = () => {
 
 // Default factory - checks env for database URL
 const defaultFactory: RepositoryFactory = () => {
-  const dbUrl = process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL;
-  const usePrisma = dbUrl && dbUrl.startsWith('postgres') && !dbUrl.includes('${{');
+  // Check if we're in a server context and have valid DB URL
+  const dbUrl = typeof process !== 'undefined'
+    ? (process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL)
+    : null;
+  const usePrisma = dbUrl && dbUrl.startsWith('postgres') && !dbUrl.includes('${{') && !dbUrl.includes('undefined');
 
   if (usePrisma) {
-    const { PrismaTransactionRepository } = require('../../infrastructure/repositories/PrismaTransactionRepository');
-    const { PrismaBudgetRepository } = require('../../infrastructure/repositories/PrismaBudgetRepository');
-    return {
-      transaction: new PrismaTransactionRepository(),
-      budget: new PrismaBudgetRepository(),
-    };
+    try {
+      const { PrismaTransactionRepository } = require('../../infrastructure/repositories/PrismaTransactionRepository');
+      const { PrismaBudgetRepository } = require('../../infrastructure/repositories/PrismaBudgetRepository');
+      return {
+        transaction: new PrismaTransactionRepository(),
+        budget: new PrismaBudgetRepository(),
+      };
+    } catch (e) {
+      console.warn('[FinanceService] Prisma not available, falling back to in-memory');
+    }
   }
 
   const { InMemoryTransactionRepository } = require('../../infrastructure/repositories/InMemoryTransactionRepository');

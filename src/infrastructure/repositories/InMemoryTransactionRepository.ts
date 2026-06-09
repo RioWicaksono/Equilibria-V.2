@@ -6,29 +6,32 @@ const globalForStore = globalThis as unknown as {
   _transactionsStore: Transaction[] | undefined;
 };
 
-const defaultData: Transaction[] = [
+const isDevelopment = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+
+// Sample data - HANYA untuk development, TIDAK untuk production
+const developmentSampleData: Transaction[] = isDevelopment ? [
   {
-    id: '1',
+    id: 'sample-1',
     amount: 15000000,
     type: 'INCOME' as TransactionType,
     category: 'Gaji Utama',
     date: new Date(),
-    description: 'Tech Company Inc.',
+    description: 'Tech Company Inc. - Sample Data (Development Only)',
     createdAt: new Date(),
   },
   {
-    id: '2',
+    id: 'sample-2',
     amount: 150000,
     type: 'EXPENSE' as TransactionType,
     category: 'Makan',
     date: new Date(),
-    description: 'Makan Siang',
+    description: 'Makan Siang - Sample Data (Development Only)',
     createdAt: new Date(),
   },
-];
+] : [];
 
-const store: Transaction[] = globalForStore._transactionsStore ?? defaultData;
-if (process.env.NODE_ENV !== 'production') globalForStore._transactionsStore = store;
+const store: Transaction[] = globalForStore._transactionsStore ?? developmentSampleData;
+if (process.env?.NODE_ENV !== 'production') globalForStore._transactionsStore = store;
 
 export class InMemoryTransactionRepository implements ITransactionRepository {
   async save(transaction: Transaction): Promise<void> {

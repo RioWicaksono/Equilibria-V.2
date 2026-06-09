@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/process-recurring",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/check-reminders",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/check-overdue-debts",
+      "schedule": "0 10 * * *"
+    }
+  ]
+}

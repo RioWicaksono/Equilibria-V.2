@@ -123,14 +123,36 @@ export default function SettingsClient() {
     setPinSuccess('');
 
     const stored = localStorage.getItem('equilibria_pin');
-    const actualPin = stored ? atob(stored) : '123789';
 
-    if (!stored && currentPin !== actualPin && currentPin !== '') {
-      setPinError('PIN saat ini salah');
+    // First time setting PIN - no need for current PIN
+    if (!stored) {
+      if (newPin.length !== 6) {
+        setPinError('PIN baru harus 6 digit');
+        return;
+      }
+
+      if (newPin !== confirmPin) {
+        setPinError('Konfirmasi PIN tidak cocok');
+        return;
+      }
+
+      localStorage.setItem('equilibria_pin', btoa(newPin));
+      setPinSuccess('PIN berhasil dibuat');
+      setCurrentPin('');
+      setNewPin('');
+      setConfirmPin('');
+      setIsChangingPin(false);
+
+      setTimeout(() => {
+        setPinSuccess('');
+      }, 3000);
       return;
     }
 
-    if (stored && currentPin !== actualPin) {
+    // Changing existing PIN - require current PIN
+    const actualPin = atob(stored);
+
+    if (currentPin !== actualPin) {
       setPinError('PIN saat ini salah');
       return;
     }
@@ -464,20 +486,23 @@ export default function SettingsClient() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div>
-                        <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">MASUKKAN PIN SAAT INI</label>
-                        <input
-                          type="password"
-                          maxLength={6}
-                          value={currentPin}
-                          onChange={(e) => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                          placeholder="******"
-                        />
-                        {!localStorage.getItem('equilibria_pin') && (
-                          <p className="text-[10px] text-zinc-600 mt-1">Hint: Default PIN adalah 123789</p>
-                        )}
-                      </div>
+                      {!localStorage.getItem('equilibria_pin') ? (
+                        <p className="text-xs text-teal-400/70 bg-teal-500/5 border border-teal-500/20 rounded-lg p-3">
+                          Anda belum memiliki PIN. Buat PIN 6 digit untuk mengamankan aplikasi.
+                        </p>
+                      ) : (
+                        <div>
+                          <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">MASUKKAN PIN SAAT INI</label>
+                          <input
+                            type="password"
+                            maxLength={6}
+                            value={currentPin}
+                            onChange={(e) => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))}
+                            className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
+                            placeholder="Masukkan PIN saat ini"
+                          />
+                        </div>
+                      )}
 
                       <div>
                         <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">PIN BARU (6 DIGIT)</label>

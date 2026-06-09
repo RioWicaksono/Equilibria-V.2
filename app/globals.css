@@ -1,32 +1,38 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    --color-primary: #2dd4bf;
-  }
-}
-
-/* Custom Scrollbar for better UI on overflowing items */
-.custom-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+/* Hide scrollbar but keep scroll functionality */
+.no-scrollbar,
 .custom-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
-}
-
-/* Hide scrollbar utility */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+.no-scrollbar::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar,
+.custom-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
-/* Base styles to prevent layout shifts */
-html, body {
-  overscroll-behavior-y: none;
+/* Global scrollbar styling for webkit browsers */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 #1a1a1a;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
 }

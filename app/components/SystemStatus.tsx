@@ -137,35 +137,35 @@ export default function SystemStatus() {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2">
+    <div className="flex flex-col sm:flex-row gap-1.5">
       {/* Telegram Status */}
-      <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
+      <div className="flex items-center gap-1.5 bg-[#1A1A1A] border border-[#262626] px-2 py-1 rounded-full">
         {telegramStatus === 'LOADING' ? (
-          <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />
+          <RefreshCw className="w-2.5 h-2.5 text-zinc-400 animate-spin" />
         ) : (
-          <div className={`w-2 h-2 rounded-full ${telegramColorClasses[telegramStatus]}`} />
+          <div className={`w-1.5 h-1.5 rounded-full ${telegramColorClasses[telegramStatus]}`} />
         )}
-        <span className="text-zinc-300 font-semibold text-xs mt-0.5">
-          Telegram: {telegramTextClasses[telegramStatus]}
+        <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">
+          TG: {telegramTextClasses[telegramStatus]}
         </span>
       </div>
 
       {/* Database Status */}
-      <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
+      <div className="flex items-center gap-1.5 bg-[#1A1A1A] border border-[#262626] px-2 py-1 rounded-full">
         {databaseStatus === 'LOADING' ? (
-          <RefreshCw className="w-3 h-3 text-zinc-400 animate-spin" />
+          <RefreshCw className="w-2.5 h-2.5 text-zinc-400 animate-spin" />
         ) : (
-          <div className={`w-2 h-2 rounded-full ${databaseColorClasses[databaseStatus]}`} />
+          <div className={`w-1.5 h-1.5 rounded-full ${databaseColorClasses[databaseStatus]}`} />
         )}
-        <span className="text-zinc-300 font-semibold text-xs mt-0.5">
-          Database: {databaseTextClasses[databaseStatus]}
+        <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">
+          DB: {databaseTextClasses[databaseStatus]}
         </span>
       </div>
 
       {/* System Status */}
-      <div className="flex items-center gap-2 bg-[#1A1A1A] border border-[#262626] px-3 py-1.5 rounded-full">
-        <div className={`w-2 h-2 rounded-full ${statusColorClasses[systemStatus]}`} />
-        <span className="text-zinc-300 font-semibold text-xs mt-0.5">Sistem: {statusTextClasses[systemStatus]}</span>
+      <div className="flex items-center gap-1.5 bg-[#1A1A1A] border border-[#262626] px-2 py-1 rounded-full">
+        <div className={`w-1.5 h-1.5 rounded-full ${statusColorClasses[systemStatus]}`} />
+        <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">Sys: {statusTextClasses[systemStatus]}</span>
       </div>
     </div>
   );

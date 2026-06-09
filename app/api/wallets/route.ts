@@ -3,18 +3,24 @@ import prisma from '@/infrastructure/database/PrismaClient';
 
 export async function GET() {
   try {
+    if (!prisma) {
+      return NextResponse.json({ wallets: [], error: 'Database not configured' }, { status: 200 });
+    }
     const wallets = await prisma.wallet.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return NextResponse.json({ wallets });
   } catch (error) {
     console.error('[GET /api/wallets]', error);
-    return NextResponse.json({ error: 'Failed to fetch wallets' }, { status: 500 });
+    return NextResponse.json({ wallets: [], error: 'Database not available - using local fallback' }, { status: 200 });
   }
 }
 
 export async function POST(req: Request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
     const { name, balance } = await req.json();
     if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
 
@@ -33,6 +39,9 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
     const { id, name, balance } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
@@ -52,6 +61,9 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
     const { id } = await req.json();
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
