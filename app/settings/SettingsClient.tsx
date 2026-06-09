@@ -590,7 +590,7 @@ export default function SettingsClient() {
                       </div>
                       <div>
                         <h4 className="text-sm font-bold text-white mb-0.5">Database PostgreSQL</h4>
-                        <p className="text-xs text-zinc-500">Terhubung otomatis ke Railway</p>
+                        <p className="text-xs text-zinc-500">Terhubung otomatis ke Neon PostgreSQL</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -611,9 +611,9 @@ export default function SettingsClient() {
                   <div className="mt-4 pt-4 border-t border-zinc-800">
                     <p className="text-[10px] text-zinc-500 flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
-                      Host: postgres.railway.internal:5432
+                      Host: ep-dawn-bonus-aomgzs1d (Neon PostgreSQL)
                     </p>
-                    <p className="text-[10px] text-zinc-600 mt-1">Database dikonfigurasi secara otomatis oleh Railway</p>
+                    <p className="text-[10px] text-zinc-600 mt-1">Database dikonfigurasi secara otomatis oleh Vercel + Neon</p>
                   </div>
                 </div>
 
