@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X, Search, Edit3 } from 'lucide-react';
-import { ALL_DEFAULT_CATEGORIES, getCategoriesByType, Category } from '@/domain/value-objects/TransactionCategory';
+import { ALL_DEFAULT_CATEGORIES, getCategoriesByType, TransactionCategory } from '@/domain/value-objects/TransactionCategory';
 
 interface CategorySelectorProps {
   value: string;
@@ -13,7 +13,7 @@ interface CategorySelectorProps {
 
 export default function CategorySelector({ value, onChange, type }: CategorySelectorProps) {
   const [search, setSearch] = useState('');
-  const [customCategories, setCustomCategories] = useState<Category[]>([]);
+  const [customCategories, setCustomCategories] = useState<TransactionCategory[]>([]);
   const [isAddingCustom, setIsAddingCustom] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
@@ -48,7 +48,7 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
   const handleAddCustomCategory = () => {
     if (!newCategoryName.trim()) return;
 
-    const newCategory: Category = {
+    const newCategory: TransactionCategory = {
       id: `custom_${Date.now()}`,
       name: newCategoryName.trim(),
       icon: newCategoryIcon || '📁',
