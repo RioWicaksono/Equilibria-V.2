@@ -38,25 +38,97 @@ export async function POST(req: NextRequest) {
 
     // Command handlers
     if (command === '/start' || command === '/menu') {
-      await sendMsg(`👋 Halo ${firstName}!
+      await sendMsg(`👋 *Halo ${firstName}!*
 
-Bot Equilibria Finance 💰
+Selamat datang di *Equilibria Finance Bot* 💰
 
-Ketik /help untuk panduan.
-━━━━━━━━━━━━━━━━━━━`);
+Aku membantumu mencatat keuangan dengan mudah langsung dari Telegram!
+
+━━━━━━━━━━━━━━━━━━
+📌 *Cara Pakai:*
+━━━━━━━━━━━━━━━━━━
+
+1️⃣ *Langsung Ketik* (Paling Gampang!)
+━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+Ketik: \`pengeluaran makan 50000\`
+Ketik: \`pemasukan salary 5000000\`
+
+2️⃣ *Pake Command*
+━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+Ketik: \`/add makanan 25000\`
+Ketik: \`/add transport 15000\`
+
+━━━━━━━━━━━━━━━━━━
+🔗 *Buka App Lengkap:*
+━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+https://equilibria-fiscal.vercel.app
+
+━━━━━━━━━━━━━━━━━━
+💡 *Ketik /help untuk panduan detail!*
+━━━━━━━━━━━━━━━━━━
+_Equilibria Finance_`);
       return NextResponse.json({ ok: true });
     }
 
     if (command === '/help' || command === '/panduan') {
-      await sendMsg(`📚 *Panduan*
+      await sendMsg(`📚 *Panduan Lengkap*
 
-━━━━━━━━━━━━━━━━━━━
-Format: [deskripsi] [nominal]
+━━━━━━━━━━━━━━━━━━
+*1️⃣ CARA INPUT TRANSAKSI*
+━━━━━━━━━━━━━━━━━━
 
-Contoh:
-pengeluaran makan 50000
-pemasukan gaji 5000000
-━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+✍️ *Cara 1: Quick Text (Gampang!*
+━━━━━━━━━━━━━━━━━━
+Ketik langsung tanpa slash:
+
+\`pengeluaran makan 50000\`
+\`pemasukan freelance 2000000\`
+\`pengeluaran kopi 15000\`
+
+━━━━━━━━━━━━━━━━━━
+✍️ *Cara 2: Pake Command /add*
+━━━━━━━━━━━━━━━━━━
+\`/add makanan 50000\`
+\`/add transport 15000\`
+\`/add belanja 100000\`
+
+━━━━━━━━━━━━━━━━━━
+*2️⃣ KATEGORI OTOMATIS*
+━━━━━━━━━━━━━━━━━━
+Bot otomatis deteksi kategori dari kata:
+
+🍔 *Makanan* → makan, kopi, lunch, Soto, Bakso
+🚗 *Transport* → ojek, grab, bensin, parkir
+🛒 *Belanja* → indomaret, alfamart, market
+🎬 *Hiburan* → film, netflix, game, youtube
+📄 *Tagihan* → listrik, air, internet, pulsa
+💊 *Kesehatan* → obat, apotek, dokter
+💵 *Gaji* → salary, bonus, thr, gaji
+💻 *Freelance* → project, kerjaan
+━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━
+*3️⃣ TOMBOL CEPAT*
+━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━
+/balance → Lihat saldo
+/stats → Statistik bulanan
+/budget → Atur budget
+/list → Riwayat transaksi
+━━━━━━━━━━━━━━━━━━
+
+━━━━━━━━━━━━━━━━━━
+*4️⃣ TIPS*
+━━━━━━━━━━━━━━━━━━
+• Minimal nominal Rp 100
+• Tinggal ketik aja tanpa ribet!
+• Contoh: \`bensin 50000\`
+• Contoh: \`makan siang 35000\`
+━━━━━━━━━━━━━━━━━━
 _Equilibria Finance_`);
       return NextResponse.json({ ok: true });
     }
