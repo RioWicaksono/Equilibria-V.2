@@ -15,18 +15,18 @@ const developmentSampleData: Transaction[] = isDevelopment ? [
     amount: 15000000,
     type: 'INCOME' as TransactionType,
     category: 'Gaji Utama',
-    date: new Date(),
+    date: new Date().toISOString(),
     description: 'Tech Company Inc. - Sample Data (Development Only)',
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'sample-2',
     amount: 150000,
     type: 'EXPENSE' as TransactionType,
     category: 'Makan',
-    date: new Date(),
+    date: new Date().toISOString(),
     description: 'Makan Siang - Sample Data (Development Only)',
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   },
 ] : [];
 
@@ -44,7 +44,7 @@ export class InMemoryTransactionRepository implements ITransactionRepository {
   }
 
   async findAll(): Promise<Transaction[]> {
-    return [...store].sort((a, b) => b.date.getTime() - a.date.getTime());
+    return [...store].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   async findById(id: string): Promise<Transaction | null> {
@@ -55,8 +55,8 @@ export class InMemoryTransactionRepository implements ITransactionRepository {
     return store.filter((t) => {
       if (filter.type && t.type !== filter.type) return false;
       if (filter.category && t.category !== filter.category) return false;
-      if (filter.startDate && t.date < filter.startDate) return false;
-      if (filter.endDate && t.date > filter.endDate) return false;
+      if (filter.startDate && t.date < (filter.startDate instanceof Date ? filter.startDate.toISOString() : filter.startDate)) return false;
+      if (filter.endDate && t.date > (filter.endDate instanceof Date ? filter.endDate.toISOString() : filter.endDate)) return false;
       return true;
     });
   }

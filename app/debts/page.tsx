@@ -40,6 +40,7 @@ export default function DebtsPage() {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkDebtReminders = () => {
@@ -107,14 +108,14 @@ export default function DebtsPage() {
         const stored = localStorage.getItem('equilibria_debts');
         if (stored) {
           const parsed = JSON.parse(stored);
-          setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
+          setDebts(parsed.map((d: DebtItem) => ({ ...d, paidAmount: d.paidAmount || 0 })));
         }
       }
-    } catch (error) {
+    } catch {
       const stored = localStorage.getItem('equilibria_debts');
       if (stored) {
         const parsed = JSON.parse(stored);
-        setDebts(parsed.map((d: any) => ({ ...d, paidAmount: d.paidAmount || 0 })));
+        setDebts(parsed.map((d: DebtItem) => ({ ...d, paidAmount: d.paidAmount || 0 })));
       }
     } finally {
       setIsLoading(false);

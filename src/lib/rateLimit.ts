@@ -79,8 +79,8 @@ export const skipRateLimit = (req: NextRequest): boolean => {
 };
 
 // Create a custom handler that skips rate limiting for specific paths
-export const createRateLimitHandler = (limiter: ReturnType<typeof rateLimit>) => {
-  return (req: Request): { limited: boolean; headers: Record<string, string> } => {
+export const createRateLimitHandler = () => {
+  return (): { limited: boolean; headers: Record<string, string> } => {
     // This is a simplified version - in production you'd use the actual middleware
     const responseHeaders: Record<string, string> = {
       'X-RateLimit-Limit': '100',

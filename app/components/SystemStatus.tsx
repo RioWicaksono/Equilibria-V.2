@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { RefreshCw, Database } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 export default function SystemStatus() {
   const [systemStatus, setSystemStatus] = useState<'green' | 'yellow' | 'red'>('green');
@@ -20,7 +20,7 @@ export default function SystemStatus() {
         if (isActive) {
           setTelegramStatus(data.status as 'ACTIVE' | 'INACTIVE');
         }
-      } catch (error) {
+      } catch {
         if (isActive) setTelegramStatus('INACTIVE');
       }
     };
@@ -45,7 +45,7 @@ export default function SystemStatus() {
       if (!navigator.onLine) {
         setSystemStatus('red');
       } else {
-        const connection = (navigator as any).connection;
+        const connection = (navigator as Navigator & { connection?: { effectiveType: string; saveData: boolean } }).connection;
         let isUnstable = false;
         if (connection) {
           if (['slow-2g', '2g', '3g'].includes(connection.effectiveType) || connection.saveData) {

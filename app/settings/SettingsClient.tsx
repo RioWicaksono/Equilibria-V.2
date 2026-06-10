@@ -9,9 +9,8 @@ type TabType = 'general' | 'security' | 'integration' | 'advanced';
 export default function SettingsClient() {
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [telegramStatus, setTelegramStatus] = useState<'LOADING' | 'ACTIVE' | 'INACTIVE'>('LOADING');
-  const [lastSync, setLastSync] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
-  const [testPayload, setTestPayload] = useState<any>(null);
+  const [testPayload, setTestPayload] = useState<unknown>(null);
   const [showPayload, setShowPayload] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [telegramLogs, setTelegramLogs] = useState<Array<{ message: string, status: string, timestamp: string }>>([]);
@@ -76,7 +75,6 @@ export default function SettingsClient() {
 
   // Auto-lock timeout state
   const [autoLockTimeout, setAutoLockTimeout] = useState(5);
-  const [showTimeoutDropdown, setShowTimeoutDropdown] = useState(false);
 
   const timeoutOptions = [
     { value: 0, label: 'Tidak Pernah' },
@@ -114,7 +112,7 @@ export default function SettingsClient() {
           // telegram webhook returns {bot: 'CONNECTED'|'DISCONNECTED'|'NOT_CONFIGURED'|'ERROR', status, ...}
           const botState = data.bot || 'INACTIVE';
           setTelegramStatus(botState === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
-          if (data.lastSync) setLastSync(data.lastSync);
+          
         })
         .catch(() => {
           if (active) setTelegramStatus('INACTIVE');
@@ -198,7 +196,7 @@ export default function SettingsClient() {
     localStorage.setItem('equilibria_auto_lock_timeout', autoLockTimeout.toString());
     window.dispatchEvent(new Event('settingsUpdated'));
     showToast(`Pengaturan auto-lock disimpan (${autoLockTimeout === 0 ? 'Dinonaktifkan' : `${autoLockTimeout} menit`})`);
-    setShowTimeoutDropdown(false);
+    
   };
 
   const testConnection = async () => {
@@ -208,14 +206,14 @@ export default function SettingsClient() {
       const res = await fetch('/api/telegram-webhook?test=true');
       const data = await res.json();
       setTelegramStatus(data.status);
-      if (data.lastSync) setLastSync(data.lastSync);
+      
       setTestPayload(data);
       if (data.status === 'ACTIVE') {
         alert('Test Connection: ' + data.message);
       } else {
         alert('Test Connection failed: ' + data.message);
       }
-    } catch (e) {
+    } catch {
       alert('Test Connection failed');
     }
     setIsTesting(false);
@@ -255,7 +253,7 @@ export default function SettingsClient() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       showToast('Backup ZIP berhasil diunduh');
-    } catch (err) {
+    } catch {
       showToast('Gagal memproses backup ZIP');
     }
   };
@@ -276,7 +274,7 @@ export default function SettingsClient() {
           }
           showToast('Data berhasil diimpor!');
           setTimeout(() => window.location.reload(), 1500);
-        } catch (err) {
+        } catch {
           showToast('Gagal memproses file JSON');
         }
       };
@@ -304,7 +302,7 @@ export default function SettingsClient() {
         } else {
           showToast('File backup invalid (JSON tidak ditemukan)');
         }
-      } catch (error) {
+      } catch {
         showToast('Gagal mengekstrak ZIP');
       }
       return;
@@ -789,7 +787,7 @@ export default function SettingsClient() {
                   )}
                 </div>
 
-                {testPayload && (
+                {testPayload !== null && testPayload !== undefined && (
                   <div className="bg-[#1A1A1A] border border-zinc-800 rounded-xl p-5 mb-5 transition-all overflow-hidden">
                     <button
                       onClick={() => setShowPayload(!showPayload)}

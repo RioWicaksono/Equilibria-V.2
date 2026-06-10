@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     if (!prisma) {
       return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
     }
-    const { name, amount, type, category, description, frequency, nextDate } = await req.json();
+    const { name, amount, type, category, frequency, nextDate } = await req.json();
     if (!name || !amount || !frequency || !nextDate) {
       return NextResponse.json({ error: 'Name, amount, frequency, and nextDate are required' }, { status: 400 });
     }

@@ -8,7 +8,7 @@ export async function GET() {
     const financeService = getFinanceService();
     await financeService.getSummary();
     return NextResponse.json({ health: 'ok' });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ health: 'error' }, { status: 500 });
   }
 }

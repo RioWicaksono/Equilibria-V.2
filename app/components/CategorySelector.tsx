@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Search } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { ALL_DEFAULT_CATEGORIES, getCategoriesByType } from '@/domain/value-objects/TransactionCategory';
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { getCategoriesByType } from '@/domain/value-objects/TransactionCategory';
 
 interface CategorySelectorProps {
   value: string;

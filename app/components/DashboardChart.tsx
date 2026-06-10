@@ -3,7 +3,13 @@
 import { memo, useMemo, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
-const DashboardChart = memo(function DashboardChart({ data }: { data: any[] }) {
+interface ChartData {
+  date: string;
+  amount: number;
+  [key: string]: unknown;
+}
+
+const DashboardChart = memo(function DashboardChart({ data }: { data: ChartData[] }) {
   const tickFormatter = useCallback((value: number) => `Rp ${value / 1000}k`, []);
   
   const chartContent = useMemo(() => {

@@ -8,7 +8,7 @@ export function useNotifications() {
     return await notificationService.requestPermission();
   }, []);
 
-  const sendNotification = useCallback((title: string, body: string, data?: any) => {
+  const sendNotification = useCallback((title: string, body: string, data?: Record<string, unknown>) => {
     notificationService.sendNotification({
       title,
       body,
@@ -55,7 +55,6 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
     initNotifications();
 
-    // Handle visibility change to check for notifications
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         notificationService.checkReminders();

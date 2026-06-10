@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFinanceService } from '@/application/services/FinanceService';
-import { useSettings } from '../../contexts/SettingsContext';
 
 export const dynamic = 'force-dynamic';
 

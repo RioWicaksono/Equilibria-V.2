@@ -1,12 +1,11 @@
 // Cron utility functions for scheduled tasks
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function processRecurringTransactions(): Promise<{
   processed: number;
   errors: string[];
 }> {
   const errors: string[] = [];
-  let processed = 0;
+  const processed = 0;
 
   // Cron functionality placeholder - will be implemented with proper recurring module
   // For now, return empty result
@@ -14,7 +13,6 @@ export async function processRecurringTransactions(): Promise<{
   return { processed, errors };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function getUpcomingReminders(days: number = 7): Promise<{
   reminders: Array<{
     id: string;
@@ -24,10 +22,11 @@ export async function getUpcomingReminders(days: number = 7): Promise<{
     priority: string;
   }>;
 }> {
+  // Parameter reserved for future implementation
+  console.log('Days parameter:', days);
   return { reminders: [] };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function checkOverdueDebts(): Promise<{
   overdueDebts: Array<{
     id: string;

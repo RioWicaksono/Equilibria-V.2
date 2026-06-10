@@ -34,8 +34,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isVercel = !!(process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('postgres') && !process.env.DATABASE_URL.includes('${{'));
-
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
@@ -55,7 +53,7 @@ export default function RootLayout({
         <SettingsProvider>
           <PinProtection>
             <div className="flex min-h-screen">
-              <Sidebar systemStatus={{ isVercel }} />
+              <Sidebar />
 
               {/* Main Content Area */}
               <main className="flex-1 overflow-x-hidden pt-12 md:pt-0 pb-20 md:pb-0">

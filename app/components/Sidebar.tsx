@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, ReactNode, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, Menu, X, ChevronLeft, ChevronRight, Lock, FileText, BarChart3, Wallet, Target, CreditCard, RefreshCw, Bell, Settings } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Menu, X, ChevronLeft, ChevronRight, Lock, Wallet, CreditCard } from 'lucide-react';
 
 // Inline SVG components for icons
 const SummaryIcon = () => (
@@ -42,19 +42,7 @@ const SettingsIcon = () => (
   </svg>
 );
 
-interface NavItem {
-  href: string;
-  icon: ReactNode;
-  label: string;
-}
-
-interface SidebarProps {
-  systemStatus: {
-    isVercel: boolean;
-  };
-}
-
-export default function Sidebar({ systemStatus }: SidebarProps) {
+export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();

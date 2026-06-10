@@ -6,7 +6,7 @@ import { Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import CategorySelector from './CategorySelector';
 
-export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSaveLocal?: (data: any) => void; isFAB?: boolean }) {
+export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSaveLocal?: (data: Record<string, unknown>) => void; isFAB?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 

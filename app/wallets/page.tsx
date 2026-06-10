@@ -62,7 +62,7 @@ export default function WalletsPage() {
           localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
         }
       }
-    } catch (error) {
+    } catch {
       // Fallback to localStorage on error
       const stored = localStorage.getItem('equilibria_wallets');
       if (stored) {

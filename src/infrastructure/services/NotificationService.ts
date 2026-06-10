@@ -1,12 +1,12 @@
 // Notification Service - Handles push notifications and reminders
-import { getReminders, type Reminder } from '../storage/LocalStorageReminders';
+import { getReminders } from '../storage/LocalStorageReminders';
 
 export interface NotificationPayload {
   title: string;
   body: string;
   icon?: string;
   tag?: string;
-  data?: any;
+  data?: Record<string, unknown>;
 }
 
 class NotificationService {
@@ -60,7 +60,6 @@ class NotificationService {
       data: payload.data
     };
 
-    // @ts-ignore - vibrate is not in standard types but supported
     const notification = new Notification(payload.title, options);
 
     // Notify listeners
@@ -76,7 +75,7 @@ class NotificationService {
       notification.close();
 
       // Navigate based on data
-      if (payload.data?.redirect) {
+      if (payload.data?.redirect && typeof payload.data.redirect === 'string') {
         window.location.href = payload.data.redirect;
       }
     };
@@ -87,10 +86,10 @@ class NotificationService {
     const reminders = getReminders();
     const today = new Date().toISOString().split('T')[0];
     const now = new Date();
-    const hour = now.getHours();
+    const currentHour = now.getHours();
 
     // Only send notifications during reasonable hours (8 AM - 9 PM)
-    if (hour < 8 || hour > 21) return;
+    if (currentHour < 8 || currentHour > 21) return;
 
     reminders.forEach(reminder => {
       const reminderDate = reminder.date.split('T')[0];
@@ -130,20 +129,16 @@ class NotificationService {
 
     const recurring = JSON.parse(localStorage.getItem('equilibria_recurring') || '[]');
     const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
-    const hour = now.getHours();
 
-    // Only check during reasonable hours
-    if (hour < 8 || hour > 21) return;
 
-    recurring.forEach((item: any) => {
+    recurring.forEach((item: Record<string, unknown>) => {
       if (item.nextDate === today) {
         const notifiedKey = `equilibria_recurring_notified_${item.id}_${today}`;
         if (localStorage.getItem(notifiedKey)) return;
 
         this.sendNotification({
           title: `📅 Transaksi Otomatis: ${item.name}`,
-          body: `Rp ${item.amount.toLocaleString('id-ID')} - ${item.frequency}`,
+          body: `Rp ${Number(item.amount).toLocaleString('id-ID')} - ${item.frequency}`,
           tag: `recurring-${item.id}`,
           data: {
             type: 'recurring',
@@ -164,15 +159,12 @@ class NotificationService {
     const debts = JSON.parse(localStorage.getItem('equilibria_debts') || '[]');
     const today = new Date();
     const daysUntil = 3; // Notify 3 days before due
-    const now = new Date();
-    const hour = now.getHours();
 
-    if (hour < 8 || hour > 21) return;
 
-    debts.forEach((debt: any) => {
+    debts.forEach((debt: Record<string, unknown>) => {
       if (!debt.dueDate || debt.status === 'PAID') return;
 
-      const dueDate = new Date(debt.dueDate);
+      const dueDate = new Date(String(debt.dueDate));
       const diffTime = dueDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -180,7 +172,7 @@ class NotificationService {
         const notifiedKey = `equilibria_debt_notified_${debt.id}`;
         if (localStorage.getItem(notifiedKey)) return;
 
-        const remaining = debt.amount - (debt.paidAmount || 0);
+        const remaining = Number(debt.amount) - (Number(debt.paidAmount) || 0);
         const isDebt = debt.type === 'DEBT';
 
         this.sendNotification({
@@ -204,8 +196,6 @@ class NotificationService {
     if (typeof window === 'undefined') return;
 
     // Check immediately if it's around 9 AM
-    const now = new Date();
-    const hour = now.getHours();
 
     // Initial check (can be removed in production)
     setTimeout(() => {

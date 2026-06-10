@@ -21,8 +21,9 @@ export default function RecurringPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', amount: '', frequency: 'Bulanan', nextDate: '', description: '' });
   const [editingItem, setEditingItem] = useState<RecurringItem | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  
 
   useEffect(() => {
     fetchRecurring();
@@ -47,7 +48,7 @@ export default function RecurringPage() {
           localStorage.setItem('equilibria_recurring', JSON.stringify(initial));
         }
       }
-    } catch (error) {
+    } catch {
       const stored = localStorage.getItem('equilibria_recurring');
       if (stored) setRecurring(JSON.parse(stored));
     } finally {

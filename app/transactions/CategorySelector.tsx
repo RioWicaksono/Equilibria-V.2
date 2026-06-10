@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, X, Search, Edit3 } from 'lucide-react';
-import { ALL_DEFAULT_CATEGORIES, getCategoriesByType, TransactionCategory } from '@/domain/value-objects/TransactionCategory';
+import { Plus, Search, Edit3 } from 'lucide-react';
+import { getCategoriesByType, TransactionCategory } from '@/domain/value-objects/TransactionCategory';
 
 interface CategorySelectorProps {
   value: string;

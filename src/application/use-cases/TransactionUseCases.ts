@@ -1,5 +1,5 @@
 import { Transaction } from '../../domain/entities/Transaction';
-import { TransactionType, isValidTransactionType } from '../../domain/value-objects/TransactionType';
+import { TransactionType } from '../../domain/value-objects/TransactionType';
 import { ITransactionRepository, TransactionFilter } from '../../domain/repositories/ITransactionRepository';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,8 +30,8 @@ export class TransactionUseCases {
       type: dto.type,
       category: dto.category,
       description: dto.description,
-      date: dto.date,
-      createdAt: new Date(),
+      date: dto.date instanceof Date ? dto.date.toISOString() : String(dto.date),
+      createdAt: new Date().toISOString(),
     };
 
     await this.transactionRepository.save(transaction);
@@ -60,7 +60,7 @@ export class TransactionUseCases {
       type: dto.type ?? existing.type,
       category: dto.category ?? existing.category,
       description: dto.description ?? existing.description,
-      date: dto.date ?? existing.date,
+      date: dto.date ? (dto.date instanceof Date ? dto.date.toISOString() : String(dto.date)) : existing.date,
     };
 
     await this.transactionRepository.save(updated);

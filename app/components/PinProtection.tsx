@@ -136,9 +136,10 @@ export default function PinProtection({ children }: { children: React.ReactNode 
           setIsAuthenticated(true);
         }, 800);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Biometric error:', err);
-      if (err.name === 'NotAllowedError') {
+      const error = err as Error;
+      if (error.name === 'NotAllowedError') {
         setBiometricError('Authentication cancelled');
       } else {
         setBiometricError('Authentication failed');
@@ -184,8 +185,8 @@ export default function PinProtection({ children }: { children: React.ReactNode 
           setIsAuthenticated(true);
         }, 800);
       }
-    } catch (err: any) {
-      console.error('Biometric registration error:', err);
+    } catch {
+      console.error('Biometric registration error');
       setBiometricError('Registration failed');
     }
   };
@@ -203,6 +204,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, pin, error, correctPin]);
 
   if (!isClient) return null;

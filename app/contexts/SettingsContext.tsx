@@ -19,7 +19,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Read from localStorage on mount
     const t = localStorage.getItem('equilibria_theme');
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (t) setTheme(t);
     const c = localStorage.getItem('equilibria_currency');
     if (c) setCurrency(c);

@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Search, Filter, X, Calendar, RefreshCw } from 'lucide-react';
-import { useSettings } from '../contexts/SettingsContext';
-import { ALL_DEFAULT_CATEGORIES, getCategoryById } from '@/domain/value-objects/TransactionCategory';
+import { Search, Filter, X } from 'lucide-react';
+import { ALL_DEFAULT_CATEGORIES } from '@/domain/value-objects/TransactionCategory';
 
 interface Transaction {
   id: string;
@@ -20,7 +19,7 @@ interface TransactionFiltersProps {
 }
 
 export default function TransactionFilters({ transactions, onFilteredChange }: TransactionFiltersProps) {
-  const { formatCurrency } = useSettings();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');

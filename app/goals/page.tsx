@@ -21,8 +21,9 @@ export default function GoalsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', targetAmount: '', currentAmount: '', deadline: '', description: '' });
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  
 
   useEffect(() => {
     fetchGoals();
@@ -47,7 +48,7 @@ export default function GoalsPage() {
           localStorage.setItem('equilibria_goals', JSON.stringify(initial));
         }
       }
-    } catch (error) {
+    } catch {
       const stored = localStorage.getItem('equilibria_goals');
       if (stored) setGoals(JSON.parse(stored));
     } finally {
@@ -89,8 +90,8 @@ export default function GoalsPage() {
           localStorage.setItem('equilibria_goals', JSON.stringify(updated));
         }
       }
-    } catch (error) {
-      console.error('Error saving goal:', error);
+    } catch {
+      console.error('Error saving goal');
     } finally {
       setIsSaving(false);
       setIsModalOpen(false);

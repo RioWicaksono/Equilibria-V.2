@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { Download } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
+import { Transaction } from '@/domain/entities/Transaction';
 
-export default function SummaryClient({ allTransactions }: { allTransactions: any[] }) {
+export default function SummaryClient({ allTransactions }: { allTransactions: Transaction[] }) {
   const { formatCurrency } = useSettings();
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth());
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());

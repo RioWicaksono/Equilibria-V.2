@@ -128,7 +128,7 @@ export default function ClientReminderList() {
           <div className="flex gap-2">
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
+              onChange={(e) => setFilterStatus(e.target.value as 'ALL' | 'PENDING' | 'COMPLETED')}
               className="bg-[#1A1A1A] border border-[#262626] text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500"
             >
               <option value="ALL">Semua Status</option>
@@ -137,7 +137,7 @@ export default function ClientReminderList() {
             </select>
             <select
               value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value as any)}
+              onChange={(e) => setFilterPriority(e.target.value as 'ALL' | 'LOW' | 'MEDIUM' | 'HIGH')}
               className="bg-[#1A1A1A] border border-[#262626] text-white rounded-lg px-3 py-2 text-sm outline-none focus:border-teal-500"
             >
               <option value="ALL">Semua Prioritas</option>
@@ -298,7 +298,7 @@ export default function ClientReminderList() {
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Prioritas</label>
                     <select
                       value={formData.priority}
-                      onChange={e => setFormData({ ...formData, priority: e.target.value as any })}
+                      onChange={e => setFormData({ ...formData, priority: e.target.value as Reminder['priority'] })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm outline-none focus:border-teal-500"
                     >
                       <option value="LOW">Rendah</option>
@@ -310,7 +310,7 @@ export default function ClientReminderList() {
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Frekuensi</label>
                     <select
                       value={formData.frequency}
-                      onChange={e => setFormData({ ...formData, frequency: e.target.value as any })}
+                      onChange={e => setFormData({ ...formData, frequency: e.target.value as Reminder['frequency'] })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm outline-none focus:border-teal-500"
                     >
                       <option value="ONCE">Sekali</option>
@@ -327,7 +327,7 @@ export default function ClientReminderList() {
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Status</label>
                     <select
                       value={formData.status}
-                      onChange={e => setFormData({ ...formData, status: e.target.value as any })}
+                      onChange={e => setFormData({ ...formData, status: e.target.value as Reminder['status'] })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm outline-none focus:border-teal-500"
                     >
                       <option value="PENDING">Pending</option>

@@ -8,7 +8,7 @@ export interface Transaction {
   categoryName?: string;
   categoryIcon?: string;
   categoryColor?: string;
-  date: Date;
+  date: string;
   description: string;
-  createdAt: Date;
+  createdAt?: string;
 }

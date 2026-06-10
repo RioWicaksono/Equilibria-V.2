@@ -1,5 +1,3 @@
-import { TransactionType } from './TransactionType';
-
 export interface TransactionId {
   readonly value: string;
 }

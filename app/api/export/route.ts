@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFinanceService } from '@/application/services/FinanceService';
 import { ExportQuerySchema } from '@/lib/validation';
 import { exportToCSV, exportToXLSX, exportToJSON, getExportFilename } from '@/lib/export';
+import { Transaction } from '@/domain/entities/Transaction';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,13 +32,13 @@ export async function GET(request: NextRequest) {
     const financeService = getFinanceService();
 
     // Fetch transactions
-    let transactions: any[] = [];
+    let transactions: Transaction[] = [];
     if (type === 'all' || type === 'transactions') {
       transactions = await financeService.getTransactions();
 
       // Filter by month if specified
       if (month) {
-        transactions = transactions.filter((t: any) => {
+        transactions = transactions.filter((t: Transaction) => {
           const d = new Date(t.date);
           const yyyymm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
           return yyyymm === month;
@@ -46,13 +47,13 @@ export async function GET(request: NextRequest) {
     }
 
     const exportData = {
-      transactions: transactions.map((t: any) => ({
+      transactions: transactions.map((t: Transaction) => ({
         id: t.id,
         amount: t.amount,
         type: t.type,
         category: t.category,
         description: t.description,
-        date: t.date,
+        date: new Date(t.date).toISOString(),
       })),
       wallets: [],
       goals: [],

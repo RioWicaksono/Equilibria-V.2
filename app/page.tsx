@@ -10,10 +10,16 @@ import { headers } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
+interface Summary {
+  balance: number;
+  totalIncome: number;
+  totalExpense: number;
+}
+
 export default async function DashboardPage() {
   await headers();
   const financeService = getFinanceService();
-  const summary = await financeService.getSummary();
+  const summary = await financeService.getSummary() as Summary;
   const transactions = await financeService.getTransactions();
   const budgets = await financeService.getBudgets();
 

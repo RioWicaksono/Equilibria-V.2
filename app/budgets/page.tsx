@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, Plus, X, Pencil, Trash2, AlertTriangle, Loader2, Check } from 'lucide-react';
+import { Target, Plus, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
-import { ALL_DEFAULT_CATEGORIES, getCategoriesByType, type TransactionCategory } from '@/domain/value-objects/TransactionCategory';
+import { ALL_DEFAULT_CATEGORIES } from '@/domain/value-objects/TransactionCategory';
 
 interface BudgetItem {
   id: string;
@@ -44,7 +44,7 @@ export default function BudgetsPage() {
           setBudgets(JSON.parse(stored));
         }
       }
-    } catch (error) {
+    } catch {
       const stored = localStorage.getItem('equilibria_budgets');
       if (stored) setBudgets(JSON.parse(stored));
     } finally {

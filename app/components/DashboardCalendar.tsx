@@ -7,9 +7,10 @@ import { id } from 'date-fns/locale';
 import { getReminders, type Reminder } from '@/infrastructure/storage/LocalStorageReminders';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, AlertCircle, CheckCircle } from 'lucide-react';
+import { Transaction } from '@/domain/entities/Transaction';
 
 interface DashboardCalendarProps {
-  transactions: any[];
+  transactions: Transaction[];
 }
 
 export default function DashboardCalendar({ transactions }: DashboardCalendarProps) {

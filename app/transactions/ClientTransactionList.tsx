@@ -5,20 +5,31 @@ import { Trash2, Edit2, CloudOff, X, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '../contexts/SettingsContext';
+import { Transaction } from '@/domain/entities/Transaction';
 
-const ClientTransactionList = memo(function ClientTransactionList({ 
+interface OfflineQueueItem extends Transaction {
+  isOffline: boolean;
+}
+
+type TransactionItem = Transaction | OfflineQueueItem;
+
+function isOfflineItem(item: TransactionItem): item is OfflineQueueItem {
+  return 'isOffline' in item && (item as OfflineQueueItem).isOffline === true;
+}
+
+const ClientTransactionList = memo(function ClientTransactionList({
   initialTransactions,
   onDelete
-}: { 
-  initialTransactions: any[];
+}: {
+  initialTransactions: Transaction[];
   onDelete: (id: string) => void;
 }) {
   const router = useRouter();
   const { formatCurrency } = useSettings();
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [offlineQueue, setOfflineQueue] = useState<any[]>([]);
-  const [editingItem, setEditingItem] = useState<any | null>(null);
+  const [offlineQueue, setOfflineQueue] = useState<OfflineQueueItem[]>([]);
+  const [editingItem, setEditingItem] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,7 +37,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
     const queueStr = localStorage.getItem('transaction_queue') || '[]';
     const queue = JSON.parse(queueStr);
     if (queue.length > 0) {
-      setOfflineQueue(queue.map((q: any, i: number) => ({
+      setOfflineQueue(queue.map((q: Transaction, i: number) => ({
         ...q,
         id: `offline-${Date.now()}-${i}`,
         isOffline: true
@@ -37,7 +48,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
       const qs = localStorage.getItem('transaction_queue') || '[]';
       const q = JSON.parse(qs);
       if (q.length !== offlineQueue.length) {
-        setOfflineQueue(q.map((item: any, i: number) => ({
+        setOfflineQueue(q.map((item: Transaction, i: number) => ({
           ...item,
           id: `offline-${Date.now()}-${i}`,
           isOffline: true
@@ -47,7 +58,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
     return () => clearInterval(interval);
   }, [offlineQueue.length]);
 
-  const allCombined = useMemo(() => [...offlineQueue, ...initialTransactions], [offlineQueue, initialTransactions]);
+  const allCombined = useMemo(() => [...offlineQueue, ...initialTransactions] as TransactionItem[], [offlineQueue, initialTransactions]);
 
   const extractTags = (text: string) => {
     const matches = text.match(/#[\w]+/g);
@@ -70,8 +81,8 @@ const ClientTransactionList = memo(function ClientTransactionList({
     }
     if (searchQuery.trim() !== '') {
       const qs = searchQuery.toLowerCase();
-      result = result.filter(t => 
-        (t.description || '').toLowerCase().includes(qs) || 
+      result = result.filter(t =>
+        (t.description || '').toLowerCase().includes(qs) ||
         (t.category || '').toLowerCase().includes(qs)
       );
     }
@@ -81,15 +92,16 @@ const ClientTransactionList = memo(function ClientTransactionList({
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const formData = new FormData();
+      if (!editingItem) return;
       formData.append('id', editingItem.id);
       formData.append('type', editingItem.type);
       formData.append('amount', editingItem.amount.toString());
       formData.append('category', editingItem.category);
       formData.append('description', editingItem.description);
-      formData.append('date', editingItem.date.split('T')[0]);
+      formData.append('date', new Date(editingItem.date).toISOString().split('T')[0]);
 
       if (navigator.onLine) {
         await fetch('/api/transactions', {
@@ -107,9 +119,9 @@ const ClientTransactionList = memo(function ClientTransactionList({
   return (
     <div className="space-y-4 relative">
       <div className="flex flex-col gap-4 mb-4">
-        <input 
-          type="text" 
-          placeholder="Cari nama atau kategori transaksi..." 
+        <input
+          type="text"
+          placeholder="Cari nama atau kategori transaksi..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-4 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm"
@@ -147,8 +159,8 @@ const ClientTransactionList = memo(function ClientTransactionList({
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
             {filteredTransactions.map((t) => (
-              <motion.div 
-                key={t.id} 
+              <motion.div
+                key={t.id}
                 layout
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -161,7 +173,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
                     <span className="font-semibold text-white">
                       {t.category}
                     </span>
-                    {t.isOffline && (
+                    {isOfflineItem(t) && (
                       <span className="flex items-center gap-1 text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-medium" title="Menunggu sinkronisasi (Offline)">
                         <CloudOff className="w-3 h-3" />
                         Tertunda
@@ -176,12 +188,11 @@ const ClientTransactionList = memo(function ClientTransactionList({
                   <span className={`font-semibold ${t.type === 'INCOME' ? 'text-teal-400' : 'text-rose-400'}`}>
                     {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount)}
                   </span>
-                  {!t.isOffline && (
+                  {!isOfflineItem(t) && (
                     <div className="flex items-center">
-                      <button 
+                      <button
                         onClick={() => {
                           const dateObj = new Date(t.date);
-                          // offset for correct local yyyy-mm-dd
                           const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
                           setEditingItem({ ...t, date: localIso });
                         }}
@@ -190,8 +201,8 @@ const ClientTransactionList = memo(function ClientTransactionList({
                         <Edit2 className="h-4 w-4" />
                         <span className="text-xs">Ubah</span>
                       </button>
-                      <button 
-                        onClick={() => setDeletingId(t.id)} 
+                      <button
+                        onClick={() => setDeletingId(t.id)}
                         className="text-zinc-500 hover:text-rose-500 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -209,19 +220,19 @@ const ClientTransactionList = memo(function ClientTransactionList({
       {/* Edit Modal */}
       <AnimatePresence>
         {editingItem && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
               className="bg-[#141414] border border-[#262626] rounded-xl p-6 w-full max-w-md shadow-2xl relative"
             >
-              <button 
+              <button
                 onClick={() => setEditingItem(null)}
                 className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
               >
@@ -229,14 +240,14 @@ const ClientTransactionList = memo(function ClientTransactionList({
               </button>
 
               <h3 className="text-xl font-bold text-white mb-6">Edit Transaksi</h3>
-              
+
               <form onSubmit={handleEditSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Jenis Transaksi</label>
-                  <select 
-                    value={editingItem.type} 
-                    onChange={(e) => setEditingItem({...editingItem, type: e.target.value})}
-                    required 
+                  <select
+                    value={editingItem.type}
+                    onChange={(e) => setEditingItem({...editingItem, type: e.target.value as Transaction['type']})}
+                    required
                     className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm"
                   >
                     <option value="EXPENSE">Pengeluaran</option>
@@ -246,11 +257,11 @@ const ClientTransactionList = memo(function ClientTransactionList({
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Nominal (Rp)</label>
-                  <input 
-                    type="text" 
-                    value={editingItem.amount} 
-                    onChange={(e) => setEditingItem({...editingItem, amount: e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')})}
-                    required 
+                  <input
+                    type="text"
+                    value={editingItem.amount}
+                    onChange={(e) => setEditingItem({...editingItem, amount: Number(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.'))})}
+                    required
                     pattern="[0-9]*"
                     inputMode="numeric"
                     className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm"
@@ -259,20 +270,20 @@ const ClientTransactionList = memo(function ClientTransactionList({
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Kategori (Gunakan #tag)</label>
-                  <input 
-                    type="text" 
-                    value={editingItem.category} 
+                  <input
+                    type="text"
+                    value={editingItem.category}
                     onChange={(e) => setEditingItem({...editingItem, category: e.target.value})}
-                    required 
+                    required
                     className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Keterangan / Deskripsi</label>
-                  <input 
-                    type="text" 
-                    value={editingItem.description} 
+                  <input
+                    type="text"
+                    value={editingItem.description}
                     onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
                     className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm"
                   />
@@ -280,19 +291,19 @@ const ClientTransactionList = memo(function ClientTransactionList({
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Tanggal</label>
-                  <input 
-                    type="date" 
-                    value={editingItem.date} 
+                  <input
+                    type="date"
+                    value={editingItem.date}
                     onChange={(e) => setEditingItem({...editingItem, date: e.target.value})}
                     max={new Date().toISOString().split('T')[0]}
-                    required 
+                    required
                     className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm [color-scheme:dark]"
                   />
                 </div>
 
                 <div className="pt-2">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isSubmitting || !editingItem.amount}
                     className="w-full bg-teal-500 hover:bg-teal-400 disabled:bg-teal-800 disabled:text-zinc-400 text-black font-bold py-2.5 rounded-lg transition-colors text-sm"
                   >
@@ -308,13 +319,13 @@ const ClientTransactionList = memo(function ClientTransactionList({
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deletingId && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 20 }}
@@ -331,13 +342,13 @@ const ClientTransactionList = memo(function ClientTransactionList({
                   </p>
                 </div>
                 <div className="flex w-full gap-3 pt-4">
-                  <button 
+                  <button
                     onClick={() => setDeletingId(null)}
                     className="flex-1 px-4 py-2 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-white font-medium text-sm transition-colors"
                   >
                     Batal
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       onDelete(deletingId);
                       setDeletingId(null);

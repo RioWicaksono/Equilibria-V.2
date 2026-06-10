@@ -36,21 +36,24 @@ function mapPrismaTransaction(t: PrismaTransactionResult): Transaction {
     amount: t.amount,
     type: t.type as TransactionType,
     category: t.category,
-    date: t.date,
+    date: t.date instanceof Date ? t.date.toISOString() : String(t.date),
     description: t.description,
-    createdAt: t.createdAt,
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
   };
 }
 
 export class PrismaTransactionRepository implements ITransactionRepository {
   async save(transaction: Transaction): Promise<void> {
+    const dateValue = new Date(transaction.date);
+    const createdAtValue = transaction.createdAt ? new Date(transaction.createdAt) : new Date();
+
     await getPrisma().transaction.upsert({
       where: { id: transaction.id },
       update: {
         amount: transaction.amount,
         type: transaction.type,
         category: transaction.category,
-        date: transaction.date,
+        date: dateValue,
         description: transaction.description,
       },
       create: {
@@ -58,9 +61,9 @@ export class PrismaTransactionRepository implements ITransactionRepository {
         amount: transaction.amount,
         type: transaction.type,
         category: transaction.category,
-        date: transaction.date,
+        date: dateValue,
         description: transaction.description,
-        createdAt: transaction.createdAt,
+        createdAt: createdAtValue,
       },
     });
   }

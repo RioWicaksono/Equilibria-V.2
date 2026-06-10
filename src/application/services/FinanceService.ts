@@ -3,6 +3,7 @@ import { IBudgetRepository } from '../../domain/repositories/IBudgetRepository';
 import { Transaction } from '../../domain/entities/Transaction';
 import { Budget } from '../../domain/entities/Budget';
 import { TransactionType } from '../../domain/value-objects/TransactionType';
+import { InMemoryTransactionRepository } from '../../infrastructure/repositories/InMemoryTransactionRepository';
 
 // Factory function for repository selection
 export type RepositoryFactory = () => {
@@ -10,28 +11,8 @@ export type RepositoryFactory = () => {
   budget: IBudgetRepository;
 };
 
-// Default factory - checks env for database URL
+// Default factory - uses in-memory repositories for simplicity
 const defaultFactory: RepositoryFactory = () => {
-  // Check if we're in a server context and have valid DB URL
-  const dbUrl = typeof process !== 'undefined'
-    ? process.env.DATABASE_URL
-    : null;
-  const usePrisma = dbUrl && dbUrl.startsWith('postgres') && !dbUrl.includes('${{') && !dbUrl.includes('undefined');
-
-  if (usePrisma) {
-    try {
-      const { PrismaTransactionRepository } = require('../../infrastructure/repositories/PrismaTransactionRepository');
-      const { PrismaBudgetRepository } = require('../../infrastructure/repositories/PrismaBudgetRepository');
-      return {
-        transaction: new PrismaTransactionRepository(),
-        budget: new PrismaBudgetRepository(),
-      };
-    } catch (e) {
-      console.warn('[FinanceService] Prisma not available, falling back to in-memory');
-    }
-  }
-
-  const { InMemoryTransactionRepository } = require('../../infrastructure/repositories/InMemoryTransactionRepository');
   return {
     transaction: new InMemoryTransactionRepository(),
     budget: new InMemoryTransactionRepositoryBudget(),
@@ -69,33 +50,33 @@ class InMemoryTransactionRepositoryBudget implements IBudgetRepository {
 }
 
 // Lazy load use cases
-function createTransactionUseCases(repo: ITransactionRepository) {
-  const { TransactionUseCases } = require('../use-cases/TransactionUseCases');
+async function createTransactionUseCases(repo: ITransactionRepository) {
+  const { TransactionUseCases } = await import('../use-cases/TransactionUseCases');
   return new TransactionUseCases(repo);
 }
 
-function createBudgetUseCases(budgetRepo: IBudgetRepository, transactionRepo: ITransactionRepository) {
-  const { BudgetUseCases } = require('../use-cases/BudgetUseCases');
+async function createBudgetUseCases(budgetRepo: IBudgetRepository, transactionRepo: ITransactionRepository) {
+  const { BudgetUseCases } = await import('../use-cases/BudgetUseCases');
   return new BudgetUseCases(budgetRepo, transactionRepo);
 }
 
 export class FinanceService {
   private readonly repositories: ReturnType<RepositoryFactory>;
-  private _transactionUseCases: any = null;
-  private _budgetUseCases: any = null;
+  private _transactionUseCases: Promise<unknown> | null = null;
+  private _budgetUseCases: Promise<unknown> | null = null;
 
   constructor(repositoryFactory: RepositoryFactory = defaultFactory) {
     this.repositories = repositoryFactory();
   }
 
-  private get transactionUseCases() {
+  private getTransactionUseCases(): Promise<unknown> {
     if (!this._transactionUseCases) {
       this._transactionUseCases = createTransactionUseCases(this.repositories.transaction);
     }
     return this._transactionUseCases;
   }
 
-  private get budgetUseCases() {
+  private getBudgetUseCases(): Promise<unknown> {
     if (!this._budgetUseCases) {
       this._budgetUseCases = createBudgetUseCases(this.repositories.budget, this.repositories.transaction);
     }
@@ -109,7 +90,8 @@ export class FinanceService {
     description: string,
     dateString: string
   ): Promise<Transaction> {
-    return this.transactionUseCases.createTransaction({
+    const useCases = await this.getTransactionUseCases() as { createTransaction: (data: unknown) => Promise<Transaction> };
+    return useCases.createTransaction({
       amount,
       type,
       category,
@@ -119,7 +101,8 @@ export class FinanceService {
   }
 
   async getTransactions(): Promise<Transaction[]> {
-    return this.transactionUseCases.getAllTransactions();
+    const useCases = await this.getTransactionUseCases() as { getAllTransactions: () => Promise<Transaction[]> };
+    return useCases.getAllTransactions();
   }
 
   async updateTransaction(
@@ -130,7 +113,8 @@ export class FinanceService {
     description: string,
     dateString: string
   ): Promise<Transaction | null> {
-    return this.transactionUseCases.updateTransaction({
+    const useCases = await this.getTransactionUseCases() as { updateTransaction: (data: unknown) => Promise<Transaction | null> };
+    return useCases.updateTransaction({
       id,
       amount,
       type,
@@ -141,31 +125,38 @@ export class FinanceService {
   }
 
   async getSummary() {
-    return this.transactionUseCases.getFinancialSummary();
+    const useCases = await this.getTransactionUseCases() as { getFinancialSummary: () => unknown };
+    return useCases.getFinancialSummary();
   }
 
   async deleteTransaction(id: string): Promise<void> {
-    await this.transactionUseCases.deleteTransaction(id);
+    const useCases = await this.getTransactionUseCases() as { deleteTransaction: (id: string) => Promise<void> };
+    await useCases.deleteTransaction(id);
   }
 
   async getBudgets(): Promise<Budget[]> {
-    return this.budgetUseCases.getAllBudgets();
+    const useCases = await this.getBudgetUseCases() as { getAllBudgets: () => Promise<Budget[]> };
+    return useCases.getAllBudgets();
   }
 
   async getBudgetStatuses() {
-    return this.budgetUseCases.getAllBudgetStatuses();
+    const useCases = await this.getBudgetUseCases() as { getAllBudgetStatuses: () => unknown };
+    return useCases.getAllBudgetStatuses();
   }
 
   async setBudget(category: string, limit: number): Promise<Budget> {
-    return this.budgetUseCases.createBudget({ category, limit });
+    const useCases = await this.getBudgetUseCases() as { createBudget: (data: { category: string; limit: number }) => Promise<Budget> };
+    return useCases.createBudget({ category, limit });
   }
 
   async getBudgetStatus(budgetId: string) {
-    return this.budgetUseCases.getBudgetStatus(budgetId);
+    const useCases = await this.getBudgetUseCases() as { getBudgetStatus: (id: string) => unknown };
+    return useCases.getBudgetStatus(budgetId);
   }
 
   async deleteBudget(id: string): Promise<boolean> {
-    return this.budgetUseCases.deleteBudget(id);
+    const useCases = await this.getBudgetUseCases() as { deleteBudget: (id: string) => Promise<boolean> };
+    return useCases.deleteBudget(id);
   }
 }
 

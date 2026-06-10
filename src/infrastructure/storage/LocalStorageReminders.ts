@@ -15,7 +15,7 @@ export function getReminders(): Reminder[] {
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
-      return parsed.map((p: any) => ({
+      return parsed.map((p: Reminder) => ({
         ...p,
         status: p.status || 'PENDING',
         priority: p.priority || (p.urgent ? 'HIGH' : 'MEDIUM'),

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Loader2, X, FileSpreadsheet, FileText } from 'lucide-react';
+import { Download, Loader2, FileSpreadsheet, FileText, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Transaction } from '@/domain/entities/Transaction';
 
-export default function ExportButton({ transactions = [] }: { transactions?: any[] }) {
+export default function ExportButton({ transactions = [] }: { transactions?: Transaction[] }) {
   const [isExporting, setIsExporting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [exportType, setExportType] = useState<'xlsx' | 'csv'>('csv');
@@ -33,7 +34,7 @@ export default function ExportButton({ transactions = [] }: { transactions?: any
 
       setToast({ message: 'Export Excel berhasil diunduh!', type: 'success' });
       setShowModal(false);
-    } catch (error) {
+    } catch {
       setToast({ message: 'Gagal melakukan export Excel', type: 'error' });
     } finally {
       setIsExporting(false);
