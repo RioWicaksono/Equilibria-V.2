@@ -200,5 +200,23 @@ Equilibria Finance`);
 }
 
 export async function GET() {
-  return NextResponse.json({ status: 'ok', bot: process.env.TELEGRAM_BOT_TOKEN ? 'ready' : 'missing_token' });
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+
+  // Check bot health
+  let botStatus = 'NOT_CONFIGURED';
+  if (token) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const data = await res.json();
+      botStatus = data.ok ? 'CONNECTED' : 'DISCONNECTED';
+    } catch {
+      botStatus = 'ERROR';
+    }
+  }
+
+  return NextResponse.json({
+    status: 'ok',
+    bot: botStatus,
+    telegram: botStatus,
+  });
 }

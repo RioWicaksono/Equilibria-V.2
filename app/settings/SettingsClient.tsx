@@ -111,7 +111,9 @@ export default function SettingsClient() {
         .then(res => res.json())
         .then(data => {
           if (!active) return;
-          setTelegramStatus(data.status);
+          // telegram webhook returns {bot: 'CONNECTED'|'DISCONNECTED'|'NOT_CONFIGURED'|'ERROR', status, ...}
+          const botState = data.bot || 'INACTIVE';
+          setTelegramStatus(botState === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
           if (data.lastSync) setLastSync(data.lastSync);
         })
         .catch(() => {
