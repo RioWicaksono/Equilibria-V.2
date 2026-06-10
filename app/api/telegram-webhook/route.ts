@@ -341,7 +341,7 @@ async function sendBudget(token: string, chatId: number) {
       return;
     }
 
-    const budgetList = budgets.map(b => {
+    const budgetList = budgets.map((b: any) => {
       const emoji = b.percentage >= 100 ? '🔴' : b.percentage >= 80 ? '🟡' : '🟢';
       return `${emoji} ${b.category}\n   ${formatCurrency(b.spent)} / ${formatCurrency(b.limit)} (${b.percentage}%)`;
     }).join('\n\n');
