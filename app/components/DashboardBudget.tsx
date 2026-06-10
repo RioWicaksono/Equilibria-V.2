@@ -108,7 +108,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
             const spent = categoryTotals[b.category] || 0;
             return (spent / b.limit) * 100 >= alertThreshold;
           }) && (
-            <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" title="Ada budget alert!" />
+            <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
           )}
         </div>
         {!isAdding && (
