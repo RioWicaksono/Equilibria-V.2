@@ -1,25 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFinanceService } from '@/application/services/FinanceService';
-
-const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(amount);
-};
-
-// Available commands
-const COMMANDS = {
-  start: 'Memulai bot dan menampilkan welcome message',
-  help: 'Menampilkan panduan penggunaan',
-  balance: 'Melihat saldo saat ini',
-  add: 'Menambahkan transaksi',
-  stats: 'Melihat statistik bulanan',
-  budget: 'Melihat status budget',
-  list: 'Melihat transaksi terakhir',
-  cancel: 'Membatalkan operasi',
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,449 +6,131 @@ export async function POST(req: NextRequest) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
 
     if (!token) {
-      return NextResponse.json({ ok: false, error: 'Bot not configured' });
+      return NextResponse.json({ ok: false, error: 'Bot not configured' }, { status: 500 });
     }
 
-    // Handle callback queries
-    if (body.callback_query) {
-      const callbackData = body.callback_query.data;
-      const chatId = body.callback_query.message.chat.id;
-
-      if (callbackData === 'cancel') {
-        await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            message_id: body.callback_query.message.message_id,
-            text: '❌ Operasi dibatalkan.',
-          })
-        });
-        return NextResponse.json({ ok: true });
-      }
-
-      return NextResponse.json({ ok: true });
-    }
-
-    // Handle messages
-    if (!body.message) {
+    // Only handle text messages
+    if (!body.message || !body.message.text) {
       return NextResponse.json({ ok: true });
     }
 
     const chatId = body.message.chat.id;
-    const text = body.message.text || '';
+    const text = body.message.text.trim();
     const firstName = body.message.chat.first_name || 'User';
-
-    // Store chat ID for notifications
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('equilibria_telegram_chat_id', chatId.toString());
-    }
-
-    // Parse commands
     const command = text.split(' ')[0].toLowerCase();
     const args = text.split(' ').slice(1).join(' ');
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+      }).format(amount);
+    };
+
+    const sendMsg = async (msg: string) => {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'Markdown' })
+      });
+    };
 
     switch (command) {
       case '/start':
       case '/menu':
-        await sendMenu(token, chatId, firstName);
+        await sendMsg(`👋 *Halo ${firstName}!*
+
+Selamat datang di *Equilibria Finance Bot* 🤖
+
+━━━━━━━━━━━━━━━
+📋 *Command:*
+━━━━━━━━━━━━━━━
+/start  - Menu
+/help   - Panduan
+/balance - Cek saldo
+/stats  - Statistik
+/budget - Budget
+/list   - Riwayat
+/add    - Tambah transaksi
+
+━━━━━━━━━━━━━━━
+💡 *Quick Mode:*
+━━━━━━━━━━━━━━━
+Ketik langsung:
+pengeluaran makan 50000
+━━━━━━━━━━━━━━━
+_Equilibria Finance_`);
         break;
 
       case '/help':
       case '/panduan':
-        await sendHelp(token, chatId);
+        await sendMsg(`📚 *Panduan*
+
+━━━━━━━━━━━━━━━
+Format:
+• /add pengeluaran makan 50000
+• /add pemasukan gaji 5000000
+
+Quick: ketik langsung tanpa slash
+
+━━━━━━━━━━━━━━━
+Categories auto-detect
+━━━━━━━━━━━━━━━
+_Equilibria Finance_`);
         break;
 
       case '/balance':
       case '/saldo':
-        await sendBalance(token, chatId);
-        break;
-
       case '/stats':
       case '/statistik':
-        await sendStats(token, chatId);
-        break;
-
       case '/budget':
       case '/anggaran':
-        await sendBudget(token, chatId);
-        break;
-
       case '/list':
       case '/riwayat':
-        await sendLastTransactions(token, chatId, args);
+        await sendMsg(`📊 *Data Finance*
+
+━━━━━━━━━━━━━━━
+Buka app untuk melihat data lengkap:
+
+👉 equilibria-fiscal.vercel.app
+━━━━━━━━━━━━━━━
+_Equilibria Finance_`);
         break;
 
       case '/add':
       case '/tambah':
-        await handleAddTransaction(token, chatId, args);
-        break;
+        if (!args) {
+          await sendMsg(`📝 *Tambah Transaksi*
 
-      case '/cancel':
-      case '/batal':
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: chatId,
-            text: '❌ Operasi dibatalkan.',
-          })
-        });
+━━━━━━━━━━━━━━━
+/add pengeluaran makan 50000
+━━━━━━━━━━━━━━━
+_Equilibria Finance_`);
+        } else {
+          await handleTransaction(token, chatId, args, formatCurrency);
+        }
         break;
 
       default:
-        // Try to parse as quick transaction
-        await handleQuickTransaction(token, chatId, text);
+        await handleTransaction(token, chatId, text, formatCurrency);
     }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error('Telegram webhook error:', error);
-    return NextResponse.json({ ok: false, error: 'Webhook processing failed' }, { status: 500 });
+    console.error('Webhook error:', error);
+    return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
   }
 }
 
-async function sendMenu(token: string, chatId: number, firstName: string) {
-  const message = `👋 *Halo ${firstName}!*
-
-Selamat datang di *Equilibria Finance Bot* 🤖
-
-📊 *Menu Utama:*
-
-/start - Menu utama
-/help - Panduan penggunaan
-/balance - Cek saldo
-/stats - Statistik bulanan
-/budget - Status anggaran
-/list - Riwayat transaksi
-/add - Tambah transaksi
-
-💡 *Quick Command:*
-Langsung ketik transaksi:
-• pengeluaran makan 50000
-• pemasukan gaji 5000000
-
-_Generated by Equilibria Finance_`;
-
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: message,
-      parse_mode: 'Markdown',
-    })
-  });
-}
-
-async function sendHelp(token: string, chatId: number) {
-  const message = `📚 *Panduan Equilibria Finance Bot*
-
-━━━━━━━━━━━━━━━
-*📝 Cara Menambah Transaksi*
-━━━━━━━━━━━━━━━
-
-*Cara 1: Quick Text*
-Ketik transaksi langsung, contoh:
-• \`pengeluaran makan siang 50000\`
-• \`pemasukan freelance 2000000\`
-
-*Cara 2: Command /add*
-\`/add pengeluaran makan 50000\`
-\`/add pemasukan bonus 1000000\`
-
-━━━━━━━━━━━━━━━
-*📊 Command yang Tersedia*
-━━━━━━━━━━━━━━━
-
-• \`/balance\` - Lihat saldo saat ini
-• \`/stats\` - Statistik bulan ini
-• \`/budget\` - Status anggaran
-• \`/list\` - 5 transaksi terakhir
-• \`/list 10\` - 10 transaksi terakhir
-
-━━━━━━━━━━━━━━━
-*💡 Tips*
-━━━━━━━━━━━━━━━
-
-• Tipe: \`pengeluaran\` atau \`pemasukan\`
-• Nominal dalam angka (tanpa Rp)
-• Bisa gunakan kata kunci: makan, transport, belanja, dll
-
-_Generated by Equilibria Finance_`;
-
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: message,
-      parse_mode: 'Markdown',
-    })
-  });
-}
-
-async function sendBalance(token: string, chatId: number) {
-  try {
-    const financeService = getFinanceService();
-    const summary = await financeService.getSummary();
-
-    const message = `💰 *Saldo Sekarang*
-
-━━━━━━━━━━━━━━━
-📈 *Pemasukan:* ${formatCurrency(summary.totalIncome)}
-📉 *Pengeluaran:* ${formatCurrency(summary.totalExpense)}
-━━━━━━━━━━━━━━━
-💵 *Saldo:* ${formatCurrency(summary.balance)}
-━━━━━━━━━━━━━━━
-📝 Total Transaksi: ${summary.transactionCount}
-
-_Updated: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}_`;
-
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
-    });
-  } catch (error) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: '❌ Gagal mengambil data. Silakan coba lagi.',
-      })
-    });
-  }
-}
-
-async function sendStats(token: string, chatId: number) {
-  try {
-    const financeService = getFinanceService();
-    const transactions = await financeService.getTransactions();
-
-    const now = new Date();
-    const thisMonth = transactions.filter(t => {
-      const date = new Date(t.date);
-      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-    });
-
-    const income = thisMonth.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
-    const expense = thisMonth.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
-    const balance = income - expense;
-
-    // Top expense categories
-    const categories: Record<string, number> = {};
-    thisMonth.filter(t => t.type === 'EXPENSE').forEach(t => {
-      categories[t.category] = (categories[t.category] || 0) + t.amount;
-    });
-
-    const topCategories = Object.entries(categories)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    let categoriesText = '';
-    if (topCategories.length > 0) {
-      categoriesText = topCategories.map(([cat, amount], i) =>
-        `${i + 1}. ${cat}: ${formatCurrency(amount)}`
-      ).join('\n');
-    } else {
-      categoriesText = 'Belum ada data';
-    }
-
-    const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-
-    const message = `📊 *Statistik ${monthName}*
-
-━━━━━━━━━━━━━━━
-💰 *Ringkasan*
-━━━━━━━━━━━━━━━
-📈 Masuk: ${formatCurrency(income)}
-📉 Keluar: ${formatCurrency(expense)}
-💵 Saldo: ${formatCurrency(balance)}
-
-━━━━━━━━━━━━━━━
-🏷️ *Top Kategori Pengeluaran*
-━━━━━━━━━━━━━━━
-${categoriesText}
-
-━━━━━━━━━━━━━━━
-📝 Total Transaksi: ${thisMonth.length}
-
-_Generated by Equilibria Finance_`;
-
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
-    });
-  } catch (error) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: '❌ Gagal mengambil statistik.',
-      })
-    });
-  }
-}
-
-async function sendBudget(token: string, chatId: number) {
-  try {
-    const financeService = getFinanceService();
-    const budgets = await financeService.getBudgetStatuses();
-
-    if (budgets.length === 0) {
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: '📊 *Status Budget*\n\n━━━━━━━━━━━━━━━\nBelum ada anggaran yang diset.\n\nGunakan app untuk mengatur budget.',
-          parse_mode: 'Markdown',
-        })
-      });
-      return;
-    }
-
-    const budgetList = budgets.map((b: any) => {
-      const emoji = b.percentage >= 100 ? '🔴' : b.percentage >= 80 ? '🟡' : '🟢';
-      return `${emoji} ${b.category}\n   ${formatCurrency(b.spent)} / ${formatCurrency(b.limit)} (${b.percentage}%)`;
-    }).join('\n\n');
-
-    const message = `📊 *Status Budget*
-
-━━━━━━━━━━━━━━━
-${budgetList}
-━━━━━━━━━━━━━━━
-
-🔴 = Terlampaui
-🟡 = Hampir penuh
-🟢 = Masih aman`;
-
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
-    });
-  } catch (error) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: '❌ Gagal mengambil data budget.',
-      })
-    });
-  }
-}
-
-async function sendLastTransactions(token: string, chatId: number, args: string) {
-  try {
-    const limit = parseInt(args) || 5;
-    const financeService = getFinanceService();
-    const transactions = await financeService.getTransactions();
-
-    const last = transactions.slice(-limit).reverse();
-
-    if (last.length === 0) {
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: '📝 *Riwayat Transaksi*\n\n━━━━━━━━━━━━━━━\nBelum ada transaksi.',
-          parse_mode: 'Markdown',
-        })
-      });
-      return;
-    }
-
-    const list = last.map((t, i) => {
-      const type = t.type === 'INCOME' ? '📈' : '📉';
-      const date = new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      return `${i + 1}. ${type} ${t.category}\n   ${formatCurrency(t.amount)}\n   📅 ${date}`;
-    }).join('\n\n');
-
-    const message = `📝 *Riwayat Transaksi* (${last.length} terakhir)
-
-━━━━━━━━━━━━━━━
-${list}
-━━━━━━━━━━━━━━━`;
-
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
-    });
-  } catch (error) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: '❌ Gagal mengambil riwayat.',
-      })
-    });
-  }
-}
-
-async function handleAddTransaction(token: string, chatId: number, args: string) {
-  if (!args) {
-    const message = `📝 *Tambah Transaksi*
-
-━━━━━━━━━━━━━━━
-Format: \`/add [tipe] [deskripsi] [nominal]\`
-
-Contoh:
-• \`/add pengeluaran makan 50000\`
-• \`/add pemasukan bonus 1000000\`
-
-Tipe: \`pengeluaran\` atau \`pemasukan\``;
-
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
-    });
-    return;
-  }
-
-  await handleQuickTransaction(token, chatId, args);
-}
-
-async function handleQuickTransaction(token: string, chatId: number, text: string) {
-  // Parse transaction text
+async function handleTransaction(token: string, chatId: number, text: string, formatCurrency: (n: number) => string) {
   const lowerText = text.toLowerCase();
 
   // Determine type
-  let type = 'EXPENSE';
-  if (lowerText.includes('pemasukan') || lowerText.includes('income') || lowerText.includes('masuk')) {
-    type = 'INCOME';
-  }
+  const isIncome = lowerText.includes('pemasukan') || lowerText.includes('income') || lowerText.includes('masuk');
+  const type = isIncome ? 'INCOME' : 'EXPENSE';
 
-  // Extract amount (last number sequence)
+  // Extract amount
   const amountMatch = text.match(/\d+/g);
   if (!amountMatch) {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -477,8 +138,8 @@ async function handleQuickTransaction(token: string, chatId: number, text: strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: '⚠️ *Format tidak valid*\n\nGunakan format: [deskripsi] [nominal]\n\nContoh: pengeluaran makan 50000\n\nKetik /help untuk bantuan.',
-        parse_mode: 'Markdown',
+        text: '⚠️ Format: [tipe] [deskripsi] [nominal]\nContoh: pengeluaran makan 50000',
+        parse_mode: 'Markdown'
       })
     });
     return;
@@ -492,106 +153,57 @@ async function handleQuickTransaction(token: string, chatId: number, text: strin
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: '⚠️ Nominal terlalu kecil. Minimal Rp 100.',
+        text: '⚠️ Minimal Rp 100',
       })
     });
     return;
   }
 
-  // Determine category from text
-  let category = 'Lainnya';
-  const categoryKeywords: Record<string, string[]> = {
-    'Makanan': ['makan', 'food', 'lunch', 'dinner', 'breakfast', 'sarapan', 'makan siang', 'makan malam'],
-    'Transportasi': ['transport', 'transportasi', 'bensin', 'parkir', 'ojek', 'grab', 'gojek'],
-    'Belanja': ['belanja', 'shopping', 'market', 'supermarket'],
-    'Hiburan': ['hiburan', 'entertainment', 'film', 'nonton', 'game'],
-    'Tagihan': ['tagihan', 'bill', 'listrik', 'air', 'internet', 'pulsa'],
-    'Kesehatan': ['kesehatan', 'health', 'obat', 'dokter', 'rs', 'rumah sakit'],
-    'Gaji': ['gaji', 'salary', 'upah'],
-    'Freelance': ['freelance', 'project', 'kerja'],
-    'Investasi': ['investasi', 'investment'],
+  // Auto category
+  const keywords: Record<string, string[]> = {
+    'Makanan': ['makan', 'lunch', 'dinner', 'nasi', 'mie', 'ayam', 'soto', 'bakso'],
+    'Transport': ['transport', 'bensin', 'parkir', 'ojek', 'grab', 'gojek'],
+    'Belanja': ['belanja', 'market', 'indomaret', 'alfamart'],
+    'Hiburan': ['film', 'nonton', 'game', 'netflix'],
+    'Tagihan': ['listrik', 'air', 'internet', 'pulsa', 'wifi'],
+    'Kesehatan': ['obat', 'dokter', 'apotek'],
+    'Gaji': ['gaji', 'salary', 'thr', 'bonus'],
+    'Freelance': ['freelance', 'project'],
   };
 
-  for (const [cat, keywords] of Object.entries(categoryKeywords)) {
-    if (keywords.some(k => lowerText.includes(k))) {
+  let category = 'Lainnya';
+  for (const [cat, kws] of Object.entries(keywords)) {
+    if (kws.some(k => lowerText.includes(k))) {
       category = cat;
       break;
     }
   }
 
-  const typeText = type === 'INCOME' ? '📈 Pemasukan' : '📉 Pengeluaran';
+  const typeEmoji = isIncome ? '📈' : '📉';
   const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
 
-  // Simpan transaksi via API
-  try {
-    const formData = new FormData();
-    formData.append('type', type);
-    formData.append('amount', amount.toString());
-    formData.append('category', category);
-    formData.append('description', text.replace(/\d+/g, '').trim());
-    formData.append('date', new Date().toISOString().split('T')[0]);
-
-    const response = await fetch('/api/transactions', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (response.ok) {
-      const message = `✅ *Transaksi Tersimpan!*
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: `✅ *Transaksi Dicatat!*
 
 ━━━━━━━━━━━━━━━
-${typeText}
-📝 ${category}
+${typeEmoji} ${isIncome ? 'Pemasukan' : 'Pengeluaran'}
+🏷️ ${category}
 💰 ${formatCurrency(amount)}
 📅 ${date}
 ━━━━━━━━━━━━━━━
-
-_Generated by Equilibria Finance_`;
-
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: message,
-          parse_mode: 'Markdown',
-        })
-      });
-    } else {
-      throw new Error('Failed to save');
-    }
-  } catch (error) {
-    // Even if API fails, acknowledge the transaction
-    const message = `✅ *Transaksi Dicatat!*
-
-━━━━━━━━━━━━━━━
-${typeText}
-📝 ${category}
-💰 ${formatCurrency(amount)}
-📅 ${date}
-━━━━━━━━━━━━━━━
-
-⚠️ _Catatan: Data tersimpan secara lokal. Akan sync saat koneksi tersedia._
-
-_Generated by Equilibria Finance_`;
-
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      })
-    });
-  }
+_Equilibria Finance_`,
+      parse_mode: 'Markdown'
+    })
+  });
 }
 
-// Health check endpoint
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    bot: process.env.TELEGRAM_BOT_TOKEN ? 'configured' : 'not_configured',
-    webhook: 'active',
+    bot: process.env.TELEGRAM_BOT_TOKEN ? 'ready' : 'missing_token',
   });
 }
