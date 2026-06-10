@@ -52,7 +52,9 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
       id: `custom_${Date.now()}`,
       name: newCategoryName.trim(),
       icon: newCategoryIcon || '📁',
-      type: type
+      color: '#6b7280',
+      type: type,
+      isDefault: false
     };
 
     const updated = [...customCategories, newCategory];
