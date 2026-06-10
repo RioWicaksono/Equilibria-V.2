@@ -20,242 +20,183 @@ export async function POST(req: NextRequest) {
     const command = text.split(' ')[0].toLowerCase();
     const args = text.split(' ').slice(1).join(' ');
 
-    const replyOptions = {
-      chat_id: chatId,
-      reply_to_message_id: messageId,
-      parse_mode: 'Markdown' as const,
-    };
-
-    const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-
     const sendMsg = async (msg: string) => {
       await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...replyOptions, text: msg })
+        body: JSON.stringify({
+          chat_id: chatId,
+          reply_to_message_id: messageId,
+          text: msg,
+          parse_mode: 'Markdown',
+        })
       });
     };
 
-    // Command handlers
+    // /start
     if (command === '/start' || command === '/menu') {
-      await sendMsg(`👋 *Halo ${firstName}!*
+      await sendMsg(`👋 Halo ${firstName}!
 
-Selamat datang di *Equilibria Finance Bot* 💰
+Selamat datang di Equilibria Finance 💰
 
-Aku membantumu mencatat keuangan dengan mudah langsung dari Telegram!
-
-━━━━━━━━━━━━━━━━━━
-📌 *Cara Pakai:*
-━━━━━━━━━━━━━━━━━━
-
-1️⃣ *Langsung Ketik* (Paling Gampang!)
-━━━━━━━━━━━━━━━━━━
-━━━━━━━━━━━━━━━━━━
-Ketik: \`pengeluaran makan 50000\`
-Ketik: \`pemasukan salary 5000000\`
-
-2️⃣ *Pake Command*
-━━━━━━━━━━━━━━━━━━
-━━━━━━━━━━━━━━━━━━
-Ketik: \`/add makanan 25000\`
-Ketik: \`/add transport 15000\`
-
-━━━━━━━━━━━━━━━━━━
-🔗 *Buka App Lengkap:*
-━━━━━━━━━━━━━━━━━━
-━━━━━━━━━━━━━━━━━━
-https://equilibria-fiscal.vercel.app
-
-━━━━━━━━━━━━━━━━━━
-💡 *Ketik /help untuk panduan detail!*
-━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`);
+Ketik /help untuk panduan lengkap.`);
       return NextResponse.json({ ok: true });
     }
 
+    // /help
     if (command === '/help' || command === '/panduan') {
-      await sendMsg(`📚 *Panduan Lengkap*
+      await sendMsg(`📚 Panduan
 
-━━━━━━━━━━━━━━━━━━
-*1️⃣ CARA INPUT TRANSAKSI*
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━
+INPUT TRANSAKSI
+━━━━━━━━━━━━━━━
 
-━━━━━━━━━━━━━━━━━━
-✍️ *Cara 1: Quick Text (Gampang!*
-━━━━━━━━━━━━━━━━━━
-Ketik langsung tanpa slash:
+Ketik langsung (tanpa slash):
+pengeluaran makan 50000
+pemasukan salary 5000000
 
-\`pengeluaran makan 50000\`
-\`pemasukan freelance 2000000\`
-\`pengeluaran kopi 15000\`
+━━━━━━━━━━━━━━━
+KATEGORI OTOMATIS
+━━━━━━━━━━━━━━━
+Aku deteksi kategori dari kata:
 
-━━━━━━━━━━━━━━━━━━
-✍️ *Cara 2: Pake Command /add*
-━━━━━━━━━━━━━━━━━━
-\`/add makanan 50000\`
-\`/add transport 15000\`
-\`/add belanja 100000\`
-
-━━━━━━━━━━━━━━━━━━
-*2️⃣ KATEGORI OTOMATIS*
-━━━━━━━━━━━━━━━━━━
-Bot otomatis deteksi kategori dari kata:
-
-🍔 *Makanan* → makan, kopi, lunch, Soto, Bakso
-🚗 *Transport* → ojek, grab, bensin, parkir
-🛒 *Belanja* → indomaret, alfamart, market
-🎬 *Hiburan* → film, netflix, game, youtube
-📄 *Tagihan* → listrik, air, internet, pulsa
-💊 *Kesehatan* → obat, apotek, dokter
-💵 *Gaji* → salary, bonus, thr, gaji
-💻 *Freelance* → project, kerjaan
-━━━━━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━
-*3️⃣ TOMBOL CEPAT*
-━━━━━━━━━━━━━━━━━━
-━━━━━━━━━━━━━━━━━━
-/balance → Lihat saldo
-/stats → Statistik bulanan
-/budget → Atur budget
-/list → Riwayat transaksi
-━━━━━━━━━━━━━━━━━━
-
-━━━━━━━━━━━━━━━━━━
-*4️⃣ TIPS*
-━━━━━━━━━━━━━━━━━━
-• Minimal nominal Rp 100
-• Tinggal ketik aja tanpa ribet!
-• Contoh: \`bensin 50000\`
-• Contoh: \`makan siang 35000\`
-━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`);
+🍔 Makanan → makan, kopi, lunch
+🚗 Transport → ojek, grab, bensin
+🛒 Belanja → indomaret, alfamart
+🎬 Hiburan → film, netflix, game
+💊 Kesehatan → obat, apotek
+💵 Gaji → salary, bonus, thr
+━━━━━━━━━━━━━━━
+Equilibria Finance`);
       return NextResponse.json({ ok: true });
     }
 
+    // /balance
     if (command === '/balance' || command === '/saldo') {
-      await sendMsg(`💰 *Saldo*
+      await sendMsg(`💰 Saldo
 
-━━━━━━━━━━━━━━━━━━━
-Buka app:
+━━━━━━━━━━━━━━━
+Buka aplikasi lengkap:
 https://equilibria-fiscal.vercel.app
-━━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`);
+━━━━━━━━━━━━━━━
+Equilibria Finance`);
       return NextResponse.json({ ok: true });
     }
 
+    // /budget
     if (command === '/budget' || command === '/anggaran') {
-      await sendMsg(`📊 *Budget*
+      await sendMsg(`📊 Budget
 
-━━━━━━━━━━━━━━━━━━━
-Atur budget:
+━━━━━━━━━━━━━━━
+Atur budget di app:
 https://equilibria-fiscal.vercel.app/budgets
-━━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`);
+━━━━━━━━━━━━━━━
+Equilibria Finance`);
       return NextResponse.json({ ok: true });
     }
 
+    // /list
     if (command === '/list' || command === '/riwayat') {
-      await sendMsg(`📝 *Riwayat*
+      await sendMsg(`📝 Riwayat
 
-━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━
 Lihat transaksi:
 https://equilibria-fiscal.vercel.app/transactions
-━━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`);
+━━━━━━━━━━━━━━━
+Equilibria Finance`);
       return NextResponse.json({ ok: true });
     }
 
-    if (command === '/add' || command === '/tambah') {
-      if (!args) {
-        await sendMsg(`📝 *Format:*
-━━━━━━━━━━━━━━━━━━━
-/add makanan 50000
-━━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`);
-        return NextResponse.json({ ok: true });
+    // Parse transaction
+    const transactionText = (command === '/add' || command === '/tambah') ? args : text;
+
+    if (!transactionText || transactionText.trim() === '') {
+      await sendMsg(`📝 Format: /add makanan 50000\n\nContoh: /add Bens.in 50000`);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Parse and save
+    const lower = transactionText.toLowerCase();
+    const isIncome = lower.includes('pemasukan') || lower.includes('income') || lower.includes('masuk');
+    const type = isIncome ? 'INCOME' : 'EXPENSE';
+
+    // Extract amount
+    const amountMatch = transactionText.match(/\d+/g);
+    if (!amountMatch) {
+      await sendMsg(`⚠️ Format: /add makanan 50000\n\nKetik nominal angka.`);
+      return NextResponse.json({ ok: true });
+    }
+
+    const amount = parseInt(amountMatch[amountMatch.length - 1]);
+    if (amount < 100) {
+      await sendMsg(`⚠️ Minimal Rp 100`);
+      return NextResponse.json({ ok: true });
+    }
+
+    // Auto-detect category
+    const keywords: Record<string, string[]> = {
+      'Makanan': ['makan', 'lunch', 'dinner', 'kopi', 'teh', 'nasi', 'bakso', 'soto', 'ayam', 'mie', 'gorengan', 'sate', 'rujak', 'es', 'juice', 'smoothie', 'jajan', 'camilan'],
+      'Transport': ['transport', 'bensin', 'parkir', 'ojek', 'grab', 'gojek', 'taxi', 'angkot', 'bus', 'kereta', 'tol'],
+      'Belanja': ['belanja', 'market', 'indomaret', 'alfamart', 'carrefour', 'alfamidi', 'hypermart', 'grosir'],
+      'Hiburan': ['film', 'nonton', 'bioskop', 'game', 'netflix', 'spotify', 'youtube', 'konser', 'tiket', 'theme park'],
+      'Tagihan': ['listrik', 'air', 'internet', 'pulsa', 'wifi', 'bpjs', 'pdam', 'gas', 'token', 'langganan'],
+      'Kesehatan': ['obat', 'dokter', 'apotek', 'klinik', 'rs', 'rumah sakit', 'medical', 'vitamin', 'herbal'],
+      'Gaji': ['gaji', 'salary', 'thr', 'bonus', 'tunjangan', 'lembur', 'komisi'],
+      'Freelance': ['freelance', 'project', 'order', 'kontrak', 'honor', 'fee'],
+      'Investasi': ['investasi', 'saham', 'reksa', 'crypto', 'trading', 'obligasi', 'deposito'],
+      'Fashion': ['baju', 'sepatu', 'tas', 'celana', 'sandal', 'jacket', 'hoodie'],
+      'Travel': ['travel', 'hotel', 'tiket pesawat', 'kereta', 'bali', 'liburan', 'penerbangan'],
+      'Pendidikan': ['buku', 'kursus', 'les', 'sekolah', 'kuliah', 'seminar', 'pelatihan'],
+      'Olahraga': ['gym', 'fitness', 'yoga', 'renang', 'badminton', 'basket', 'futsal'],
+    };
+
+    let category = 'Lainnya';
+    for (const [cat, kws] of Object.entries(keywords)) {
+      if (kws.some(k => lower.includes(k))) {
+        category = cat;
+        break;
       }
-      await parseTransaction(token, chatId, messageId, args, formatCurrency);
-      return NextResponse.json({ ok: true });
     }
 
-    // Quick transaction (no slash)
-    await parseTransaction(token, chatId, messageId, text, formatCurrency);
+    // Save to database
+    const dateStr = new Date().toISOString().split('T')[0];
+    const description = transactionText.replace(/\d+/g, '').trim() || category;
+
+    try {
+      const formData = new URLSearchParams();
+      formData.append('type', type);
+      formData.append('amount', amount.toString());
+      formData.append('category', category);
+      formData.append('description', description);
+      formData.append('date', dateStr);
+
+      const baseUrl = process.env.APP_URL || 'https://equilibria-fiscal.vercel.app';
+      await fetch(`${baseUrl}/api/transactions`, {
+        method: 'POST',
+        body: formData,
+      });
+    } catch (e) {
+      console.error('Failed to save:', e);
+    }
+
+    // Send confirmation
+    const emoji = isIncome ? '📈' : '📉';
+    const displayDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+    await sendMsg(`✅ Tersimpan!
+
+━━━━━━━━━━━━━━━
+${emoji} ${isIncome ? 'Pemasukan' : 'Pengeluaran'}
+🏷️ ${category}
+💰 Rp ${amount.toLocaleString('id-ID')}
+📅 ${displayDate}
+━━━━━━━━━━━━━━━
+Equilibria Finance`);
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error('Webhook error:', error);
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
   }
-}
-
-async function parseTransaction(token: string, chatId: number, replyId: number, text: string, formatCurrency: (n: number) => string) {
-  const lower = text.toLowerCase();
-  const isIncome = lower.includes('pemasukan') || lower.includes('income') || lower.includes('masuk');
-
-  const amountMatch = text.match(/\d+/g);
-  if (!amountMatch) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, reply_to_message_id: replyId, text: '⚠️ Ketik nominal angka.\n\nContoh: pengeluaran makan 50000' })
-    });
-    return;
-  }
-
-  const amount = parseInt(amountMatch[amountMatch.length - 1]);
-  if (amount < 100) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, reply_to_message_id: replyId, text: '⚠️ Minimal Rp 100' })
-    });
-    return;
-  }
-
-  // Auto category
-  const categories: [string, string[]][] = [
-    ['🍔 Makanan', ['makan', 'lunch', 'dinner', 'kopi', 'teh', 'nasi', 'mie', 'ayam', 'soto', 'bakso']],
-    ['🚗 Transport', ['transport', 'bensin', 'parkir', 'ojek', 'grab', 'gojek', 'taxi']],
-    ['🛒 Belanja', ['belanja', 'market', 'indomaret', 'alfamart', 'carrefour']],
-    ['🎬 Hiburan', ['film', 'nonton', 'game', 'netflix', 'spotify', 'youtube']],
-    ['📄 Tagihan', ['listrik', 'air', 'internet', 'pulsa', 'wifi', 'bpjs']],
-    ['💊 Kesehatan', ['obat', 'dokter', 'apotek', 'klinik']],
-    ['💵 Gaji', ['gaji', 'salary', 'thr', 'bonus']],
-    ['💻 Freelance', ['freelance', 'project', 'kerjaan', 'order']],
-    ['📈 Investasi', ['investasi', 'saham', 'reksa', 'crypto', 'trading']],
-    ['🏠 Rumah', ['kontrak', 'sewa', 'furniture']],
-    ['👕 Fashion', ['baju', 'sepatu', 'celana', 'tas']],
-    ['✈️ Travel', ['travel', 'hotel', 'tiket', 'pesawat', 'liburan']],
-    ['📚 Pendidikan', ['buku', 'kursus', 'les', 'sekolah', 'kuliah']],
-  ];
-
-  let category = '💰 Lainnya';
-  for (const [cat, keywords] of categories) {
-    if (keywords.some(k => lower.includes(k))) { category = cat; break; }
-  }
-
-  const emoji = isIncome ? '📈' : '📉';
-  const type = isIncome ? 'Pemasukan' : 'Pengeluaran';
-  const date = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: chatId,
-      reply_to_message_id: replyId,
-      text: `✅ *Tercatat!*
-
-${emoji} *${type}*
-${category}
-━━━━━━━━━━━━━━━━━━━
-💰 *${formatCurrency(amount)}*
-📅 ${date}
-━━━━━━━━━━━━━━━━━━━
-_Equilibria Finance_`,
-      parse_mode: 'Markdown'
-    })
-  });
 }
 
 export async function GET() {
