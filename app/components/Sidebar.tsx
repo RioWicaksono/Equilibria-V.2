@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, ChevronLeft, ChevronRight, Lock, Wallet, CreditCard, Target, ArrowRepeat, Bell, BarChart3, LayoutGrid, Settings } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, ChevronLeft, ChevronRight, Lock, Wallet, CreditCard, Target, RefreshCw, Bell, BarChart3, LayoutGrid, Settings } from 'lucide-react';
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -22,8 +22,8 @@ export default function Sidebar() {
     { href: '/wallets', icon: Wallet, label: 'Dompet' },
     { href: '/budgets', icon: CreditCard, label: 'Budget' },
     { href: '/goals', icon: Target, label: 'Target' },
-    { href: '/debts', icon: ArrowRepeat, label: 'Hutang' },
-    { href: '/recurring', icon: ArrowRepeat, label: 'Auto' },
+    { href: '/debts', icon: RefreshCw, label: 'Hutang' },
+    { href: '/recurring', icon: RefreshCw, label: 'Auto' },
     { href: '/reminders', icon: Bell, label: 'Reminder' },
     { href: '/settings', icon: Settings, label: 'Pengaturan' },
   ];

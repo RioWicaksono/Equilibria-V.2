@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Home, Receipt, Wallet, Target, Settings, LayoutGrid, CreditCard, ArrowRepeat, Bell, BarChart3 } from 'lucide-react';
+import { Home, Receipt, Wallet, Target, Settings, LayoutGrid, CreditCard, RefreshCw, Bell, BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
@@ -15,8 +15,8 @@ const navItems = [
 
 const moreMenuItems = [
   { href: '/budgets', label: 'Budget', icon: CreditCard, color: 'text-teal-400' },
-  { href: '/debts', label: 'Hutang', icon: ArrowRepeat, color: 'text-rose-400' },
-  { href: '/recurring', label: 'Auto', icon: ArrowRepeat, color: 'text-amber-400' },
+  { href: '/debts', label: 'Hutang', icon: RefreshCw, color: 'text-rose-400' },
+  { href: '/recurring', label: 'Auto', icon: RefreshCw, color: 'text-amber-400' },
   { href: '/reminders', label: 'Reminder', icon: Bell, color: 'text-purple-400' },
   { href: '/summary', label: 'Summary', icon: LayoutGrid, color: 'text-blue-400' },
   { href: '/statistics', label: 'Statistik', icon: BarChart3, color: 'text-cyan-400' },
