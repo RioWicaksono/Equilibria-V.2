@@ -1,6 +1,0 @@
-{
-  "name": "Equilibria",
-  "description": "Financial tracker application. Focuses on manual data entry.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

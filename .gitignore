@@ -7,3 +7,9 @@ coverage/
 !.env.example
 *.tsbuildinfo
 .vercel
+CLAUDE.md
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.claude

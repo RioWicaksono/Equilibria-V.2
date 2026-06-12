@@ -20,6 +20,14 @@ const SENSITIVE_PATHS = [
   '/api/telegram-webhook',
 ];
 
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+].filter(Boolean);
+
+// CSRF safe methods
+const CSRF_SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
+
 /**
  * Get client IP from request
  */
@@ -86,12 +94,59 @@ function checkRateLimit(
   };
 }
 
+/**
+ * Validate CORS origin
+ */
+function isValidOrigin(origin: string | null): boolean {
+  if (!origin) return true; // Allow null for same-origin requests
+  return ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed));
+}
+
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const origin = req.headers.get('origin');
+  const method = req.method;
+
+  // Add security headers to all responses
+  const response = NextResponse.next();
+
+  // CORS headers
+  if (isValidOrigin(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  }
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
+  response.headers.set('Access-Control-Allow-Credentials', 'true');
+  response.headers.set('Access-Control-Max-Age', '86400');
+
+  // Handle CORS preflight
+  if (method === 'OPTIONS') {
+    return response;
+  }
 
   // Skip middleware for non-API routes
   if (!path.startsWith('/api/')) {
-    return NextResponse.next();
+    return response;
+  }
+
+  // Security headers
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('X-Permitted-Cross-Domain-Policies', 'none');
+  response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+
+  // CSRF protection for mutating requests
+  if (!CSRF_SAFE_METHODS.includes(method)) {
+    const csrfToken = req.headers.get('x-csrf-token');
+    // In production, validate CSRF token against stored token
+    // For now, we just check it exists for mutating requests
+    if (!csrfToken) {
+      // Log potential CSRF attempt (in production, use proper logging)
+      console.warn(`CSRF warning: Missing token for ${method} ${path}`);
+    }
   }
 
   // Skip rate limiting for public endpoints
@@ -118,19 +173,15 @@ export async function middleware(req: NextRequest) {
             'X-RateLimit-Limit': maxRequests.toString(),
             'X-RateLimit-Remaining': '0',
             'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
-          },
+ },
         }
       );
     }
+
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', maxRequests.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
   }
-
-  // Add security headers to all responses
-  const response = NextResponse.next();
-
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
   return response;
 }

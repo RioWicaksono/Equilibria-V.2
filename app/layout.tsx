@@ -3,6 +3,9 @@ import Sidebar from './components/Sidebar';
 import PWARegistration from './components/PWARegistration';
 import PinProtection from './components/PinProtection';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { ErrorBoundary } from './components/shared/ErrorBoundary';
+import { QueryProvider } from './providers/QueryProvider';
+import MobileNav from './components/layout/MobileNav';
 import './globals.css';
 
 export const viewport: Viewport = {
@@ -49,21 +52,41 @@ export default function RootLayout({
         `}</style>
       </head>
       <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5]">
-        <PWARegistration />
-        <SettingsProvider>
-          <PinProtection>
-            <div className="flex min-h-screen">
-              <Sidebar />
-
-              {/* Main Content Area */}
-              <main className="flex-1 overflow-x-hidden pt-12 md:pt-0 pb-20 md:pb-0">
-                <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-5">
-                  {children}
+        <ErrorBoundary>
+          <QueryProvider>
+            <PWARegistration />
+            <SettingsProvider>
+              <PinProtection>
+              <div className="flex min-h-screen">
+                {/* Desktop Sidebar */}
+                <div className="hidden md:block">
+                  <Sidebar />
                 </div>
-              </main>
-            </div>
-          </PinProtection>
-        </SettingsProvider>
+
+                {/* Main Content Area */}
+                <main className="flex-1 w-full md:ml-56 pt-14 md:pt-0 pb-20 md:pb-0">
+                  {/* Mobile Header */}
+                  <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-[#262626]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-sm">
+                        E
+                      </span>
+                      <span className="text-base font-bold text-white">Equilibria</span>
+                    </div>
+                  </div>
+
+                  <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-5">
+                    {children}
+                  </div>
+                </main>
+
+                {/* Mobile Bottom Navigation */}
+                <MobileNav />
+              </div>
+            </PinProtection>
+            </SettingsProvider>
+          </QueryProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
