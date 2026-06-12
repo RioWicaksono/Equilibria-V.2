@@ -664,7 +664,7 @@ export default function SettingsClient() {
                   <div className="mt-4 pt-4 border-t border-zinc-800">
                     <p className="text-[10px] text-zinc-500 flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
-                      Host: ep-dawn-bonus-aomgzs1d (Neon PostgreSQL)
+                      Connected to Neon PostgreSQL
                     </p>
                     <p className="text-[10px] text-zinc-600 mt-1">Database dikonfigurasi secara otomatis oleh Vercel + Neon</p>
                   </div>

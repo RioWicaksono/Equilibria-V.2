@@ -5,10 +5,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import CategorySelector from './CategorySelector';
+import { useOfflineQueueProcessor, addToQueue, getQueueCount } from '@/lib/useOfflineQueue';
 
 export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSaveLocal?: (data: Record<string, unknown>) => void; isFAB?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const [queueCount, setQueueCount] = useState(0);
 
   const [type, setType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE');
   const [amount, setAmount] = useState('');
@@ -22,6 +24,17 @@ export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSav
   // Track if form has been modified
   const initialState = useRef({ type: 'EXPENSE', amount: '', category: '', description: '', date: new Date().toISOString().split('T')[0] });
   const isFormDirty = amount !== '' || category !== '' || description !== '';
+
+  // Process offline queue when back online
+  useOfflineQueueProcessor((count) => {
+    console.log(`Synced ${count} offline transactions`);
+    router.refresh();
+    setQueueCount(getQueueCount());
+  });
+
+  useEffect(() => {
+    setQueueCount(getQueueCount());
+  }, []);
 
   useEffect(() => {
     setIsDirty(amount !== '' || category !== '' || description !== '');
@@ -88,12 +101,29 @@ export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSav
           router.refresh();
         }
       } else {
-        const queue = JSON.parse(localStorage.getItem('transaction_queue') || '[]');
-        queue.push({ type, amount: Number(numericAmount), category, description, date });
-        localStorage.setItem('transaction_queue', JSON.stringify(queue));
+        // Add to offline queue using the proper queue system
+        addToQueue({
+          type,
+          amount: Number(numericAmount),
+          category,
+          description,
+          date,
+        });
+        setQueueCount(getQueueCount());
       }
     } catch (err) {
       console.error("Failed to add", err);
+      // Fallback to queue if fetch fails
+      if (!navigator.onLine) {
+        addToQueue({
+          type,
+          amount: Number(numericAmount),
+          category,
+          description,
+          date,
+        });
+        setQueueCount(getQueueCount());
+      }
     } finally {
       setIsSubmitting(false);
       setIsOpen(false);

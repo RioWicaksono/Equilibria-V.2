@@ -27,6 +27,19 @@ export async function POST(req: Request) {
   }
 }
 
+export async function PUT(req: Request) {
+  try {
+    const { id, category, limit } = await req.json();
+    if (!id) return NextResponse.json({ error: 'Missing budget id' }, { status: 400 });
+
+    const budget = await financeService.updateBudget(id, { category, limit });
+    return NextResponse.json(budget);
+  } catch (error) {
+    console.error('[PUT /api/budgets]', error);
+    return NextResponse.json({ error: 'Failed to update budget' }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json();

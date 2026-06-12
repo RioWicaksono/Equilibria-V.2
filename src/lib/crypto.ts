@@ -1,58 +1,63 @@
 /**
- * Security Utilities
- * Provides hashing and verification functions for sensitive data
+ * Security Utilities for PIN and sensitive data
+ * Uses Web Crypto API with SHA-256 hashing
  */
 
 /**
- * Hash a string using SHA-256
- * Uses Web Crypto API for browser-side hashing
+ * Generate cryptographically secure random bytes
  */
-export async function hashString(input: string): Promise<string> {
+function getSecureRandomBytes(length: number): Uint8Array {
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    return window.crypto.getRandomValues(new Uint8Array(length));
+  }
+  // Fallback - NOT cryptographically secure, but better than nothing
+  const array = new Uint8Array(length);
+  for (let i = 0; i < length; i++) {
+    array[i] = Math.floor(Math.random() * 256);
+  }
+  return array;
+}
+
+/**
+ * SHA-256 hash using Web Crypto API
+ */
+export async function sha256(message: string): Promise<string> {
   if (typeof window === 'undefined' || !window.crypto?.subtle) {
-    // Fallback for server-side or when crypto is not available
-    return simpleHash(input);
+    // Server-side or crypto not available - use simple hash
+    return simpleHash(message);
   }
 
   try {
     const encoder = new TextEncoder();
-    const data = encoder.encode(input);
+    const data = encoder.encode(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   } catch {
-    return simpleHash(input);
+    return simpleHash(message);
   }
 }
 
 /**
- * Simple deterministic hash using string manipulation
- * This is NOT cryptographically secure - only for app-level PIN verification
+ * Simple deterministic hash for environments without crypto
+ * Uses djb2 algorithm for consistency
  */
 function simpleHash(input: string): string {
-  let hash = 5381; // DJB2 hash algorithm - deterministic
+  let hash = 5381;
   for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) + hash) + char;
+    hash = ((hash << 5) + hash) + input.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
   }
-  return Math.abs(hash).toString(16).padStart(16, '0');
-}
-
-/**
- * Verify a string against a hash
- */
-export async function verifyHash(input: string, hash: string): Promise<boolean> {
-  const inputHash = await hashString(input);
-  return timingSafeEqual(inputHash, hash);
+  return Math.abs(hash).toString(16).padStart(8, '0');
 }
 
 /**
  * Timing-safe string comparison to prevent timing attacks
  */
-function timingSafeEqual(a: string, b: string): boolean {
+function timingSafeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
   }
-
   let result = 0;
   for (let i = 0; i < a.length; i++) {
     result |= a.charCodeAt(i) ^ b.charCodeAt(i);
@@ -61,64 +66,62 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 /**
- * Generate a random salt for hashing
+ * Generate a random salt
  */
 export function generateSalt(length: number = 16): string {
-  const array = new Uint8Array(length);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(array);
-  } else {
-    for (let i = 0; i < length; i++) {
-      array[i] = Math.floor(Math.random() * 256);
-    }
-  }
-  return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+  const bytes = getSecureRandomBytes(length);
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
- * Hash PIN with salt for secure storage
+ * Hash PIN with salt using PBKDF2-like approach
+ * This provides better security than simple hashing
  */
 export async function hashPin(pin: string, salt?: string): Promise<{ hash: string; salt: string }> {
   const pinSalt = salt || generateSalt();
-  const combined = `${pin}:${pinSalt}`;
-  const hash = await hashString(combined);
-  return { hash, salt: pinSalt };
+  // Combine PIN with salt multiple times for better security
+  const iterations = 1000;
+  let result = pin + pinSalt;
+
+  for (let i = 0; i < iterations; i++) {
+    result = await sha256(result + i.toString());
+  }
+
+  return { hash: result, salt: pinSalt };
 }
 
 /**
  * Verify PIN against stored hash and salt
- * IMPORTANT: Must use the SAME salt that was used during hashing
  */
-export async function verifyPin(pin: string, storedHash: string, salt: string): Promise<boolean> {
-  // Recreate the exact same hash using the stored salt
-  const combined = `${pin}:${salt}`;
-  const inputHash = await hashString(combined);
-  return verifyHash(inputHash, storedHash);
+export async function verifyPin(inputPin: string, storedHash: string, salt: string): Promise<boolean> {
+  const { hash } = await hashPin(inputPin, salt);
+  return timingSafeCompare(hash, storedHash);
 }
 
 /**
- * Direct PIN comparison (for simple verification)
+ * Simple direct PIN comparison
+ * Use this when PIN is stored directly (less secure)
  */
-export function comparePin(inputPin: string, storedPin: string): boolean {
-  return inputPin === storedPin;
+export function comparePin(input: string, stored: string): boolean {
+  return timingSafeCompare(input, stored);
 }
 
 /**
- * Simple Base64 encode (for non-sensitive data only)
+ * Base64 encode (for non-sensitive data only)
  */
 export function base64Encode(str: string): string {
   if (typeof window === 'undefined') {
-    throw new Error('base64Encode is only available in browser environment');
+    return Buffer.from(str).toString('base64');
   }
   return btoa(str);
 }
 
 /**
- * Simple Base64 decode
+ * Base64 decode
  */
 export function base64Decode(str: string): string {
   if (typeof window === 'undefined') {
-    throw new Error('base64Decode is only available in browser environment');
+    return Buffer.from(str, 'base64').toString();
   }
   try {
     return atob(str);
