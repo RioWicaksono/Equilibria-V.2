@@ -1,41 +1,27 @@
 import pino from 'pino';
 
-// Create logger instance with structured output
+// Simple logger without pino-pretty transport to avoid build issues
 const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  transport: process.env.NODE_ENV !== 'production'
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          translateTime: 'SYS:standard',
-          ignore: 'pid,hostname',
-        },
-      }
-    : undefined,
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   formatters: {
     level: (label) => ({ level: label }),
-    bindings: () => ({
-      service: 'equilibria-finance',
-      env: process.env.NODE_ENV || 'development',
-    }),
   },
   timestamp: pino.stdTimeFunctions.isoTime,
 });
 
 // Create child logger for specific modules
-export const createModuleLogger = (module: string) => {
-  return logger.child({ module });
+export const createModuleLogger = (moduleName: string) => {
+  return logger.child({ module: moduleName });
 };
 
-// Pre-configured loggers for different parts of the app
+// Pre-configured loggers
 export const apiLogger = createModuleLogger('api');
 export const dbLogger = createModuleLogger('database');
 export const telegramLogger = createModuleLogger('telegram');
 export const authLogger = createModuleLogger('auth');
 export const cacheLogger = createModuleLogger('cache');
 
-// Helper functions for common log scenarios
+// Helper functions
 export const logRequest = (req: { method: string; url: string; ip?: string }, userId?: string) => {
   apiLogger.info({
     type: 'request',
@@ -43,17 +29,17 @@ export const logRequest = (req: { method: string; url: string; ip?: string }, us
     url: req.url,
     ip: req.ip,
     userId,
-  }, `Incoming request: ${req.method} ${req.url}`);
+  });
 };
 
-export const logResponse = (req: { method: string; url: string }, statusCode: number, duration: number) => {
+export const logResponse = (method: string, url: string, statusCode: number, durationMs: number) => {
   apiLogger.info({
     type: 'response',
-    method: req.method,
-    url: req.url,
+    method,
+    url,
     statusCode,
-    durationMs: duration,
-  }, `Request completed: ${req.method} ${req.url} - ${statusCode}`);
+    durationMs,
+  });
 };
 
 export const logError = (error: Error, context?: Record<string, unknown>) => {
@@ -65,15 +51,15 @@ export const logError = (error: Error, context?: Record<string, unknown>) => {
       stack: error.stack,
     },
     ...context,
-  }, `Error occurred: ${error.message}`);
+  });
 };
 
-export const logDatabaseOperation = (operation: string, table: string, duration: number, success: boolean) => {
+export const logDatabaseOperation = (operation: string, table: string, durationMs: number, success: boolean) => {
   dbLogger.info({
     type: 'db_operation',
     operation,
     table,
-    durationMs: duration,
+    durationMs,
     success,
   });
 };
