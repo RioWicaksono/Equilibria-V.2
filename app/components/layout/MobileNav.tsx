@@ -120,7 +120,7 @@ export default function MobileNav() {
         </div>
       )}
 
-      <style jsx global>{`
+      <style>{`
         .safe-area-pb {
           padding-bottom: env(safe-area-inset-bottom, 8px);
         }

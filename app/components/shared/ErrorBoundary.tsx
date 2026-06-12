@@ -13,7 +13,7 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryComponent extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -71,6 +71,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
+export default ErrorBoundaryComponent;
+
+// Re-export for backward compatibility
+export { ErrorBoundaryComponent as ErrorBoundary };
+
 // Hook version for functional components
 export function withErrorBoundary<P extends object>(
   WrappedComponent: React.ComponentType<P>,
@@ -78,9 +83,9 @@ export function withErrorBoundary<P extends object>(
 ): React.ComponentType<P> {
   return function WithErrorBoundary(props: P) {
     return (
-      <ErrorBoundary fallback={fallback}>
+      <ErrorBoundaryComponent fallback={fallback}>
         <WrappedComponent {...props} />
-      </ErrorBoundary>
+      </ErrorBoundaryComponent>
     );
   };
 }
