@@ -149,6 +149,11 @@ export class FinanceService {
     return useCases.createBudget({ category, limit });
   }
 
+  async updateBudget(id: string, data: { category?: string; limit?: number }): Promise<Budget | null> {
+    const useCases = await this.getBudgetUseCases() as { updateBudget: (id: string, data: { category?: string; limit?: number }) => Promise<Budget | null> };
+    return useCases.updateBudget(id, data);
+  }
+
   async getBudgetStatus(budgetId: string) {
     const useCases = await this.getBudgetUseCases() as { getBudgetStatus: (id: string) => unknown };
     return useCases.getBudgetStatus(budgetId);
@@ -182,6 +187,8 @@ export const financeService = {
   getBudgets: () => getFinanceService().getBudgets(),
   getBudgetStatuses: () => getFinanceService().getBudgetStatuses(),
   setBudget: (category: string, limit: number) => getFinanceService().setBudget(category, limit),
+  updateBudget: (id: string, data: { category?: string; limit?: number }) =>
+    getFinanceService().updateBudget(id, data) as unknown,
   getBudgetStatus: (id: string) => getFinanceService().getBudgetStatus(id),
   deleteBudget: (id: string) => getFinanceService().deleteBudget(id),
 };
