@@ -31,8 +31,8 @@ export default function MobileNav() {
   return (
     <>
       {/* Mobile Bottom Navigation */}
-      <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-xl border-t border-[#262626] safe-area-pb"
+          <nav
+        className="2xl:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-xl border-t border-[#262626] safe-area-pb"
         aria-label="Mobile navigation"
       >
         <div className="flex items-center justify-around px-1 py-2">
@@ -69,7 +69,7 @@ export default function MobileNav() {
 
       {/* Overlay Menu */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" onClick={() => setIsMenuOpen(false)}>
+        <div className="2xl:hidden fixed inset-0 z-50" onClick={() => setIsMenuOpen(false)}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-hidden="true" />
           <div
             className="absolute bottom-20 left-0 right-0 bg-[#141414]/98 backdrop-blur-xl border-t border-[#262626] rounded-t-3xl p-5 max-h-[65vh] overflow-y-auto animate-slide-up"

@@ -32,11 +32,11 @@ export default function Sidebar() {
 
   return (
     <aside className={`
-      fixed lg:relative inset-y-0 left-0 z-40
+      fixed 2xl:relative inset-y-0 left-0 z-40
       bg-[#0A0A0A] border-r border-[#262626] flex flex-col
       transform transition-all duration-300 ease-out
-      ${isCollapsed ? 'w-16' : 'w-56'}
-      -translate-x-full lg:translate-x-0
+      ${isCollapsed ? 'w-16 2xl:w-16' : 'w-64 2xl:w-64'}
+      -translate-x-full 2xl:translate-x-0
     `}>
       {/* Logo */}
       <div className="flex items-center gap-2 px-4 py-4 border-b border-[#262626]">
@@ -88,10 +88,10 @@ export default function Sidebar() {
         </button>
       </nav>
 
-      {/* Collapse Button */}
+      {/* Collapse Button - Only show on 2xl+ screens */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-20 w-6 h-6 items-center justify-center bg-[#1a1a1a] border border-[#333] rounded-full text-zinc-400 hover:text-white hover:border-teal-500/50 transition-all duration-200 hidden lg:flex shadow-lg"
+        className="absolute -right-3 top-20 w-6 h-6 items-center justify-center bg-[#1a1a1a] border border-[#333] rounded-full text-zinc-400 hover:text-white hover:border-teal-500/50 transition-all duration-200 hidden 2xl:flex shadow-lg"
         title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? (
@@ -101,10 +101,17 @@ export default function Sidebar() {
         )}
       </button>
 
-      {/* Version */}
+      {/* Version - Show only when collapsed on 2xl+ */}
+      {isCollapsed && (
+        <div className="2xl:block hidden px-4 py-3 border-t border-[#262626]">
+          <p className="text-[10px] text-zinc-600 text-center">v2.0</p>
+        </div>
+      )}
+
+      {/* Version - Show when expanded */}
       {!isCollapsed && (
-        <div className="px-4 py-3 border-t border-[#262626]">
-          <p className="text-[10px] text-zinc-600 text-center">v2.0.0</p>
+        <div className="2xl:block hidden px-4 py-3 border-t border-[#262626]">
+          <p className="text-[10px] text-zinc-600 text-center">Equilibria v2.0</p>
         </div>
       )}
     </aside>
