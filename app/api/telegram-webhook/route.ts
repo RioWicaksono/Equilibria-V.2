@@ -199,24 +199,46 @@ Equilibria Finance`);
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
+  const isTest = req.nextUrl.searchParams.get('test') === 'true';
 
   // Check bot health
   let botStatus = 'NOT_CONFIGURED';
+  let errorMessage = '';
+
   if (token) {
     try {
       const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
       const data = await res.json();
       botStatus = data.ok ? 'CONNECTED' : 'DISCONNECTED';
-    } catch {
+      if (!data.ok && data.description) {
+        errorMessage = data.description;
+      }
+    } catch (e) {
       botStatus = 'ERROR';
+      errorMessage = e instanceof Error ? e.message : 'Network error';
     }
+  } else {
+    errorMessage = 'Telegram bot token not configured. Set TELEGRAM_BOT_TOKEN in environment variables.';
+  }
+
+  // If test mode, return detailed response
+  if (isTest) {
+    return NextResponse.json({
+      success: botStatus === 'CONNECTED',
+      bot: botStatus,
+      status: botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE',
+      message: botStatus === 'CONNECTED' ? 'Bot is connected and ready!' : errorMessage,
+      error: botStatus !== 'CONNECTED' ? errorMessage : undefined,
+    });
   }
 
   return NextResponse.json({
     status: 'ok',
     bot: botStatus,
     telegram: botStatus,
+    message: botStatus === 'CONNECTED' ? 'Bot connected' : errorMessage,
+    error: botStatus !== 'CONNECTED' ? errorMessage : undefined,
   });
 }

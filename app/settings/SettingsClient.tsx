@@ -205,16 +205,22 @@ export default function SettingsClient() {
     try {
       const res = await fetch('/api/telegram-webhook?test=true');
       const data = await res.json();
-      setTelegramStatus(data.status);
-      
       setTestPayload(data);
-      if (data.status === 'ACTIVE') {
-        alert('Test Connection: ' + data.message);
+
+      // Update status based on response
+      const botStatus = data.bot || data.status;
+      setTelegramStatus(botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
+
+      // Show appropriate message
+      const message = data.message || data.error || 'Unknown response';
+      if (data.success || botStatus === 'CONNECTED') {
+        alert('Test Connection: Success! Bot is connected.');
       } else {
-        alert('Test Connection failed: ' + data.message);
+        alert('Test Connection failed: ' + message);
       }
-    } catch {
-      alert('Test Connection failed');
+    } catch (error) {
+      const err = error as Error;
+      alert('Test Connection failed: ' + (err?.message || 'Network error'));
     }
     setIsTesting(false);
   };
@@ -333,15 +339,20 @@ export default function SettingsClient() {
     try {
       const res = await fetch('/api/health');
       const data = await res.json();
-      if (data.status === 'ok' || data.health === 'ok') {
+      // Health API returns: healthy, degraded, or unhealthy
+      // Check database and API checks from the response
+      const dbStatus = data.checks?.database?.status;
+      const apiStatus = data.checks?.api?.status;
+
+      if (dbStatus === 'pass' && apiStatus === 'pass') {
         setApiHealthStatus('healthy');
         setDatabaseConnected(true);
       } else {
         setApiHealthStatus('unhealthy');
-        setDatabaseConnected(false);
+        setDatabaseConnected(dbStatus === 'pass');
       }
       setLastHealthCheck(new Date().toLocaleString('id-ID'));
-    } catch {
+    } catch (error) {
       setApiHealthStatus('unhealthy');
       setDatabaseConnected(false);
       setLastHealthCheck(new Date().toLocaleString('id-ID'));
@@ -350,6 +361,7 @@ export default function SettingsClient() {
 
   useEffect(() => {
     if (activeTab === 'integration') {
+      // Immediately check health when integration tab is opened
       checkHealth();
     }
   }, [activeTab]);

@@ -124,20 +124,6 @@ export default async function DashboardPage() {
           <DashboardBudget budgets={budgets} categoryTotals={categoryTotals} />
         </div>
       </div>
-
-      {/* Quick Stats Footer */}
-      <div className="flex flex-wrap gap-3 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#141414] border border-[#262626] rounded-lg">
-          <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
-          <span className="text-xs text-zinc-400">Database: <span className="text-teal-400 font-medium">Connected</span></span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#141414] border border-[#262626] rounded-lg">
-          <span className="text-xs text-zinc-400">Transaksi: <span className="text-white font-medium">{transactions.length}</span></span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#141414] border border-[#262626] rounded-lg">
-          <span className="text-xs text-zinc-400">Budget aktif: <span className="text-white font-medium">{budgets.length}</span></span>
-        </div>
-      </div>
     </div>
   );
 }
