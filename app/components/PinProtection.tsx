@@ -3,34 +3,22 @@
 import { useState, useEffect } from 'react';
 import { Lock, Delete, Fingerprint, Smartphone, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { hashPin, verifyPin, generateSalt, base64Encode, base64Decode } from '@/lib/crypto';
+import { comparePin, base64Decode } from '@/lib/crypto';
 
 const STORAGE_KEYS = {
-  PIN_HASH: 'equilibria_pin_hash',
-  PIN_SALT: 'equilibria_pin_salt',
+  PIN: 'equilibria_pin',
   AUTH: 'equilibria_auth',
   BIOMETRIC_ENABLED: 'equilibria_biometric_enabled',
   BIOMETRIC_CREDENTIAL: 'equilibria_biometric_credential',
   AUTO_LOCK_TIMEOUT: 'equilibria_auto_lock_timeout',
-  LEGACY_PIN: 'equilibria_pin',
 } as const;
 
 const DEFAULT_TIMEOUT_MINUTES = 5;
 const DEFAULT_PIN = '123789';
 
-const getStoredPinHash = () => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(STORAGE_KEYS.PIN_HASH);
-};
-
-const getStoredSalt = () => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(STORAGE_KEYS.PIN_SALT);
-};
-
-const getLegacyPin = () => {
+const getStoredPin = (): string => {
   if (typeof window === 'undefined') return DEFAULT_PIN;
-  const stored = localStorage.getItem(STORAGE_KEYS.LEGACY_PIN);
+  const stored = localStorage.getItem(STORAGE_KEYS.PIN);
   if (stored) {
     try {
       return base64Decode(stored);
@@ -38,14 +26,10 @@ const getLegacyPin = () => {
       return DEFAULT_PIN;
     }
   }
+  // Initialize default PIN
+  const encoded = btoa(DEFAULT_PIN);
+  localStorage.setItem(STORAGE_KEYS.PIN, encoded);
   return DEFAULT_PIN;
-};
-
-const getDefaultPinHash = async () => {
-  const { hash, salt } = await hashPin(DEFAULT_PIN);
-  localStorage.setItem(STORAGE_KEYS.PIN_HASH, hash);
-  localStorage.setItem(STORAGE_KEYS.PIN_SALT, salt);
-  return { hash, salt };
 };
 
 export default function PinProtection({ children }: { children: React.ReactNode }) {
@@ -53,32 +37,17 @@ export default function PinProtection({ children }: { children: React.ReactNode 
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [storedHash, setStoredHash] = useState<string | null>(null);
-  const [storedSalt, setStoredSalt] = useState<string | null>(null);
+  const [storedPin, setStoredPin] = useState<string>(DEFAULT_PIN);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricError, setBiometricError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
+    const init = () => {
       setIsClient(true);
-
-      let hash = getStoredPinHash();
-      let salt = getStoredSalt();
-
-      if (!hash || !salt) {
-        // Try legacy PIN first
-        const legacyPin = getLegacyPin();
-        const defaults = await hashPin(legacyPin);
-        localStorage.setItem(STORAGE_KEYS.PIN_HASH, defaults.hash);
-        localStorage.setItem(STORAGE_KEYS.PIN_SALT, defaults.salt);
-        hash = defaults.hash;
-        salt = defaults.salt;
-      }
-
-      setStoredHash(hash);
-      setStoredSalt(salt);
+      const pin = getStoredPin();
+      setStoredPin(pin);
 
       // Check biometric availability
       if (window.PublicKeyCredential) {
@@ -118,7 +87,6 @@ export default function PinProtection({ children }: { children: React.ReactNode 
 
     const handleActivity = () => {
       const now = Date.now();
-      // Only reset timer if user was inactive for at least 1 second
       if (now - lastActivity > 1000) {
         resetTimer();
       }
@@ -134,35 +102,15 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     };
   }, [isAuthenticated]);
 
-  const handleKeyPress = async (num: number) => {
+  const handleKeyPress = (num: number) => {
     if (pin.length < 6) {
       setError(false);
       const newPin = pin + num.toString();
       setPin(newPin);
 
       if (newPin.length === 6) {
-        // Try hashed verification first
-        if (storedHash && storedSalt) {
-          const isValid = await verifyPin(newPin, storedHash, storedSalt);
-          if (isValid) {
-            setShowSuccess(true);
-            setTimeout(() => {
-              sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-              setIsAuthenticated(true);
-              setPin('');
-            }, 800);
-            return;
-          }
-        }
-
-        // Fallback to legacy PIN check
-        const legacyPin = getLegacyPin();
-        if (newPin === legacyPin) {
-          // Migrate to hashed storage
-          const defaults = await getDefaultPinHash();
-          setStoredHash(defaults.hash);
-          setStoredSalt(defaults.salt);
-
+        // Direct PIN comparison
+        if (comparePin(newPin, storedPin)) {
           setShowSuccess(true);
           setTimeout(() => {
             sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
@@ -289,7 +237,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, pin, error, storedHash, storedSalt]);
+  }, [isAuthenticated, pin, error, storedPin]);
 
   if (!isClient) return null;
 

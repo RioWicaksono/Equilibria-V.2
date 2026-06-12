@@ -25,14 +25,14 @@ export async function hashString(input: string): Promise<string> {
 }
 
 /**
- * Simple hash fallback using string manipulation
+ * Simple deterministic hash using string manipulation
+ * This is NOT cryptographically secure - only for app-level PIN verification
  */
 function simpleHash(input: string): string {
-  let hash = 0;
+  let hash = 5381; // DJB2 hash algorithm - deterministic
   for (let i = 0; i < input.length; i++) {
     const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+    hash = ((hash << 5) + hash) + char;
   }
   return Math.abs(hash).toString(16).padStart(16, '0');
 }
@@ -87,15 +87,24 @@ export async function hashPin(pin: string, salt?: string): Promise<{ hash: strin
 
 /**
  * Verify PIN against stored hash and salt
+ * IMPORTANT: Must use the SAME salt that was used during hashing
  */
 export async function verifyPin(pin: string, storedHash: string, salt: string): Promise<boolean> {
-  const { hash } = await hashPin(pin, salt);
-  return verifyHash(hash, storedHash);
+  // Recreate the exact same hash using the stored salt
+  const combined = `${pin}:${salt}`;
+  const inputHash = await hashString(combined);
+  return verifyHash(inputHash, storedHash);
+}
+
+/**
+ * Direct PIN comparison (for simple verification)
+ */
+export function comparePin(inputPin: string, storedPin: string): boolean {
+  return inputPin === storedPin;
 }
 
 /**
  * Simple Base64 encode (for non-sensitive data only)
- * @deprecated Use hashing for sensitive data
  */
 export function base64Encode(str: string): string {
   if (typeof window === 'undefined') {
@@ -106,7 +115,6 @@ export function base64Encode(str: string): string {
 
 /**
  * Simple Base64 decode
- * @deprecated Use hashing for sensitive data
  */
 export function base64Decode(str: string): string {
   if (typeof window === 'undefined') {
