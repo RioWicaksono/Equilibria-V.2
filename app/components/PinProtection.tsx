@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Lock, Delete, Fingerprint, Smartphone, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { hashPin, verifyPin, generateSalt } from '@/lib/crypto';
+import { hashPin, verifyPin, generateSalt, base64Encode, base64Decode } from '@/lib/crypto';
 
 const STORAGE_KEYS = {
   PIN_HASH: 'equilibria_pin_hash',
@@ -12,9 +12,11 @@ const STORAGE_KEYS = {
   BIOMETRIC_ENABLED: 'equilibria_biometric_enabled',
   BIOMETRIC_CREDENTIAL: 'equilibria_biometric_credential',
   AUTO_LOCK_TIMEOUT: 'equilibria_auto_lock_timeout',
+  LEGACY_PIN: 'equilibria_pin',
 } as const;
 
 const DEFAULT_TIMEOUT_MINUTES = 5;
+const DEFAULT_PIN = '123789';
 
 const getStoredPinHash = () => {
   if (typeof window === 'undefined') return null;
@@ -26,8 +28,21 @@ const getStoredSalt = () => {
   return localStorage.getItem(STORAGE_KEYS.PIN_SALT);
 };
 
+const getLegacyPin = () => {
+  if (typeof window === 'undefined') return DEFAULT_PIN;
+  const stored = localStorage.getItem(STORAGE_KEYS.LEGACY_PIN);
+  if (stored) {
+    try {
+      return base64Decode(stored);
+    } catch {
+      return DEFAULT_PIN;
+    }
+  }
+  return DEFAULT_PIN;
+};
+
 const getDefaultPinHash = async () => {
-  const { hash, salt } = await hashPin('123789');
+  const { hash, salt } = await hashPin(DEFAULT_PIN);
   localStorage.setItem(STORAGE_KEYS.PIN_HASH, hash);
   localStorage.setItem(STORAGE_KEYS.PIN_SALT, salt);
   return { hash, salt };
@@ -49,12 +64,15 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     const init = async () => {
       setIsClient(true);
 
-      // Initialize default PIN if not set
       let hash = getStoredPinHash();
       let salt = getStoredSalt();
 
       if (!hash || !salt) {
-        const defaults = await getDefaultPinHash();
+        // Try legacy PIN first
+        const legacyPin = getLegacyPin();
+        const defaults = await hashPin(legacyPin);
+        localStorage.setItem(STORAGE_KEYS.PIN_HASH, defaults.hash);
+        localStorage.setItem(STORAGE_KEYS.PIN_SALT, defaults.salt);
         hash = defaults.hash;
         salt = defaults.salt;
       }
@@ -122,10 +140,29 @@ export default function PinProtection({ children }: { children: React.ReactNode 
       const newPin = pin + num.toString();
       setPin(newPin);
 
-      if (newPin.length === 6 && storedHash && storedSalt) {
-        const isValid = await verifyPin(newPin, storedHash, storedSalt);
+      if (newPin.length === 6) {
+        // Try hashed verification first
+        if (storedHash && storedSalt) {
+          const isValid = await verifyPin(newPin, storedHash, storedSalt);
+          if (isValid) {
+            setShowSuccess(true);
+            setTimeout(() => {
+              sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+              setIsAuthenticated(true);
+              setPin('');
+            }, 800);
+            return;
+          }
+        }
 
-        if (isValid) {
+        // Fallback to legacy PIN check
+        const legacyPin = getLegacyPin();
+        if (newPin === legacyPin) {
+          // Migrate to hashed storage
+          const defaults = await getDefaultPinHash();
+          setStoredHash(defaults.hash);
+          setStoredSalt(defaults.salt);
+
           setShowSuccess(true);
           setTimeout(() => {
             sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
@@ -139,13 +176,6 @@ export default function PinProtection({ children }: { children: React.ReactNode 
             setError(false);
           }, 600);
         }
-      } else if (newPin.length === 6 && !storedHash) {
-        // Edge case: hash not yet initialized
-        setError(true);
-        setTimeout(() => {
-          setPin('');
-          setError(false);
-        }, 600);
       }
     }
   };

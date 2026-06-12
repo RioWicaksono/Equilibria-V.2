@@ -8,15 +8,33 @@
  * Uses Web Crypto API for browser-side hashing
  */
 export async function hashString(input: string): Promise<string> {
-  if (typeof window === 'undefined') {
-    throw new Error('hashString is only available in browser environment');
+  if (typeof window === 'undefined' || !window.crypto?.subtle) {
+    // Fallback for server-side or when crypto is not available
+    return simpleHash(input);
   }
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(input);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return simpleHash(input);
+  }
+}
+
+/**
+ * Simple hash fallback using string manipulation
+ */
+function simpleHash(input: string): string {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16).padStart(16, '0');
 }
 
 /**
@@ -50,7 +68,6 @@ export function generateSalt(length: number = 16): string {
   if (typeof window !== 'undefined' && window.crypto) {
     window.crypto.getRandomValues(array);
   } else {
-    // Fallback for environments without crypto
     for (let i = 0; i < length; i++) {
       array[i] = Math.floor(Math.random() * 256);
     }
