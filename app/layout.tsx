@@ -60,15 +60,15 @@ export default function RootLayout({
             <SettingsProvider>
               <PinProtection>
                 <div className="flex min-h-screen">
-                  {/* Desktop Sidebar - Hidden on screens smaller than 1280px */}
-                  <div className="hidden 2xl:block">
+                  {/* Desktop Sidebar - Hidden on mobile and tablet (< 1024px) */}
+                  <div className="hidden lg:block">
                     <Sidebar />
                   </div>
 
                   {/* Main Content Area */}
-                  <main className="flex-1 w-full min-w-0 pt-14 2xl:pt-0 pb-20 md:pb-6">
-                    {/* Mobile/Tablet Header - Hidden on 2xl+ */}
-                    <header className="2xl:hidden fixed top-0 left-0 right-0 z-30 bg-[#0A0A0A]/98 backdrop-blur-xl border-b border-[#262626] h-14">
+                  <main className="flex-1 w-full min-w-0 pt-14 lg:pt-0 pb-20 lg:pb-6">
+                    {/* Mobile/Tablet Header - Hidden on lg+ */}
+                    <header className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-[#0A0A0A]/98 backdrop-blur-xl border-b border-[#262626] h-14">
                       <div className="flex items-center justify-between h-full px-4">
                         <div className="flex items-center gap-2">
                           <span className="w-8 h-8 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-sm">
@@ -85,8 +85,10 @@ export default function RootLayout({
                     </div>
                   </main>
 
-                  {/* Mobile Bottom Navigation - Hidden on 2xl+ */}
-                  <MobileNav />
+                  {/* Mobile/Tablet Bottom Navigation - Hidden on lg+ */}
+                  <div className="lg:hidden">
+                    <MobileNav />
+                  </div>
                 </div>
               </PinProtection>
             </SettingsProvider>
