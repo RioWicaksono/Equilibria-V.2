@@ -135,9 +135,9 @@ export default function BudgetsPage() {
         <div className="flex flex-col">
           <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
             <Target className="w-6 h-6 text-teal-400" />
-            Budget Management
+            Pengelolaan Budget
           </h2>
-          <p className="text-sm text-zinc-500 mt-1">Atur batas pengeluaran per kategori untuk控制 keuangan Anda.</p>
+          <p className="text-sm text-zinc-500 mt-1">Atur batas pengeluaran per kategori untuk mengontrol keuangan Anda.</p>
         </div>
         <button
           onClick={() => {
@@ -181,7 +181,7 @@ export default function BudgetsPage() {
         <div className="text-center py-20 bg-[#141414] border border-dashed border-[#262626] rounded-xl">
           <Target className="w-12 h-12 text-zinc-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-zinc-400">Belum ada budget</h3>
-          <p className="text-sm text-zinc-500 mt-2">Tambahkan budget untuk категория dépenses Anda.</p>
+          <p className="text-sm text-zinc-500 mt-2">Tambahkan budget untuk mengontrol pengeluaran Anda.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

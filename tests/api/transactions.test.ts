@@ -9,7 +9,7 @@ vi.mock('@/infrastructure/database/PrismaClient', () => ({
       findUnique: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue({
         id: 'tx-mock-1',
-        amount: 100000,
+        amount: 150000,
         type: 'EXPENSE',
         category: 'Makanan',
         description: 'Test transaction',

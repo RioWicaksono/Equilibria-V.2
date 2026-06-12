@@ -3,18 +3,34 @@
 import { useState, useEffect } from 'react';
 import { Lock, Delete, Fingerprint, Smartphone, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { hashPin, verifyPin, generateSalt } from '@/lib/crypto';
 
-const getStoredPin = () => {
-  if (typeof window === 'undefined') return '123789';
-  const stored = localStorage.getItem('equilibria_pin');
-  if (stored) {
-    try {
-      return atob(stored);
-    } catch {
-      return '123789';
-    }
-  }
-  return '123789';
+const STORAGE_KEYS = {
+  PIN_HASH: 'equilibria_pin_hash',
+  PIN_SALT: 'equilibria_pin_salt',
+  AUTH: 'equilibria_auth',
+  BIOMETRIC_ENABLED: 'equilibria_biometric_enabled',
+  BIOMETRIC_CREDENTIAL: 'equilibria_biometric_credential',
+  AUTO_LOCK_TIMEOUT: 'equilibria_auto_lock_timeout',
+} as const;
+
+const DEFAULT_TIMEOUT_MINUTES = 5;
+
+const getStoredPinHash = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(STORAGE_KEYS.PIN_HASH);
+};
+
+const getStoredSalt = () => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(STORAGE_KEYS.PIN_SALT);
+};
+
+const getDefaultPinHash = async () => {
+  const { hash, salt } = await hashPin('123789');
+  localStorage.setItem(STORAGE_KEYS.PIN_HASH, hash);
+  localStorage.setItem(STORAGE_KEYS.PIN_SALT, salt);
+  return { hash, salt };
 };
 
 export default function PinProtection({ children }: { children: React.ReactNode }) {
@@ -22,24 +38,39 @@ export default function PinProtection({ children }: { children: React.ReactNode 
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [correctPin, setCorrectPin] = useState('123789');
+  const [storedHash, setStoredHash] = useState<string | null>(null);
+  const [storedSalt, setStoredSalt] = useState<string | null>(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricError, setBiometricError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    const init = () => {
+    const init = async () => {
       setIsClient(true);
-      setCorrectPin(getStoredPin());
 
+      // Initialize default PIN if not set
+      let hash = getStoredPinHash();
+      let salt = getStoredSalt();
+
+      if (!hash || !salt) {
+        const defaults = await getDefaultPinHash();
+        hash = defaults.hash;
+        salt = defaults.salt;
+      }
+
+      setStoredHash(hash);
+      setStoredSalt(salt);
+
+      // Check biometric availability
       if (window.PublicKeyCredential) {
-        const storedBiometric = localStorage.getItem('equilibria_biometric_enabled');
+        const storedBiometric = localStorage.getItem(STORAGE_KEYS.BIOMETRIC_ENABLED);
         setBiometricEnabled(storedBiometric === 'true');
         setBiometricAvailable(true);
       }
 
-      const auth = sessionStorage.getItem('equilibria_auth');
+      // Check existing auth session
+      const auth = sessionStorage.getItem(STORAGE_KEYS.AUTH);
       if (auth === 'true') {
         setIsAuthenticated(true);
       }
@@ -50,38 +81,54 @@ export default function PinProtection({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const timeoutMinutes = parseInt(localStorage.getItem('equilibria_auto_lock_timeout') || '5');
+    const timeoutMinutes = parseInt(
+      localStorage.getItem(STORAGE_KEYS.AUTO_LOCK_TIMEOUT) || String(DEFAULT_TIMEOUT_MINUTES),
+      10
+    );
 
-    let timeout: NodeJS.Timeout;
+    let timeout: ReturnType<typeof setTimeout>;
+    let lastActivity = Date.now();
+
     const resetTimer = () => {
       clearTimeout(timeout);
+      lastActivity = Date.now();
       timeout = setTimeout(() => {
         setIsAuthenticated(false);
-        sessionStorage.removeItem('equilibria_auth');
+        sessionStorage.removeItem(STORAGE_KEYS.AUTH);
       }, timeoutMinutes * 60 * 1000);
     };
 
+    const handleActivity = () => {
+      const now = Date.now();
+      // Only reset timer if user was inactive for at least 1 second
+      if (now - lastActivity > 1000) {
+        resetTimer();
+      }
+    };
+
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(e => document.addEventListener(e, resetTimer, { passive: true }));
+    events.forEach(e => document.addEventListener(e, handleActivity, { passive: true }));
     resetTimer();
 
     return () => {
       clearTimeout(timeout);
-      events.forEach(e => document.removeEventListener(e, resetTimer));
+      events.forEach(e => document.removeEventListener(e, handleActivity));
     };
   }, [isAuthenticated]);
 
-  const handleKeyPress = (num: number) => {
+  const handleKeyPress = async (num: number) => {
     if (pin.length < 6) {
       setError(false);
       const newPin = pin + num.toString();
       setPin(newPin);
 
-      if (newPin.length === 6) {
-        if (newPin === correctPin) {
+      if (newPin.length === 6 && storedHash && storedSalt) {
+        const isValid = await verifyPin(newPin, storedHash, storedSalt);
+
+        if (isValid) {
           setShowSuccess(true);
           setTimeout(() => {
-            sessionStorage.setItem('equilibria_auth', 'true');
+            sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
             setIsAuthenticated(true);
             setPin('');
           }, 800);
@@ -92,6 +139,13 @@ export default function PinProtection({ children }: { children: React.ReactNode 
             setError(false);
           }, 600);
         }
+      } else if (newPin.length === 6 && !storedHash) {
+        // Edge case: hash not yet initialized
+        setError(true);
+        setTimeout(() => {
+          setPin('');
+          setError(false);
+        }, 600);
       }
     }
   };
@@ -110,7 +164,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     }
 
     try {
-      const storedCredential = localStorage.getItem('equilibria_biometric_credential');
+      const storedCredential = localStorage.getItem(STORAGE_KEYS.BIOMETRIC_CREDENTIAL);
       if (!storedCredential) {
         await registerBiometric();
         return;
@@ -132,7 +186,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
       if (assertion) {
         setShowSuccess(true);
         setTimeout(() => {
-          sessionStorage.setItem('equilibria_auth', 'true');
+          sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
           setIsAuthenticated(true);
         }, 800);
       }
@@ -175,13 +229,13 @@ export default function PinProtection({ children }: { children: React.ReactNode 
           type: credential.type
         };
 
-        localStorage.setItem('equilibria_biometric_credential', JSON.stringify(credentialData));
-        localStorage.setItem('equilibria_biometric_enabled', 'true');
+        localStorage.setItem(STORAGE_KEYS.BIOMETRIC_CREDENTIAL, JSON.stringify(credentialData));
+        localStorage.setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, 'true');
         setBiometricEnabled(true);
 
         setShowSuccess(true);
         setTimeout(() => {
-          sessionStorage.setItem('equilibria_auth', 'true');
+          sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
           setIsAuthenticated(true);
         }, 800);
       }
@@ -205,7 +259,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, pin, error, correctPin]);
+  }, [isAuthenticated, pin, error, storedHash, storedSalt]);
 
   if (!isClient) return null;
 

@@ -8,6 +8,8 @@ import { Search } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+const ITEMS_PER_PAGE = 20;
+
 export default async function TransactionsPage(props: {
   searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
@@ -25,14 +27,28 @@ export default async function TransactionsPage(props: {
   // Get type filter
   const typeFilter = typeof searchParams?.type === 'string' ? searchParams.type : '';
 
+  // Get pagination params
+  const page = parseInt(typeof searchParams?.page === 'string' ? searchParams.page : '1', 10);
+
   // Filter transactions
-  const transactions = allTransactions.filter(t => {
+  const filteredTransactions = allTransactions.filter(t => {
     const tDate = new Date(t.date).toISOString().split('T')[0];
     const matchDate = requestedDate === 'all' || tDate === requestedDate;
     const matchCategory = !categoryFilter || t.category.toLowerCase().includes(categoryFilter.toLowerCase());
     const matchType = !typeFilter || t.type === typeFilter;
     return matchDate && matchCategory && matchType;
   });
+
+  // Sort by date descending
+  const sortedTransactions = [...filteredTransactions].sort((a, b) =>
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  // Calculate pagination
+  const totalItems = sortedTransactions.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const startIndex = (page - 1) * ITEMS_PER_PAGE;
+  const paginatedTransactions = sortedTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   // Get unique categories
   const categories = Array.from(new Set(allTransactions.map(t => t.category)));
@@ -43,6 +59,16 @@ export default async function TransactionsPage(props: {
     { value: new Date(Date.now() - 86400000).toISOString().split('T')[0], label: 'Kemarin' },
     { value: 'all', label: 'Semua' },
   ];
+
+  // Build filter URL with pagination preserved
+  const buildFilterUrl = (newPage?: number) => {
+    const params = new URLSearchParams();
+    if (requestedDate !== 'all') params.set('date', requestedDate);
+    if (typeFilter) params.set('type', typeFilter);
+    if (categoryFilter) params.set('category', categoryFilter);
+    if (newPage && newPage > 1) params.set('page', newPage.toString());
+    return `/transactions?${params.toString()}`;
+  };
 
   async function deleteTransaction(id: string) {
     'use server';
@@ -59,10 +85,10 @@ export default async function TransactionsPage(props: {
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-lg sm:text-xl font-semibold text-white">Transaksi</h2>
-          <p className="text-xs text-zinc-500 mt-0.5">{transactions.length} item ditemukan</p>
+          <p className="text-xs text-zinc-500 mt-0.5">{totalItems} item ditemukan{totalPages > 1 ? ` (halaman ${page}/${totalPages})` : ''}</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <ExportButton transactions={transactions} />
+          <ExportButton transactions={paginatedTransactions} />
           <TransactionModal />
         </div>
       </header>
@@ -141,10 +167,35 @@ export default async function TransactionsPage(props: {
       {/* Transaction List */}
       <div className="bg-[#141414] border border-[#262626] rounded-xl p-3 sm:p-4">
         <ClientTransactionList
-          initialTransactions={transactions}
+          initialTransactions={paginatedTransactions}
           onDelete={deleteTransaction}
         />
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-4">
+          {page > 1 && (
+            <a
+              href={buildFilterUrl(page - 1)}
+              className="px-3 py-1.5 bg-zinc-800 text-zinc-400 rounded-lg text-sm hover:bg-zinc-700 transition-colors"
+            >
+              ← Prev
+            </a>
+          )}
+          <span className="px-3 py-1.5 text-zinc-500 text-sm">
+            Halaman {page} dari {totalPages}
+          </span>
+          {page < totalPages && (
+            <a
+              href={buildFilterUrl(page + 1)}
+              className="px-3 py-1.5 bg-zinc-800 text-zinc-400 rounded-lg text-sm hover:bg-zinc-700 transition-colors"
+            >
+              Next →
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }

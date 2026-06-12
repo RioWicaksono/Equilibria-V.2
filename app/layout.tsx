@@ -66,13 +66,7 @@ export default function RootLayout({
                 {/* Main Content Area */}
                 <main className="flex-1 w-full md:ml-56 pt-14 md:pt-0 pb-20 md:pb-0">
                   {/* Mobile Header */}
-                  <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-[#262626]">
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-sm">
-                        E
-                      </span>
-                      <span className="text-base font-bold text-white">Equilibria</span>
-                    </div>
+                  <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-[#0A0A0A]/95 backdrop-blur-md border-b border-[#262626] h-14">
                   </div>
 
                   <div className="w-full max-w-7xl mx-auto p-3 sm:p-4 md:p-5">

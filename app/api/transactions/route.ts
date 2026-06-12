@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { FinanceService } from '@/application/services/FinanceService';
+import { CreateTransactionSchema, UpdateTransactionSchema } from '@/lib/validation';
+import { ZodError } from 'zod';
 
 const financeService = new FinanceService();
+
+function formatZodError(error: ZodError): string {
+  return error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+}
 
 export async function GET() {
   try {
@@ -26,6 +32,25 @@ export async function POST(req: Request) {
     const category = formData.get('category') as string;
     const description = formData.get('description') as string;
     const date = formData.get('date') as string;
+
+    // Validate with Zod
+    try {
+      CreateTransactionSchema.parse({
+        amount,
+        type,
+        category,
+        description,
+        date,
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: formatZodError(error) },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
 
     if (amount > 0) {
       const transaction = await financeService.addTransaction(amount, type as 'INCOME' | 'EXPENSE', category, description, date);
@@ -52,6 +77,26 @@ export async function PUT(req: Request) {
     const category = formData.get('category') as string;
     const description = formData.get('description') as string;
     const date = formData.get('date') as string;
+
+    // Validate with Zod
+    try {
+      UpdateTransactionSchema.parse({
+        id,
+        amount,
+        type,
+        category,
+        description,
+        date,
+      });
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return NextResponse.json(
+          { error: 'Validation failed', details: formatZodError(error) },
+          { status: 400 }
+        );
+      }
+      throw error;
+    }
 
     if (amount > 0 && id) {
       const transaction = await financeService.updateTransaction(id, amount, type as 'INCOME' | 'EXPENSE', category, description, date);
