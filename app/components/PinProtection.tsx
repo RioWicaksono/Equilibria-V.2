@@ -42,12 +42,14 @@ export default function PinProtection({ children }: { children: React.ReactNode 
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricError, setBiometricError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const init = () => {
       setIsClient(true);
       const pin = getStoredPin();
       setStoredPin(pin);
+      setIsInitialized(true);
 
       // Check biometric availability
       if (window.PublicKeyCredential) {
@@ -103,7 +105,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
   }, [isAuthenticated]);
 
   const handleKeyPress = (num: number) => {
-    if (pin.length < 6) {
+    if (pin.length < 6 && isInitialized) {
       setError(false);
       const newPin = pin + num.toString();
       setPin(newPin);
@@ -237,7 +239,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, pin, error, storedPin]);
+  }, [isAuthenticated, pin, error, storedPin, isInitialized]);
 
   if (!isClient) return null;
 

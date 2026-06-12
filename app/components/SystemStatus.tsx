@@ -18,7 +18,9 @@ export default function SystemStatus() {
         if (!res.ok) throw new Error();
         const data = await res.json();
         if (isActive) {
-          setTelegramStatus(data.status as 'ACTIVE' | 'INACTIVE');
+          // Check bot status from response
+          const botStatus = data.bot || data.status;
+          setTelegramStatus(botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
         }
       } catch {
         if (isActive) setTelegramStatus('INACTIVE');
@@ -31,7 +33,9 @@ export default function SystemStatus() {
         if (res.ok) {
           const data = await res.json();
           if (isActive) {
-            setDatabaseStatus(data.health === 'ok' || data.status === 'ok' ? 'CONNECTED' : 'DISCONNECTED');
+            // Check actual database check status, not overall status
+            const dbCheck = data.checks?.database?.status;
+            setDatabaseStatus(dbCheck === 'pass' ? 'CONNECTED' : 'DISCONNECTED');
           }
         } else {
           if (isActive) setDatabaseStatus('DISCONNECTED');
@@ -62,7 +66,16 @@ export default function SystemStatus() {
           if (!res.ok) {
             setSystemStatus('red');
           } else {
-            setSystemStatus(isUnstable ? 'yellow' : 'green');
+            const data = await res.json();
+            // Check if database and API are passing
+            const dbPass = data.checks?.database?.status === 'pass';
+            const apiPass = data.checks?.api?.status === 'pass';
+
+            if (dbPass && apiPass) {
+              setSystemStatus(isUnstable ? 'yellow' : 'green');
+            } else {
+              setSystemStatus('red');
+            }
           }
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
@@ -120,8 +133,8 @@ export default function SystemStatus() {
 
   const telegramTextClasses = {
     LOADING: 'Memeriksa',
-    ACTIVE: 'Aktif',
-    INACTIVE: 'Tidak Aktif'
+    ACTIVE: 'Terhubung',
+    INACTIVE: 'Terputus'
   };
 
   const databaseColorClasses = {
@@ -146,7 +159,7 @@ export default function SystemStatus() {
           <div className={`w-1.5 h-1.5 rounded-full ${telegramColorClasses[telegramStatus]}`} />
         )}
         <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">
-          TG: {telegramTextClasses[telegramStatus]}
+          Telegram: {telegramTextClasses[telegramStatus]}
         </span>
       </div>
 
@@ -158,14 +171,14 @@ export default function SystemStatus() {
           <div className={`w-1.5 h-1.5 rounded-full ${databaseColorClasses[databaseStatus]}`} />
         )}
         <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">
-          DB: {databaseTextClasses[databaseStatus]}
+          Database: {databaseTextClasses[databaseStatus]}
         </span>
       </div>
 
       {/* System Status */}
       <div className="flex items-center gap-1.5 bg-[#1A1A1A] border border-[#262626] px-2 py-1 rounded-full">
         <div className={`w-1.5 h-1.5 rounded-full ${statusColorClasses[systemStatus]}`} />
-        <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">Sys: {statusTextClasses[systemStatus]}</span>
+        <span className="text-zinc-300 font-semibold text-[10px] sm:text-xs">System: {statusTextClasses[systemStatus]}</span>
       </div>
     </div>
   );
