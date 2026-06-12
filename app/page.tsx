@@ -1,5 +1,5 @@
 import { getFinanceService } from '@/application/services/FinanceService';
-import { ArrowDownRight, ArrowUpRight, Wallet } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import DashboardCalendar from './components/DashboardCalendar';
 import DashboardBudget from './components/DashboardBudget';
 import SystemStatus from './components/SystemStatus';
@@ -30,65 +30,112 @@ export default async function DashboardPage() {
     }
   });
 
+  // Calculate percentage change (mock calculation for demo)
+  const incomePercent = summary.totalIncome > 0 ? Math.round((summary.totalExpense / summary.totalIncome) * 100) : 0;
+
   return (
-    <div className="space-y-3 md:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out relative w-full min-w-0 overflow-hidden pb-4">
+    <div className="space-y-6 relative w-full min-w-0">
       <TransactionModal isFAB={true} />
 
-      {/* Compact Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+      {/* Header Section */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-slide-up">
         <div className="flex flex-col">
-          <h2 className="text-base sm:text-lg font-semibold text-white">Ringkasan Keuangan</h2>
-          <p className="text-[10px] sm:text-xs text-zinc-500">Laporan otomatis harian</p>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-8 h-8 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-xs">
+              E
+            </span>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Dashboard</h1>
+          </div>
+          <p className="text-xs sm:text-sm text-zinc-500 ml-10 sm:ml-10">Ringkasan keuangan Anda hari ini</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <LockButton />
           <SystemStatus />
         </div>
       </header>
 
-      {/* Summary Cards - Compact */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="bg-[#141414] border border-[#262626] rounded-lg p-2 sm:p-3 flex flex-col justify-between min-h-[70px] sm:min-h-[80px]">
-          <span className="text-zinc-500 text-[9px] sm:text-[10px] font-medium uppercase flex items-center gap-1">
-            <Wallet className="h-3 w-3" /> Saldo
-          </span>
-          <span className="text-sm sm:text-lg md:text-xl font-bold text-white truncate block">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        {/* Balance Card */}
+        <div className="card group hover:border-teal-500/30">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-teal-500/10 rounded-lg group-hover:bg-teal-500/20 transition-colors">
+              <Wallet className="w-5 h-5 text-teal-400" />
+            </div>
+            <span className="badge badge-success">Total</span>
+          </div>
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saldo</p>
+          <p className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
             <FormatCurrency amount={summary.balance} />
-          </span>
+          </p>
         </div>
 
-        <div className="bg-[#141414] border border-[#262626] rounded-lg p-2 sm:p-3 flex flex-col justify-between min-h-[70px] sm:min-h-[80px]">
-          <span className="text-teal-500 text-[9px] sm:text-[10px] font-medium uppercase flex items-center gap-1">
-            <ArrowUpRight className="h-3 w-3" /> Masuk
-          </span>
-          <span className="text-sm sm:text-lg md:text-xl font-bold text-teal-400 truncate block">
+        {/* Income Card */}
+        <div className="card group hover:border-teal-500/30">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-teal-500/10 rounded-lg group-hover:bg-teal-500/20 transition-colors">
+              <TrendingUp className="w-5 h-5 text-teal-400" />
+            </div>
+            <span className="badge badge-success">+{incomePercent}%</span>
+          </div>
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Pemasukan</p>
+          <p className="text-2xl sm:text-3xl font-bold text-teal-400 tracking-tight">
             <FormatCurrency amount={summary.totalIncome} />
-          </span>
+          </p>
         </div>
 
-        <div className="bg-[#141414] border border-[#262626] rounded-lg p-2 sm:p-3 flex flex-col justify-between min-h-[70px] sm:min-h-[80px]">
-          <span className="text-rose-500 text-[9px] sm:text-[10px] font-medium uppercase flex items-center gap-1">
-            <ArrowDownRight className="h-3 w-3" /> Keluar
-          </span>
-          <span className="text-sm sm:text-lg md:text-xl font-bold text-rose-500 truncate block">
+        {/* Expense Card */}
+        <div className="card group hover:border-rose-500/30">
+          <div className="flex items-start justify-between mb-3">
+            <div className="p-2 bg-rose-500/10 rounded-lg group-hover:bg-rose-500/20 transition-colors">
+              <TrendingDown className="w-5 h-5 text-rose-400" />
+            </div>
+            <span className="badge badge-danger">{incomePercent}%</span>
+          </div>
+          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Pengeluaran</p>
+          <p className="text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight">
             <FormatCurrency amount={summary.totalExpense} />
-          </span>
+          </p>
         </div>
       </div>
 
-      {/* Calendar& Budget - Side by side on large screens */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-        {/* Calendar Section - Compact */}
-        <div className="bg-[#141414] border border-[#262626] rounded-lg p-2 sm:p-3">
-          <h3 className="text-xs sm:text-sm font-bold text-white mb-2">Kalender</h3>
-          <div className="w-full flex justify-center">
-            <DashboardCalendar transactions={transactions} />
+      {/* Calendar & Budget Section */}
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        {/* Calendar Section */}
+        <div className="xl:col-span-2">
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <svg className="w-4 h-4 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Kalender
+              </h3>
+              <span className="text-xs text-zinc-500">{new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</span>
+            </div>
+            <div className="w-full flex justify-center">
+              <DashboardCalendar transactions={transactions} />
+            </div>
           </div>
         </div>
 
-        {/* Budget Section - Compact */}
-        <div>
+        {/* Budget Section */}
+        <div className="xl:col-span-3">
           <DashboardBudget budgets={budgets} categoryTotals={categoryTotals} />
+        </div>
+      </div>
+
+      {/* Quick Stats Footer */}
+      <div className="flex flex-wrap gap-3 animate-slide-up" style={{ animationDelay: '0.3s' }}>
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#141414] border border-[#262626] rounded-lg">
+          <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
+          <span className="text-xs text-zinc-400">Database: <span className="text-teal-400 font-medium">Connected</span></span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#141414] border border-[#262626] rounded-lg">
+          <span className="text-xs text-zinc-400">Transaksi: <span className="text-white font-medium">{transactions.length}</span></span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 bg-[#141414] border border-[#262626] rounded-lg">
+          <span className="text-xs text-zinc-400">Budget aktif: <span className="text-white font-medium">{budgets.length}</span></span>
         </div>
       </div>
     </div>
