@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -17,6 +17,31 @@ export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSav
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  // Track if form has been modified
+  const initialState = useRef({ type: 'EXPENSE', amount: '', category: '', description: '', date: new Date().toISOString().split('T')[0] });
+  const isFormDirty = amount !== '' || category !== '' || description !== '';
+
+  useEffect(() => {
+    setIsDirty(amount !== '' || category !== '' || description !== '');
+  }, [amount, category, description]);
+
+  const handleClose = () => {
+    if (isFormDirty) {
+      if (confirm('Anda memiliki perubahan yang belum disimpan. Yakin ingin menutup?')) {
+        setIsOpen(false);
+        // Reset form
+        setType('EXPENSE');
+        setAmount('');
+        setCategory('');
+        setDescription('');
+        setDate(new Date().toISOString().split('T')[0]);
+      }
+    } else {
+      setIsOpen(false);
+    }
+  };
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.replace(/\D/g, '');
@@ -110,6 +135,7 @@ export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSav
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={handleClose}
           >
             <motion.div
               initial={{ scale: 0.95, y: 20 }}
@@ -118,7 +144,7 @@ export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSav
               className="bg-[#141414] border border-[#262626] rounded-xl p-6 w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto"
             >
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"
               >
                 <X className="w-5 h-5" />

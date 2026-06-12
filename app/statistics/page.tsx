@@ -218,7 +218,7 @@ export default function StatisticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.monthlyData}>
                     <XAxis dataKey="month" stroke="#71717a" fontSize={9} />
-                    <YAxis stroke="#71717a" fontSize={9} tickFormatter={(v) => `$${v / 1000}k`} />
+                    <YAxis stroke="#71717a" fontSize={9} tickFormatter={(v) => `Rp${(v / 1000).toFixed(0)}rb`} />
                     <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #262626', borderRadius: '6px', fontSize: '10px' }} labelStyle={{ color: '#e4e4e7' }} />
                     <Bar dataKey="income" fill="#2dd4bf" name="Pemasukan" radius={[3, 3, 0, 0]} />
                     <Bar dataKey="expense" fill="#f43f5e" name="Pengeluaran" radius={[3, 3, 0, 0]} />
@@ -251,7 +251,7 @@ export default function StatisticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={stats.cashFlow}>
                   <XAxis dataKey="month" stroke="#71717a" fontSize={9} />
-                  <YAxis stroke="#71717a" fontSize={9} tickFormatter={(v) => `$${v / 1000}k`} />
+                  <YAxis stroke="#71717a" fontSize={9} tickFormatter={(v) => `Rp${(v / 1000).toFixed(0)}rb`} />
                   <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #262626', borderRadius: '6px', fontSize: '10px' }} labelStyle={{ color: '#e4e4e7' }} />
                   <Line type="monotone" dataKey="balance" stroke="#2dd4bf" strokeWidth={2} dot={{ r: 2 }} name="Saldo" />
                 </LineChart>

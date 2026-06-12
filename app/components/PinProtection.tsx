@@ -50,6 +50,8 @@ export default function PinProtection({ children }: { children: React.ReactNode 
       const pin = getStoredPin();
       setStoredPin(pin);
       setIsInitialized(true);
+      // Always reset showSuccess on init
+      setShowSuccess(false);
 
       // Check biometric availability
       if (window.PublicKeyCredential) {
@@ -62,6 +64,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
       const auth = sessionStorage.getItem(STORAGE_KEYS.AUTH);
       if (auth === 'true') {
         setIsAuthenticated(true);
+        setShowSuccess(false); // Don't show success screen if already authenticated
       }
     };
     init();
@@ -83,6 +86,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
       lastActivity = Date.now();
       timeout = setTimeout(() => {
         setIsAuthenticated(false);
+        setShowSuccess(false); // Reset success state when timeout
         sessionStorage.removeItem(STORAGE_KEYS.AUTH);
       }, timeoutMinutes * 60 * 1000);
     };
@@ -224,6 +228,13 @@ export default function PinProtection({ children }: { children: React.ReactNode 
       setBiometricError('Registration failed');
     }
   };
+
+  useEffect(() => {
+    // Reset showSuccess when auth state changes (e.g., after timeout)
+    if (!isAuthenticated) {
+      setShowSuccess(false);
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (isAuthenticated) return;
