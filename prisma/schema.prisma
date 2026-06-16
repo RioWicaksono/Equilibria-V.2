@@ -127,3 +127,21 @@ model CustomCategory {
 
   @@index([type])
 }
+
+// User reminders for bills and payment schedules
+model Reminder {
+  id        String   @id @default(cuid())
+  title     String
+  date      DateTime
+  amount    Float?
+  status    String   @default("PENDING") // 'PENDING' | 'COMPLETED'
+  priority  String   @default("MEDIUM") // 'LOW' | 'MEDIUM' | 'HIGH'
+  frequency String   @default("ONCE")   // 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
+  urgent    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([date])
+  @@index([priority])
+}

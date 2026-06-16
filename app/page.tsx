@@ -1,7 +1,6 @@
 import { getFinanceService } from '@/application/services/FinanceService';
 import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import SystemStatus from './components/SystemStatus';
-import LockButton from './components/LockButton';
 import FormatCurrency from './components/FormatCurrency';
 import { headers } from 'next/headers';
 import DashboardCalendar from './components/DashboardCalendar';
@@ -45,7 +44,6 @@ export default async function DashboardPage() {
           <p className="text-xs sm:text-sm text-zinc-500 ml-10">Ringkasan keuangan Anda hari ini</p>
         </div>
         <div className="flex items-center gap-2">
-          <LockButton />
           <SystemStatus />
         </div>
       </header>

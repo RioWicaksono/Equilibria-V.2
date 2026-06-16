@@ -1,4 +1,4 @@
-import { prisma } from '../PrismaClient';
+import { prisma } from '../database/PrismaClient';
 
 export interface CustomCategory {
   id: string;

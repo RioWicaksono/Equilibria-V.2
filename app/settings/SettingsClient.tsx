@@ -348,8 +348,7 @@ export default function SettingsClient() {
           >
             <Settings2 className="w-5 h-5" /> Umum
           </button>
-          <button 
-          <button 
+          <button
             onClick={() => setActiveTab('integration')}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${
               activeTab === 'integration' ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1A1A1A]'

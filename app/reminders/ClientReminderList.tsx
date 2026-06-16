@@ -1,14 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Reminder, getReminders, saveReminders } from '@/infrastructure/storage/LocalStorageReminders';
 import { Bell, Edit2, Trash2, Plus, X, Search, Calendar, CheckCircle2, Circle, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 
+interface Reminder {
+  id: string;
+  title: string;
+  date: string;
+  amount: number | null;
+  status: 'PENDING' | 'COMPLETED';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH';
+  frequency: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+  urgent: boolean;
+}
+
 export default function ClientReminderList() {
   const { formatCurrency } = useSettings();
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'PENDING' | 'COMPLETED'>('ALL');
   const [filterPriority, setFilterPriority] = useState<'ALL' | 'LOW' | 'MEDIUM' | 'HIGH'>('ALL');
@@ -19,7 +30,7 @@ export default function ClientReminderList() {
   const [formData, setFormData] = useState<Partial<Reminder>>({
     title: '',
     date: new Date().toISOString().split('T')[0],
-    amount: '',
+    amount: null,
     status: 'PENDING',
     priority: 'MEDIUM',
     frequency: 'ONCE',
@@ -28,43 +39,79 @@ export default function ClientReminderList() {
 
   useEffect(() => {
     const handleUpdate = () => {
-      setReminders(getReminders());
+      fetchReminders();
     };
     handleUpdate();
     window.addEventListener('reminders-updated', handleUpdate);
     return () => window.removeEventListener('reminders-updated', handleUpdate);
   }, []);
 
-  const handleSave = () => {
+  const fetchReminders = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/reminders');
+      const data = await res.json();
+      if (data.reminders) {
+        setReminders(data.reminders);
+      }
+    } catch (error) {
+      console.error('Failed to fetch reminders:', error);
+    }
+    setIsLoading(false);
+  };
+
+  const handleSave = async () => {
     if (!formData.title || !formData.date) return;
 
-    let updated;
-    if (isEditing) {
-      updated = reminders.map(r => r.id === isEditing ? { ...r, ...formData } as Reminder : r);
-    } else {
-      updated = [...reminders, { ...formData, id: crypto.randomUUID() } as Reminder];
+    try {
+      if (isEditing) {
+        const res = await fetch('/api/reminders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: isEditing, ...formData })
+        });
+        if (!res.ok) throw new Error('Failed to update');
+      } else {
+        const res = await fetch('/api/reminders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+        if (!res.ok) throw new Error('Failed to create');
+      }
+      await fetchReminders();
+      setIsEditing(null);
+      setIsModalOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error('Failed to save reminder:', error);
     }
-
-    saveReminders(updated);
-    setReminders(updated);
-    setIsEditing(null);
-    setIsModalOpen(false);
-    resetForm();
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Yakin ingin menghapus pengingat ini?')) return;
-    const updated = reminders.filter(r => r.id !== id);
-    saveReminders(updated);
-    setReminders(updated);
+    try {
+      const res = await fetch(`/api/reminders?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      await fetchReminders();
+    } catch (error) {
+      console.error('Failed to delete reminder:', error);
+    }
   };
 
-  const toggleStatus = (id: string, currentStatus: string) => {
-    const updated = reminders.map(r =>
-      r.id === id ? { ...r, status: currentStatus === 'PENDING' ? 'COMPLETED' : 'PENDING' } as Reminder : r
-    );
-    saveReminders(updated);
-    setReminders(updated);
+  const toggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'PENDING' ? 'COMPLETED' : 'PENDING';
+    try {
+      const res = await fetch('/api/reminders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: newStatus })
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      await fetchReminders();
+    } catch (error) {
+      console.error('Failed to toggle status:', error);
+    }
   };
 
   const startEdit = (reminder: Reminder) => {
@@ -77,7 +124,7 @@ export default function ClientReminderList() {
     setFormData({
       title: '',
       date: new Date().toISOString().split('T')[0],
-      amount: '',
+      amount: null,
       status: 'PENDING',
       priority: 'MEDIUM',
       frequency: 'ONCE',
@@ -85,12 +132,12 @@ export default function ClientReminderList() {
     });
   };
 
-  const formatDateLabel = (isoDate: string) => {
+  const formatDateLabel = (dateStr: string) => {
     try {
-      const d = new Date(isoDate);
+      const d = new Date(dateStr);
       return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     } catch {
-      return isoDate;
+      return dateStr;
     }
   };
 
@@ -156,7 +203,14 @@ export default function ClientReminderList() {
       </div>
 
       {/* Grid */}
-      {filteredReminders.length > 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-[#141414] border border-[#262626] rounded-xl text-center">
+          <div className="w-16 h-16 bg-zinc-900 border border-zinc-800 rounded-full flex items-center justify-center mb-4 animate-pulse">
+            <Bell className="w-8 h-8 text-zinc-600" />
+          </div>
+          <p className="text-zinc-500 text-sm">Memuat pengingat...</p>
+        </div>
+      ) : filteredReminders.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence>
             {filteredReminders.map((reminder) => (
@@ -192,7 +246,7 @@ export default function ClientReminderList() {
                   <div className="flex flex-col gap-2">
                     {reminder.amount != null && (
                       <span className="text-sm font-semibold text-zinc-300">
-                        {formatCurrency(Number(String(reminder.amount).replace(/\D/g, '')))}
+                        {formatCurrency(reminder.amount)}
                       </span>
                     )}
                     <div className="flex flex-wrap gap-2">
@@ -272,7 +326,7 @@ export default function ClientReminderList() {
                     <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Tanggal</label>
                     <input
                       type="date"
-                      value={formData.date?.split('T')[0]}
+                      value={formData.date?.split('T')[0] || ''}
                       onChange={e => setFormData({ ...formData, date: e.target.value })}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none"
                     />
@@ -282,11 +336,11 @@ export default function ClientReminderList() {
                     <input
                       type="text"
                       placeholder="Rp..."
-                      value={formData.amount}
+                      value={formData.amount != null ? String(formData.amount) : ''}
                       onChange={e => {
                         const val = e.target.value.replace(/\D/g, '');
                         const formattedVal = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                        setFormData({ ...formData, amount: formattedVal });
+                        setFormData({ ...formData, amount: val ? parseInt(val) : undefined });
                       }}
                       className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg p-2.5 text-sm focus:border-teal-500 outline-none"
                     />
