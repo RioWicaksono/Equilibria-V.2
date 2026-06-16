@@ -1,33 +1,56 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Lock, Delete, Fingerprint, Smartphone, Shield } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Lock, Delete, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { base64Encode } from '@/lib/crypto';
-import bcrypt from 'bcryptjs';
+import { useRouter } from 'next/navigation';
+
+// Simple hash for PIN (fallback if bcrypt fails)
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(16).padStart(8, '0');
+}
 
 const STORAGE_KEYS = {
   PIN_HASH: 'equilibria_pin_hash',
   AUTH: 'equilibria_auth',
-  BIOMETRIC_ENABLED: 'equilibria_biometric_enabled',
-  BIOMETRIC_CREDENTIAL: 'equilibria_biometric_credential',
   AUTO_LOCK_TIMEOUT: 'equilibria_auto_lock_timeout',
 } as const;
 
 const DEFAULT_TIMEOUT_MINUTES = 5;
 
-/**
- * Verify PIN against stored bcrypt hash (client-side)
- */
-async function verifyPin(inputPin: string, storedHash: string): Promise<boolean> {
+// Simple verify (sync fallback)
+function simpleVerify(input: string, stored: string): boolean {
+  return simpleHash(input) === stored;
+}
+
+// Async verify (tries bcrypt first, falls back to simple)
+async function verifyPin(input: string, stored: string): Promise<boolean> {
   try {
-    return await bcrypt.compare(inputPin, storedHash);
+    const bcrypt = await import('bcryptjs');
+    return await bcrypt.compare(input, stored);
   } catch {
-    return false;
+    // Fallback to simple hash
+    return simpleVerify(input, stored);
   }
 }
 
-const getStoredPinHash = (): string | null => {
+async function hashPin(pin: string): Promise<string> {
+  try {
+    const bcrypt = await import('bcryptjs');
+    return await bcrypt.hash(pin, 10);
+  } catch {
+    // Fallback to simple hash
+    return simpleHash(pin);
+  }
+}
+
+const getStoredHash = (): string | null => {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(STORAGE_KEYS.PIN_HASH);
 };
@@ -37,26 +60,17 @@ const hasPinSet = (): boolean => {
   return localStorage.getItem(STORAGE_KEYS.PIN_HASH) !== null;
 };
 
-const savePinHash = async (pin: string): Promise<void> => {
-  if (typeof window === 'undefined') return;
-  const hash = await bcrypt.hash(pin, 12);
-  localStorage.setItem(STORAGE_KEYS.PIN_HASH, hash);
-};
-
 export default function PinProtection({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [storedPinHash, setStoredPinHash] = useState<string | null>(null);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
-  const [biometricError, setBiometricError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [storedHash, setStoredHash] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isSetupMode, setIsSetupMode] = useState(false);
   const [setupStep, setSetupStep] = useState<'enter' | 'confirm'>('enter');
+  const router = useRouter();
 
   useEffect(() => {
     const init = () => {

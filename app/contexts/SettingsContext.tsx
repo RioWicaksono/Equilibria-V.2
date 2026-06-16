@@ -1,87 +1,109 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useEffect, useState, useCallback, ReactNode } from 'react';
 
-type SettingsContextType = {
-  theme: string;
+type Theme = 'dark' | 'light' | 'auto';
+
+interface SettingsContextType {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
   currency: string;
+  setCurrency: (currency: string) => void;
   language: string;
+  setLanguage: (lang: string) => void;
   formatCurrency: (amount: number) => string;
-};
+  isDark: boolean;
+}
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
+function getSystemTheme(): boolean {
+  if (typeof window === 'undefined') return true;
+  return window.matchMedia('(prefers-color-scheme: dark').matches;
+}
+
+function applyTheme(isDark: boolean) {
+  if (typeof document === 'undefined') return;
+  document.body.classList.toggle('dark', isDark);
+  document.body.classList.toggle('light', !isDark);
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState('dark');
-  const [currency, setCurrency] = useState('IDR');
-  const [language, setLanguage] = useState('id');
+  const [theme, _setTheme] = useState<Theme>('auto');
+  const [currency, setCurrencyState] = useState('IDR');
+  const [language, setLanguageState] = useState('id');
+  const [isDark, setIsDark] = useState(true);
 
+  // Initialize from localStorage and system preference
   useEffect(() => {
-    // Read from localStorage on mount
-    const t = localStorage.getItem('equilibria_theme');
-    if (t) setTheme(t);
-    const c = localStorage.getItem('equilibria_currency');
-    if (c) setCurrency(c);
-    const l = localStorage.getItem('equilibria_lang');
-    if (l) setLanguage(l);
+    const savedTheme = localStorage.getItem('equilibria_theme') as Theme | null;
+    const savedCurrency = localStorage.getItem('equilibria_currency');
+    const savedLanguage = localStorage.getItem('equilibria_lang');
 
-    // Apply theme
-    if (t === 'light') {
-      document.body.classList.add('light-mode');
-    } else {
-      document.body.classList.remove('light-mode');
-    }
-    
-    // Listen for storage changes from SettingsClient
-    const handleStorageChange = () => {
-      const t2 = localStorage.getItem('equilibria_theme');
-      if (t2) {
-        setTheme(t2);
-        if (t2 === 'light') {
-          document.body.classList.add('light-mode');
-        } else {
-          document.body.classList.remove('light-mode');
-        }
+    if (savedCurrency) setCurrencyState(savedCurrency);
+    if (savedLanguage) setLanguageState(savedLanguage);
+
+    const effectiveTheme = savedTheme || 'auto';
+    _setTheme(effectiveTheme);
+
+    const dark = effectiveTheme === 'auto' ? getSystemTheme() : effectiveTheme === 'dark';
+    setIsDark(dark);
+    applyTheme(dark);
+
+    // Listen for system theme changes
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      const storedTheme = localStorage.getItem('equilibria_theme');
+      if (storedTheme === 'auto' || !storedTheme) {
+        const newDark = getSystemTheme();
+        setIsDark(newDark);
+        applyTheme(newDark);
       }
-      const c2 = localStorage.getItem('equilibria_currency');
-      if (c2) setCurrency(c2);
-      const l2 = localStorage.getItem('equilibria_lang');
-      if (l2) setLanguage(l2);
     };
-
-    window.addEventListener('storage', handleStorageChange);
-    // Custom event for same-window updates
-    window.addEventListener('settingsUpdated', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('settingsUpdated', handleStorageChange);
-    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const formatCurrency = (amount: number) => {
+  const setTheme = useCallback((newTheme: Theme) => {
+    _setTheme(newTheme);
+    localStorage.setItem('equilibria_theme', newTheme);
+    const dark = newTheme === 'auto' ? getSystemTheme() : newTheme === 'dark';
+    setIsDark(dark);
+    applyTheme(dark);
+    window.dispatchEvent(new Event('themeChanged'));
+  }, []);
+
+  const setCurrency = useCallback((curr: string) => {
+    setCurrencyState(curr);
+    localStorage.setItem('equilibria_currency', curr);
+  }, []);
+
+  const setLanguage = useCallback((lang: string) => {
+    setLanguageState(lang);
+    localStorage.setItem('equilibria_lang', lang);
+  }, []);
+
+  const formatCurrency = useCallback((amount: number): string => {
     switch (currency) {
       case 'USD':
-        return '$ ' + amount.toLocaleString('en-US');
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
       case 'EUR':
-        return '€ ' + amount.toLocaleString('de-DE');
+        return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
       case 'IDR':
       default:
-        return 'Rp ' + amount.toLocaleString('id-ID');
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
     }
-  };
+  }, [currency]);
 
   return (
-    <SettingsContext.Provider value={{ theme, currency, language, formatCurrency }}>
+    <SettingsContext.Provider value={{ theme, setTheme, currency, setCurrency, language, setLanguage, formatCurrency, isDark }}>
       {children}
     </SettingsContext.Provider>
   );
 }
 
 export function useSettings() {
-  const ctx = useContext(SettingsContext);
-  if (!ctx) {
-    throw new Error('useSettings must be used within SettingsProvider');
-  }
-  return ctx;
+  const context = useContext(SettingsContext);
+  if (!context) throw new Error('useSettings must be used within SettingsProvider');
+  return context;
 }
