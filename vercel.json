@@ -3,7 +3,6 @@
   "buildCommand": "pnpm run build",
   "devCommand": "pnpm dev",
   "installCommand": "pnpm install",
-  "packageManager": "pnpm",
   "crons": [
     {
       "path": "/api/cron/process-recurring",
