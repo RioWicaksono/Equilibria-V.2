@@ -50,11 +50,8 @@ export default function StatisticsPage() {
       const goalRes = await fetch('/api/goals').then(r => r.json()).catch(() => ({ goals: [] }));
       const debtRes = await fetch('/api/debts').then(r => r.json()).catch(() => ({ debts: [] }));
 
-      let allTrans: Transaction[] = transRes.transactions || [];
-      if (!allTrans.length) {
-        const stored = localStorage.getItem('equilibria_transactions');
-        if (stored) allTrans = JSON.parse(stored);
-      }
+      // All transactions come from database via API
+      const allTrans: Transaction[] = transRes.transactions || [];
 
       setGoals(goalRes.goals || []);
       setDebts(debtRes.debts || []);

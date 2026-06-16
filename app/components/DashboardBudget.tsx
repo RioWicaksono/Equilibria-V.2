@@ -16,8 +16,21 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
   const [formData, setFormData] = useState({ category: '', limit: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState(80);
+  const [telegramToken, setTelegramToken] = useState('');
   const router = useRouter();
   const { formatCurrency } = useSettings();
+
+  // Load telegram token from API
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.settings?.telegramToken) {
+          setTelegramToken(data.settings.telegramToken);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Check for budget alerts and send notifications
   useEffect(() => {
@@ -28,13 +41,13 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
         const isNearLimit = progress >= alertThreshold;
         const isOverLimit = progress >= 100;
 
-        // Check if we already sent this alert today
+        // Check if we already sent this alert today (sessionStorage for ephemeral state)
         const alertKey = `budget_alert_${budget.category}_${new Date().toISOString().split('T')[0]}`;
-        const alreadyAlerted = localStorage.getItem(alertKey);
+        const alreadyAlerted = sessionStorage.getItem(alertKey);
 
         if ((isNearLimit || isOverLimit) && !alreadyAlerted) {
-          // Store that we alerted
-          localStorage.setItem(alertKey, 'true');
+          // Store that we alerted (sessionStorage - clears on tab close)
+          sessionStorage.setItem(alertKey, 'true');
 
           // Create notification message
           const remaining = budget.limit - spent;
@@ -54,8 +67,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
             });
           }
 
-          // Try Telegram notification if configured
-          const telegramToken = localStorage.getItem('equilibria_telegram_token');
+          // Try Telegram notification if configured (read from state which loads from API)
           if (telegramToken) {
             fetch('/api/telegram', {
               method: 'POST',
@@ -74,7 +86,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
-  }, [budgets, categoryTotals, alertThreshold, formatCurrency]);
+  }, [budgets, categoryTotals, alertThreshold, formatCurrency, telegramToken]);
 
   const handleSave = async () => {
     if (!formData.category || !formData.limit) return;
