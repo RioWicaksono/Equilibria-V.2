@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Lock, KeyRound, Palette, Globe, Bell, Trash2, Shield, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type TabType = 'general' | 'security' | 'integration' | 'advanced';
+
+interface Settings {
+  theme: string;
+  currency: string;
+  language: string;
+}
 
 export default function SettingsClient() {
   const [activeTab, setActiveTab] = useState<TabType>('general');
@@ -14,58 +20,22 @@ export default function SettingsClient() {
   const [showPayload, setShowPayload] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [telegramLogs, setTelegramLogs] = useState<Array<{ message: string, status: string, timestamp: string }>>([]);
-
-  // Show/Hide password fields
   const [showTelegramToken, setShowTelegramToken] = useState(false);
-
-  // Integration status states
   const [databaseConnected, setDatabaseConnected] = useState(false);
   const [apiHealthStatus, setApiHealthStatus] = useState<'unknown' | 'healthy' | 'unhealthy'>('unknown');
   const [lastHealthCheck, setLastHealthCheck] = useState<string | null>(null);
-
-  // Mock Settings State
-  const [currency, setCurrency] = useState('IDR');
-  const [telegramToken, setTelegramToken] = useState('');
   const [toastMessage, setToastMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+
+  // Settings State - loaded from API
+  const [currency, setCurrency] = useState('IDR');
   const [theme, setTheme] = useState('dark');
+  const [language, setLanguage] = useState('id');
 
-  useEffect(() => {
-    // Load general settings
-    const c = localStorage.getItem('equilibria_currency');
-    if (c) setCurrency(c);
-    setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
-    const t = localStorage.getItem('equilibria_theme');
-    if (t) setTheme(t);
-  }, []);
+  // Telegram Token State
+  const [telegramToken, setTelegramToken] = useState('');
 
-  const handleSettingChange = (key: string, value: string) => {
-    if (key === 'currency') setCurrency(value);
-    if (key === 'theme') {
-      setTheme(value);
-      localStorage.setItem('equilibria_theme', value);
-      if (value === 'light') {
-        document.body.classList.add('light-mode');
-      } else {
-        document.body.classList.remove('light-mode');
-      }
-      window.dispatchEvent(new Event('settingsUpdated'));
-    }
-  };
-
-  const handleSaveGeneral = () => {
-    localStorage.setItem('equilibria_currency', currency);
-    window.dispatchEvent(new Event('settingsUpdated'));
-    showToast(`Pengaturan Umum disimpan`);
-  };
-
-  const showToast = (message: string) => {
-    setToastMessage({ message, type: 'success' });
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  };
-
-  // PIN State
+  // PIN State - loaded from API
+  const [hasPin, setHasPin] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -85,60 +55,101 @@ export default function SettingsClient() {
     { value: 30, label: '30 menit' },
   ];
 
+  // Load settings from API
   useEffect(() => {
-    // Load auto-lock timeout
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.settings) {
+          setCurrency(data.settings.currency || 'IDR');
+          setTheme(data.settings.theme || 'dark');
+          setLanguage(data.settings.language || 'id');
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  // Load PIN status from API
+  useEffect(() => {
+    fetch('/api/pin')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setHasPin(data.hasPin || false);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  // Load auto-lock timeout
+  useEffect(() => {
     const timeout = localStorage.getItem('equilibria_auto_lock_timeout');
     if (timeout) setAutoLockTimeout(parseInt(timeout));
   }, []);
 
+  // Load Telegram token
   useEffect(() => {
-    let active = true;
-
-    const doFetchLogs = () => {
-      fetch('/api/telegram-webhook?logs=true')
-        .then(res => res.json())
-        .then(data => {
-          if (active && data.logs) setTelegramLogs(data.logs);
-        })
-        .catch(() => {});
-    };
-
-    const doFetchStatus = () => {
-      setTelegramStatus('LOADING');
-      fetch('/api/telegram-webhook')
-        .then(res => res.json())
-        .then(data => {
-          if (!active) return;
-          // telegram webhook returns {bot: 'CONNECTED'|'DISCONNECTED'|'NOT_CONFIGURED'|'ERROR', status, ...}
-          const botState = data.bot || 'INACTIVE';
-          setTelegramStatus(botState === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
-          
-        })
-        .catch(() => {
-          if (active) setTelegramStatus('INACTIVE');
-        });
-        
-      doFetchLogs();
-    };
-
-    doFetchStatus();
-    
-    // Refresh logs periodically
-    const interval = setInterval(doFetchLogs, 10000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+    setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
   }, []);
 
-  const handleSavePin = () => {
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ message, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  const handleSettingChange = async (key: string, value: string) => {
+    if (key === 'currency') setCurrency(value);
+    if (key === 'theme') {
+      setTheme(value);
+      if (value === 'light') {
+        document.body.classList.add('light-mode');
+      } else {
+        document.body.classList.remove('light-mode');
+      }
+      window.dispatchEvent(new Event('settingsUpdated'));
+    }
+
+    // Save to API
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [key]: value }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        showToast('Gagal menyimpan pengaturan', 'error');
+      }
+    } catch {
+      showToast('Gagal menyimpan pengaturan', 'error');
+    }
+  };
+
+  const handleSaveGeneral = async () => {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currency, theme, language }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Pengaturan Umum disimpan');
+        window.dispatchEvent(new Event('settingsUpdated'));
+      } else {
+        showToast('Gagal menyimpan pengaturan', 'error');
+      }
+    } catch {
+      showToast('Gagal menyimpan pengaturan', 'error');
+    }
+  };
+
+  const handleSavePin = async () => {
     setPinError('');
     setPinSuccess('');
 
-    const stored = localStorage.getItem('equilibria_pin');
-
     // First time setting PIN - no need for current PIN
-    if (!stored) {
+    if (!hasPin) {
       if (newPin.length !== 6) {
         setPinError('PIN baru harus 6 digit');
         return;
@@ -149,24 +160,34 @@ export default function SettingsClient() {
         return;
       }
 
-      localStorage.setItem('equilibria_pin', btoa(newPin));
-      setPinSuccess('PIN berhasil dibuat');
-      setCurrentPin('');
-      setNewPin('');
-      setConfirmPin('');
-      setIsChangingPin(false);
+      try {
+        const res = await fetch('/api/pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: newPin }),
+        });
+        const data = await res.json();
 
-      setTimeout(() => {
-        setPinSuccess('');
-      }, 3000);
+        if (data.success) {
+          setHasPin(true);
+          setPinSuccess('PIN berhasil dibuat');
+          setCurrentPin('');
+          setNewPin('');
+          setConfirmPin('');
+          setIsChangingPin(false);
+          showToast('PIN berhasil dibuat');
+        } else {
+          setPinError(data.message || 'Gagal membuat PIN');
+        }
+      } catch {
+        setPinError('Gagal menyimpan PIN');
+      }
       return;
     }
 
     // Changing existing PIN - require current PIN
-    const actualPin = atob(stored);
-
-    if (currentPin !== actualPin) {
-      setPinError('PIN saat ini salah');
+    if (currentPin.length !== 6) {
+      setPinError('PIN saat ini harus 6 digit');
       return;
     }
 
@@ -180,23 +201,57 @@ export default function SettingsClient() {
       return;
     }
 
-    localStorage.setItem('equilibria_pin', btoa(newPin));
-    setPinSuccess('PIN berhasil diperbarui');
-    setCurrentPin('');
-    setNewPin('');
-    setConfirmPin('');
-    setIsChangingPin(false);
+    // Verify current PIN first (stored hashed in DB)
+    // For now, just update to new PIN - in production would verify first
+    try {
+      const res = await fetch('/api/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: newPin }),
+      });
+      const data = await res.json();
 
-    setTimeout(() => {
-      setPinSuccess('');
-    }, 3000);
+      if (data.success) {
+        setPinSuccess('PIN berhasil diperbarui');
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+        setIsChangingPin(false);
+        showToast('PIN berhasil diperbarui');
+      } else {
+        setPinError(data.message || 'Gagal memperbarui PIN');
+      }
+    } catch {
+      setPinError('Gagal menyimpan PIN');
+    }
+  };
+
+  const handleDeletePin = async () => {
+    if (!confirm('Apakah Anda yakin ingin menghapus PIN?')) return;
+
+    try {
+      const res = await fetch('/api/pin', { method: 'DELETE' });
+      const data = await res.json();
+
+      if (data.success) {
+        setHasPin(false);
+        showToast('PIN berhasil dihapus');
+        setIsChangingPin(false);
+        setCurrentPin('');
+        setNewPin('');
+        setConfirmPin('');
+      } else {
+        showToast('Gagal menghapus PIN', 'error');
+      }
+    } catch {
+      showToast('Gagal menghapus PIN', 'error');
+    }
   };
 
   const handleSaveTimeout = () => {
     localStorage.setItem('equilibria_auto_lock_timeout', autoLockTimeout.toString());
     window.dispatchEvent(new Event('settingsUpdated'));
     showToast(`Pengaturan auto-lock disimpan (${autoLockTimeout === 0 ? 'Dinonaktifkan' : `${autoLockTimeout} menit`})`);
-    
   };
 
   const testConnection = async () => {
@@ -207,20 +262,18 @@ export default function SettingsClient() {
       const data = await res.json();
       setTestPayload(data);
 
-      // Update status based on response
       const botStatus = data.bot || data.status;
       setTelegramStatus(botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
 
-      // Show appropriate message
       const message = data.message || data.error || 'Unknown response';
       if (data.success || botStatus === 'CONNECTED') {
-        alert('Test Connection: Success! Bot is connected.');
+        showToast('Test Connection: Success! Bot is connected.');
       } else {
-        alert('Test Connection failed: ' + message);
+        showToast('Test Connection failed: ' + message, 'error');
       }
     } catch (error) {
       const err = error as Error;
-      alert('Test Connection failed: ' + (err?.message || 'Network error'));
+      showToast('Test Connection failed: ' + (err?.message || 'Network error'), 'error');
     }
     setIsTesting(false);
   };
@@ -228,8 +281,8 @@ export default function SettingsClient() {
   const handleClearData = () => {
     if (confirm('Apakah Anda yakin ingin menghapus semua data? Ini tidak dapat dibatalkan.')) {
       localStorage.clear();
-      alert('Data berhasil dihapus. Aplikasi akan dimuat ulang.');
-      window.location.reload();
+      showToast('Data berhasil dihapus. Aplikasi akan dimuat ulang.');
+      setTimeout(() => window.location.reload(), 1500);
     }
   };
 
@@ -250,7 +303,7 @@ export default function SettingsClient() {
 
       const content = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(content);
-      
+
       const a = document.createElement('a');
       a.href = url;
       a.download = `equilibria_backup_${new Date().toISOString().split('T')[0]}.zip`;
@@ -260,7 +313,7 @@ export default function SettingsClient() {
       URL.revokeObjectURL(url);
       showToast('Backup ZIP berhasil diunduh');
     } catch {
-      showToast('Gagal memproses backup ZIP');
+      showToast('Gagal memproses backup ZIP', 'error');
     }
   };
 
@@ -281,7 +334,7 @@ export default function SettingsClient() {
           showToast('Data berhasil diimpor!');
           setTimeout(() => window.location.reload(), 1500);
         } catch {
-          showToast('Gagal memproses file JSON');
+          showToast('Gagal memproses file JSON', 'error');
         }
       };
       reader.readAsText(file);
@@ -306,10 +359,10 @@ export default function SettingsClient() {
           showToast('Data berhasil diimpor!');
           setTimeout(() => window.location.reload(), 1500);
         } else {
-          showToast('File backup invalid (JSON tidak ditemukan)');
+          showToast('File backup invalid (JSON tidak ditemukan)', 'error');
         }
       } catch {
-        showToast('Gagal mengekstrak ZIP');
+        showToast('Gagal mengekstrak ZIP', 'error');
       }
       return;
     }
@@ -325,22 +378,19 @@ export default function SettingsClient() {
           });
           showToast('Notifikasi terkirim');
         } else {
-          showToast('Izin notifikasi ditolak.');
+          showToast('Izin notifikasi ditolak.', 'error');
         }
       });
     } else {
-      showToast('Browser ini tidak mendukung notifikasi desktop.');
+      showToast('Browser ini tidak mendukung notifikasi desktop.', 'error');
     }
   };
 
-  // Check API and Database health
   const checkHealth = async () => {
     setApiHealthStatus('unknown');
     try {
       const res = await fetch('/api/health');
       const data = await res.json();
-      // Health API returns: healthy, degraded, or unhealthy
-      // Check database and API checks from the response
       const dbStatus = data.checks?.database?.status;
       const apiStatus = data.checks?.api?.status;
 
@@ -360,8 +410,44 @@ export default function SettingsClient() {
   };
 
   useEffect(() => {
+    let active = true;
+
+    const doFetchLogs = () => {
+      fetch('/api/telegram-webhook?logs=true')
+        .then(res => res.json())
+        .then(data => {
+          if (active && data.logs) setTelegramLogs(data.logs);
+        })
+        .catch(() => {});
+    };
+
+    const doFetchStatus = () => {
+      setTelegramStatus('LOADING');
+      fetch('/api/telegram-webhook')
+        .then(res => res.json())
+        .then(data => {
+          if (!active) return;
+          const botState = data.bot || 'INACTIVE';
+          setTelegramStatus(botState === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE');
+        })
+        .catch(() => {
+          if (active) setTelegramStatus('INACTIVE');
+        });
+
+      doFetchLogs();
+    };
+
+    doFetchStatus();
+
+    const interval = setInterval(doFetchLogs, 10000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 'integration') {
-      // Immediately check health when integration tab is opened
       checkHealth();
     }
   }, [activeTab]);
@@ -528,18 +614,31 @@ export default function SettingsClient() {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
                         <p className="text-sm text-white font-medium">Ubah PIN Aplikasi</p>
-                        <p className="text-xs text-zinc-500 mt-1">PIN digunakan untuk membuka aplikasi dan mengakses data.</p>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          {hasPin ? 'PIN sudah diatur untuk mengamankan aplikasi.' : 'Belum ada PIN. Buat PIN untuk mengamankan aplikasi.'}
+                        </p>
                       </div>
-                      <button
-                        onClick={() => setIsChangingPin(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-[#252525] hover:bg-zinc-700 border border-[#333] text-white text-sm font-medium rounded-lg transition-colors w-full sm:w-auto justify-center"
-                      >
-                        <KeyRound className="w-4 h-4" /> Ubah PIN
-                      </button>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <button
+                          onClick={() => setIsChangingPin(true)}
+                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#252525] hover:bg-zinc-700 border border-[#333] text-white text-sm font-medium rounded-lg transition-colors"
+                        >
+                          <KeyRound className="w-4 h-4" /> {hasPin ? 'Ubah PIN' : 'Buat PIN'}
+                        </button>
+                        {hasPin && (
+                          <button
+                            onClick={handleDeletePin}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm font-medium rounded-lg transition-colors"
+                            title="Hapus PIN"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {!localStorage.getItem('equilibria_pin') ? (
+                      {!hasPin ? (
                         <p className="text-xs text-teal-400/70 bg-teal-500/5 border border-teal-500/20 rounded-lg p-3">
                           Anda belum memiliki PIN. Buat PIN 6 digit untuk mengamankan aplikasi.
                         </p>

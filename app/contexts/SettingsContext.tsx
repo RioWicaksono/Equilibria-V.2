@@ -1,109 +1,84 @@
 'use client';
 
-import { createContext, useEffect, useState, useCallback, useContext, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 
-type Theme = 'dark' | 'light' | 'auto';
-
-interface SettingsContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  currency: string;
-  setCurrency: (currency: string) => void;
-  language: string;
-  setLanguage: (lang: string) => void;
-  formatCurrency: (amount: number) => string;
-  isDark: boolean;
+interface Settings {
+  theme?: 'dark' | 'light' | 'auto';
+  currency?: string;
+  language?: string;
 }
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+interface SettingsContextType extends Settings {
+  setTheme: (theme: 'dark' | 'light' | 'auto') => void;
+  setCurrency: (currency: string) => void;
+  setLanguage: (lang: string) => void;
+}
+
+const SettingsContext = createContext<SettingsContextType | null>(null);
 
 function getSystemTheme(): boolean {
-  if (typeof window === 'undefined') return true;
-  return window.matchMedia('(prefers-color-scheme: dark').matches;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 function applyTheme(isDark: boolean) {
-  if (typeof document === 'undefined') return;
   document.body.classList.toggle('dark', isDark);
   document.body.classList.toggle('light', !isDark);
 }
 
-export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [theme, _setTheme] = useState<Theme>('auto');
+export function SettingsProvider({ children }: { children: React.ReactNode }) {
+  const [theme, setThemeState] = useState<'dark' | 'light' | 'auto'>('auto');
   const [currency, setCurrencyState] = useState('IDR');
   const [language, setLanguageState] = useState('id');
   const [isDark, setIsDark] = useState(true);
+  const [ready, setReady] = useState(false);
 
-  // Initialize from localStorage and system preference
+  // Load from API
   useEffect(() => {
-    const savedTheme = localStorage.getItem('equilibria_theme') as Theme | null;
-    const savedCurrency = localStorage.getItem('equilibria_currency');
-    const savedLanguage = localStorage.getItem('equilibria_lang');
-
-    if (savedCurrency) setCurrencyState(savedCurrency);
-    if (savedLanguage) setLanguageState(savedLanguage);
-
-    const effectiveTheme = savedTheme || 'auto';
-    _setTheme(effectiveTheme);
-
-    const dark = effectiveTheme === 'auto' ? getSystemTheme() : effectiveTheme === 'dark';
-    setIsDark(dark);
-    applyTheme(dark);
-
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-      const storedTheme = localStorage.getItem('equilibria_theme');
-      if (storedTheme === 'auto' || !storedTheme) {
-        const newDark = getSystemTheme();
-        setIsDark(newDark);
-        applyTheme(newDark);
+    fetch('/api/settings').then(r => r.json()).then(data => {
+      if (data.success && data.settings) {
+        const s = data.settings;
+        setThemeState(s.theme || 'auto');
+        setCurrencyState(s.currency || 'IDR');
+        setLanguageState(s.language || 'id');
+        const dark = s.theme === 'auto' ? getSystemTheme() : s.theme === 'light';
+        setIsDark(dark);
+        applyTheme(dark);
       }
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+      setReady(true);
+    }).catch(() => setReady(true));
   }, []);
 
-  const setTheme = useCallback((newTheme: Theme) => {
-    _setTheme(newTheme);
-    localStorage.setItem('equilibria_theme', newTheme);
-    const dark = newTheme === 'auto' ? getSystemTheme() : newTheme === 'dark';
+  const setTheme = (t: 'dark' | 'light' | 'auto') => {
+    setThemeState(t);
+    const dark = t === 'auto' ? getSystemTheme() : t === 'dark';
     setIsDark(dark);
     applyTheme(dark);
-    window.dispatchEvent(new Event('themeChanged'));
-  }, []);
+    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ theme: t }), headers: { 'Content-Type': 'application/json' });
+  };
 
-  const setCurrency = useCallback((curr: string) => {
-    setCurrencyState(curr);
-    localStorage.setItem('equilibria_currency', curr);
-  }, []);
+  const setCurrency = (c: string) => {
+    setCurrencyState(c);
+    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ currency: c }), headers: { 'Content-Type': 'application/json' });
+  };
 
-  const setLanguage = useCallback((lang: string) => {
-    setLanguageState(lang);
-    localStorage.setItem('equilibria_lang', lang);
-  }, []);
+  const setLanguage = (l: string) => {
+    setLanguageState(l);
+    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ language: l }), headers: { 'Content-Type': 'application/json' });
+  };
 
-  const formatCurrency = useCallback((amount: number): string => {
-    switch (currency) {
-      case 'USD':
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
-      case 'EUR':
-        return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(amount);
-      case 'IDR':
-      default:
-        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
-    }
-  }, [currency]);
+  if (!ready) return <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-zinc-700 border-t-teal-500 rounded-full animate-spin" />
+  </div>;
 
   return (
-    <SettingsContext.Provider value={{ theme, setTheme, currency, setCurrency, language, setLanguage, formatCurrency, isDark }}>
+    <SettingsContext.Provider value={{ theme, setTheme, currency, setCurrency, language, setLanguage }}>
       {children}
     </SettingsContext.Provider>
   );
 }
 
 export function useSettings() {
-  const context = useContext(SettingsContext);
-  if (!context) throw new Error('useSettings must be used within SettingsProvider');
-  return context;
+  const ctx = useContext(SettingsContext);
+  if (!ctx) throw new Error('useSettings must be inside SettingsProvider');
+  return ctx;
 }
