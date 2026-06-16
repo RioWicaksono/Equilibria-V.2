@@ -1,22 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 
 const prismaClientSingleton = () => {
-  const dbUrl = process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL;
-
-  // If no database URL, return null - API routes will handle fallback
-  if (!dbUrl) {
-    console.warn('[PrismaClient] No database URL found, using local fallback');
-    return null;
-  }
-
-  try {
-    return new PrismaClient({
-      datasourceUrl: dbUrl,
-    });
-  } catch (error) {
-    console.warn('[PrismaClient] Failed to initialize:', error);
-    return null;
-  }
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  });
 };
 
 declare const globalThis: {
@@ -27,6 +14,6 @@ const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();
 
 export default prisma;
 
-if (process.env.NODE_ENV !== 'production' && prisma) {
+if (process.env.NODE_ENV !== 'production') {
   globalThis.prismaGlobal = prisma;
 }

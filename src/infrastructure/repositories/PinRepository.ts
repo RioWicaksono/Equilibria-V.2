@@ -1,12 +1,12 @@
 import prisma from '../database/PrismaClient';
 
 export async function getPin(): Promise<string | null> {
-  const pin = await prisma?.userPin.findFirst();
+  const pin = await prisma.userPin.findFirst();
   return pin?.hash || null;
 }
 
 export async function setPin(hash: string): Promise<void> {
-  await prisma?.userPin.upsert({
+  await prisma.userPin.upsert({
     where: { id: 'pin' },
     update: { hash },
     create: { id: 'pin', hash },
@@ -28,5 +28,5 @@ export async function hasPin(): Promise<boolean> {
 }
 
 export async function clearPin(): Promise<void> {
-  await prisma?.userPin.deleteMany();
+  await prisma.userPin.deleteMany();
 }

@@ -8,7 +8,7 @@ export interface Settings {
 }
 
 export async function getSettings(): Promise<Settings> {
-  const settings = await prisma?.userSettings.findFirst();
+  const settings = await prisma.userSettings.findFirst();
   if (!settings) return { theme: 'dark', language: 'id', currency: 'IDR', autoLockTimeout: 5 };
   return {
     theme: settings.theme as Settings['theme'],
@@ -19,7 +19,7 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(data: Partial<Settings>): Promise<Settings> {
-  const updated = await prisma?.userSettings.upsert({
+  const updated = await prisma.userSettings.upsert({
     where: { id: 'default' },
     update: data,
     create: { id: 'default', ...data },
