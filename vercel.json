@@ -1,5 +1,9 @@
 {
   "framework": "nextjs",
+  "buildCommand": "pnpm run build",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install",
+  "packageManager": "pnpm",
   "crons": [
     {
       "path": "/api/cron/process-recurring",
@@ -13,8 +17,5 @@
       "path": "/api/cron/check-overdue-debts",
       "schedule": "0 10 * * *"
     }
-  ],
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install"
+  ]
 }
