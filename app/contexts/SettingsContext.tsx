@@ -12,6 +12,7 @@ interface SettingsContextType extends Settings {
   setTheme: (theme: 'dark' | 'light' | 'auto') => void;
   setCurrency: (currency: string) => void;
   setLanguage: (lang: string) => void;
+  formatCurrency: (amount: number) => string;
 }
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
@@ -66,12 +67,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ language: l }), headers: { 'Content-Type': 'application/json' } });
   };
 
+  const formatCurrency = (amount: number): string => {
+    const symbols: Record<string, string> = {
+      IDR: 'Rp',
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      JPY: '¥',
+    };
+    const symbol = symbols[currency] || currency;
+    return `${symbol} ${amount.toLocaleString('id-ID')}`;
+  };
+
   if (!ready) return <div className="min-h-screen bg-black flex items-center justify-center">
     <div className="w-8 h-8 border-4 border-zinc-700 border-t-teal-500 rounded-full animate-spin" />
   </div>;
 
   return (
-    <SettingsContext.Provider value={{ theme, setTheme, currency, setCurrency, language, setLanguage }}>
+    <SettingsContext.Provider value={{ theme, setTheme, currency, setCurrency, language, setLanguage, formatCurrency }}>
       {children}
     </SettingsContext.Provider>
   );
