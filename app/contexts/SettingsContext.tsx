@@ -53,17 +53,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const dark = t === 'auto' ? getSystemTheme() : t === 'dark';
     setIsDark(dark);
     applyTheme(dark);
-    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ theme: t }), headers: { 'Content-Type': 'application/json' });
+    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ theme: t }), headers: { 'Content-Type': 'application/json' } });
   };
 
   const setCurrency = (c: string) => {
     setCurrencyState(c);
-    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ currency: c }), headers: { 'Content-Type': 'application/json' });
+    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ currency: c }), headers: { 'Content-Type': 'application/json' } });
   };
 
   const setLanguage = (l: string) => {
     setLanguageState(l);
-    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ language: l }), headers: { 'Content-Type': 'application/json' });
+    fetch('/api/settings', { method: 'PATCH', body: JSON.stringify({ language: l }), headers: { 'Content-Type': 'application/json' } });
   };
 
   if (!ready) return <div className="min-h-screen bg-black flex items-center justify-center">
