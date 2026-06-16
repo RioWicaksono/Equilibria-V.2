@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap } from 'lucide-react';
+import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type TabType = 'general' | 'integration' | 'advanced';
@@ -440,8 +440,6 @@ export default function SettingsClient() {
                 </div>
               </div>
             </motion.div>
-          )}
-
           )}
 
           {activeTab === 'integration' && (

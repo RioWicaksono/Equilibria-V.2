@@ -1,17 +1,9 @@
-import { prisma } from '../database/PrismaClient';
+import prisma from '../database/PrismaClient';
+import { Prisma } from '@prisma/client';
 
-export interface Reminder {
-  id: string;
-  title: string;
-  date: Date;
-  amount: number | null;
-  status: 'PENDING' | 'COMPLETED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH';
-  frequency: 'ONCE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
-  urgent: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export type Reminder = Prisma.ReminderGetPayload<object>;
+export type ReminderCreateInput = Prisma.ReminderCreateInput;
+export type ReminderUpdateInput = Prisma.ReminderUpdateInput;
 
 export class PrismaReminderRepository {
   async findAll(): Promise<Reminder[]> {
@@ -34,16 +26,14 @@ export class PrismaReminderRepository {
     });
   }
 
-  async save(reminder: Omit<Reminder, 'id' | 'createdAt' | 'updatedAt'>): Promise<Reminder> {
-    return prisma.reminder.create({
-      data: reminder as Record<string, unknown>
-    });
+  async save(data: ReminderCreateInput): Promise<Reminder> {
+    return prisma.reminder.create({ data });
   }
 
-  async update(id: string, data: Partial<Reminder>): Promise<Reminder> {
+  async update(id: string, data: ReminderUpdateInput): Promise<Reminder> {
     return prisma.reminder.update({
       where: { id },
-      data: data as Record<string, unknown>
+      data
     });
   }
 
@@ -62,27 +52,27 @@ export class PrismaReminderRepository {
         title: 'Bayar Listrik',
         date: new Date(new Date().getFullYear(), new Date().getMonth(), 5),
         amount: 500000,
-        status: 'PENDING',
-        priority: 'HIGH',
-        frequency: 'MONTHLY',
+        status: 'PENDING' as const,
+        priority: 'HIGH' as const,
+        frequency: 'MONTHLY' as const,
         urgent: true
       },
       {
         title: 'Tagihan Internet',
         date: new Date(new Date().getFullYear(), new Date().getMonth(), 10),
         amount: 350000,
-        status: 'PENDING',
-        priority: 'MEDIUM',
-        frequency: 'MONTHLY',
+        status: 'PENDING' as const,
+        priority: 'MEDIUM' as const,
+        frequency: 'MONTHLY' as const,
         urgent: false
       },
       {
         title: 'Iuran Warga',
         date: new Date(new Date().getFullYear(), new Date().getMonth(), 15),
         amount: 50000,
-        status: 'PENDING',
-        priority: 'LOW',
-        frequency: 'MONTHLY',
+        status: 'PENDING' as const,
+        priority: 'LOW' as const,
+        frequency: 'MONTHLY' as const,
         urgent: false
       }
     ];
