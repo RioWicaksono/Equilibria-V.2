@@ -1,14 +1,11 @@
 'use client';
 
 import { Lock } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { lockApp } from './PinProtection';
 
 export default function LockButton() {
-  const router = useRouter();
-
   const handleLock = () => {
-    sessionStorage.removeItem('equilibria_auth');
-    router.refresh();
+    lockApp();
   };
 
   return (

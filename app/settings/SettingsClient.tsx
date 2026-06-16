@@ -64,6 +64,7 @@ export default function SettingsClient() {
           setCurrency(data.settings.currency || 'IDR');
           setTheme(data.settings.theme || 'dark');
           setLanguage(data.settings.language || 'id');
+          setAutoLockTimeout(data.settings.autoLockTimeout ?? 5);
         }
       })
       .catch(console.error);
@@ -81,13 +82,7 @@ export default function SettingsClient() {
       .catch(console.error);
   }, []);
 
-  // Load auto-lock timeout
-  useEffect(() => {
-    const timeout = localStorage.getItem('equilibria_auto_lock_timeout');
-    if (timeout) setAutoLockTimeout(parseInt(timeout));
-  }, []);
-
-  // Load Telegram token
+  // Load Telegram token (kept in localStorage - not sensitive)
   useEffect(() => {
     setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
   }, []);
@@ -248,10 +243,23 @@ export default function SettingsClient() {
     }
   };
 
-  const handleSaveTimeout = () => {
-    localStorage.setItem('equilibria_auto_lock_timeout', autoLockTimeout.toString());
-    window.dispatchEvent(new Event('settingsUpdated'));
-    showToast(`Pengaturan auto-lock disimpan (${autoLockTimeout === 0 ? 'Dinonaktifkan' : `${autoLockTimeout} menit`})`);
+  const handleSaveTimeout = async () => {
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoLockTimeout }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.dispatchEvent(new Event('settingsUpdated'));
+        showToast(`Pengaturan auto-lock disimpan (${autoLockTimeout === 0 ? 'Dinonaktifkan' : `${autoLockTimeout} menit`})`);
+      } else {
+        showToast('Gagal menyimpan pengaturan auto-lock', 'error');
+      }
+    } catch {
+      showToast('Gagal menyimpan pengaturan auto-lock', 'error');
+    }
   };
 
   const testConnection = async () => {
