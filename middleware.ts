@@ -27,6 +27,8 @@ const PUBLIC_PATHS = [
   '/api/docs',
   '/api/docs-json',
   '/api/telegram-webhook', // Telegram bot - uses bot token validation instead
+  '/api/settings',
+  '/api/pin',
 ];
 
 // Paths that need stricter rate limiting
