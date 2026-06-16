@@ -1,85 +1,91 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/infrastructure/database/PrismaClient';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
+import { PrismaFinancialGoalRepository } from '@/infrastructure/repositories/PrismaFinancialGoalRepository';
+
+const goalRepo = new PrismaFinancialGoalRepository();
 
 export async function GET() {
   try {
-    if (!prisma) {
-      return NextResponse.json({ goals: [], error: 'Database not configured' }, { status: 200 });
-    }
-    const goals = await prisma.financialGoal.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return NextResponse.json({ goals });
+    const goals = await goalRepo.findAll();
+    return ApiResponse.ok({ goals });
   } catch (error) {
-    console.error('[GET /api/goals]', error);
-    return NextResponse.json({ goals: [], error: 'Database not available - using local fallback' }, { status: 200 });
+    logger.error('[GET /api/goals]', { error });
+    return ApiResponse.internalError('Failed to fetch goals');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
-    const { name, targetAmount, currentAmount, deadline } = await req.json();
+    const { name, targetAmount, currentAmount, deadline, description } = await req.json();
     if (!name || !targetAmount) {
-      return NextResponse.json({ error: 'Name and targetAmount are required' }, { status: 400 });
+      return ApiResponse.badRequest('Name and targetAmount are required');
     }
 
-    const goal = await prisma.financialGoal.create({
-      data: {
-        name,
-        targetAmount: parseFloat(targetAmount),
-        currentAmount: currentAmount ? parseFloat(currentAmount) : 0,
-        deadline: deadline ? new Date(deadline) : null,
-      },
-    });
-    return NextResponse.json({ success: true, goal });
+    const goal = {
+      id: crypto.randomUUID(),
+      name,
+      targetAmount: parseFloat(targetAmount),
+      currentAmount: currentAmount ? parseFloat(currentAmount) : 0,
+      description: description || undefined,
+      deadline: deadline ? new Date(deadline) : undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await goalRepo.save(goal);
+    return ApiResponse.created({ goal });
   } catch (error) {
-    console.error('[POST /api/goals]', error);
-    return NextResponse.json({ error: 'Failed to create goal' }, { status: 500 });
+    logger.error('[POST /api/goals]', { error });
+    return ApiResponse.internalError('Failed to create goal');
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    const { id, name, targetAmount, currentAmount, deadline, description } = await req.json();
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
     }
-    const { id, name, targetAmount, currentAmount, deadline } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
-    const updateData: Record<string, unknown> = {};
-    if (name) updateData.name = name;
-    if (targetAmount) updateData.targetAmount = parseFloat(targetAmount);
-    if (currentAmount !== undefined) updateData.currentAmount = parseFloat(currentAmount);
-    if (deadline) updateData.deadline = new Date(deadline);
+    const existing = await goalRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Goal');
+    }
 
-    const goal = await prisma.financialGoal.update({
-      where: { id },
-      data: updateData,
-    });
-    return NextResponse.json({ success: true, goal });
+    const updated = {
+      ...existing,
+      ...(name && { name }),
+      ...(targetAmount && { targetAmount: parseFloat(targetAmount) }),
+      ...(currentAmount !== undefined && { currentAmount: parseFloat(currentAmount) }),
+      ...(description !== undefined && { description }),
+      ...(deadline && { deadline: new Date(deadline) }),
+      updatedAt: new Date(),
+    };
+
+    await goalRepo.save(updated);
+    return ApiResponse.ok({ goal: updated });
   } catch (error) {
-    console.error('[PUT /api/goals]', error);
-    return NextResponse.json({ error: 'Failed to update goal' }, { status: 500 });
+    logger.error('[PUT /api/goals]', { error });
+    return ApiResponse.internalError('Failed to update goal');
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
+    }
 
-    await prisma.financialGoal.delete({
-      where: { id },
-    });
-    return NextResponse.json({ success: true });
+    const existing = await goalRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Goal');
+    }
+
+    await goalRepo.delete(id);
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('[DELETE /api/goals]', error);
-    return NextResponse.json({ error: 'Failed to delete goal' }, { status: 500 });
+    logger.error('[DELETE /api/goals]', { error });
+    return ApiResponse.internalError('Failed to delete goal');
   }
 }

@@ -1,87 +1,95 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/infrastructure/database/PrismaClient';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
+import { PrismaDebtRepository } from '@/infrastructure/repositories/PrismaDebtRepository';
+
+const debtRepo = new PrismaDebtRepository();
 
 export async function GET() {
   try {
-    if (!prisma) {
-      return NextResponse.json({ debts: [], error: 'Database not configured' }, { status: 200 });
-    }
-    const debts = await prisma.debt.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return NextResponse.json({ debts });
+    const debts = await debtRepo.findAll();
+    return ApiResponse.ok({ debts });
   } catch (error) {
-    console.error('[GET /api/debts]', error);
-    return NextResponse.json({ debts: [], error: 'Database not available - using local fallback' }, { status: 200 });
+    logger.error('[GET /api/debts]', { error });
+    return ApiResponse.internalError('Failed to fetch debts');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
-    const { name, amount, type, dueDate } = await req.json();
+    const { name, amount, type, dueDate, description } = await req.json();
     if (!name || !amount) {
-      return NextResponse.json({ error: 'Name and amount are required' }, { status: 400 });
+      return ApiResponse.badRequest('Name and amount are required');
     }
 
-    const debt = await prisma.debt.create({
-      data: {
-        name,
-        amount: parseFloat(amount),
-        type: type || 'DEBT',
-        status: 'UNPAID',
-        dueDate: dueDate ? new Date(dueDate) : null,
-      },
-    });
-    return NextResponse.json({ success: true, debt });
+    const debt = {
+      id: crypto.randomUUID(),
+      name,
+      amount: parseFloat(amount),
+      type: type || 'DEBT',
+      status: 'UNPAID' as const,
+      paidAmount: 0,
+      description: description || undefined,
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    await debtRepo.save(debt);
+    return ApiResponse.created({ debt });
   } catch (error) {
-    console.error('[POST /api/debts]', error);
-    return NextResponse.json({ error: 'Failed to create debt' }, { status: 500 });
+    logger.error('[POST /api/debts]', { error });
+    return ApiResponse.internalError('Failed to create debt');
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    const { id, name, amount, type, status, dueDate, description, paidAmount } = await req.json();
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
     }
-    const { id, name, amount, type, status, dueDate } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
-    const updateData: Record<string, unknown> = {};
-    if (name) updateData.name = name;
-    if (amount) updateData.amount = parseFloat(amount);
-    if (type) updateData.type = type;
-    if (status) updateData.status = status;
-    if (dueDate) updateData.dueDate = new Date(dueDate);
+    const existing = await debtRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Debt');
+    }
 
-    const debt = await prisma.debt.update({
-      where: { id },
-      data: updateData,
-    });
-    return NextResponse.json({ success: true, debt });
+    const updated = {
+      ...existing,
+      ...(name && { name }),
+      ...(amount && { amount: parseFloat(amount) }),
+      ...(type && { type: type as 'DEBT' | 'LOAN' }),
+      ...(status && { status: status as 'UNPAID' | 'PAID' }),
+      ...(description !== undefined && { description }),
+      ...(paidAmount !== undefined && { paidAmount: parseFloat(paidAmount) }),
+      ...(dueDate && { dueDate: new Date(dueDate) }),
+      updatedAt: new Date(),
+    };
+
+    await debtRepo.save(updated);
+    return ApiResponse.ok({ debt: updated });
   } catch (error) {
-    console.error('[PUT /api/debts]', error);
-    return NextResponse.json({ error: 'Failed to update debt' }, { status: 500 });
+    logger.error('[PUT /api/debts]', { error });
+    return ApiResponse.internalError('Failed to update debt');
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
+    }
 
-    await prisma.debt.delete({
-      where: { id },
-    });
-    return NextResponse.json({ success: true });
+    const existing = await debtRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Debt');
+    }
+
+    await debtRepo.delete(id);
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('[DELETE /api/debts]', error);
-    return NextResponse.json({ error: 'Failed to delete debt' }, { status: 500 });
+    logger.error('[DELETE /api/debts]', { error });
+    return ApiResponse.internalError('Failed to delete debt');
   }
 }

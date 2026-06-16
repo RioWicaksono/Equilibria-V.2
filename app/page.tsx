@@ -1,14 +1,12 @@
 import { getFinanceService } from '@/application/services/FinanceService';
-import { ArrowDownRight, ArrowUpRight, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
-import DashboardCalendar from './components/DashboardCalendar';
-import DashboardBudget from './components/DashboardBudget';
+import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 import SystemStatus from './components/SystemStatus';
 import LockButton from './components/LockButton';
-import TransactionModal from './transactions/TransactionModal';
 import FormatCurrency from './components/FormatCurrency';
 import { headers } from 'next/headers';
-
-export const dynamic = 'force-dynamic';
+import DashboardCalendar from './components/DashboardCalendar';
+import DashboardBudget from './components/DashboardBudget';
+import TransactionModal from './transactions/TransactionModal';
 
 interface Summary {
   balance: number;
@@ -30,14 +28,12 @@ export default async function DashboardPage() {
     }
   });
 
-  // Calculate percentage change (mock calculation for demo)
   const incomePercent = summary.totalIncome > 0 ? Math.round((summary.totalExpense / summary.totalIncome) * 100) : 0;
 
   return (
     <div className="space-y-6 relative w-full min-w-0">
       <TransactionModal isFAB={true} />
 
-      {/* Header Section */}
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-slide-up">
         <div className="flex flex-col">
           <div className="flex items-center gap-2 mb-1">
@@ -46,7 +42,7 @@ export default async function DashboardPage() {
             </span>
             <h1 className="text-xl sm:text-2xl font-bold text-white">Dashboard</h1>
           </div>
-          <p className="text-xs sm:text-sm text-zinc-500 ml-10 sm:ml-10">Ringkasan keuangan Anda hari ini</p>
+          <p className="text-xs sm:text-sm text-zinc-500 ml-10">Ringkasan keuangan Anda hari ini</p>
         </div>
         <div className="flex items-center gap-2">
           <LockButton />
@@ -54,9 +50,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        {/* Balance Card */}
         <div className="card group hover:border-teal-500/30">
           <div className="flex items-start justify-between mb-3">
             <div className="p-2 bg-teal-500/10 rounded-lg group-hover:bg-teal-500/20 transition-colors">
@@ -70,7 +64,6 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {/* Income Card */}
         <div className="card group hover:border-teal-500/30">
           <div className="flex items-start justify-between mb-3">
             <div className="p-2 bg-teal-500/10 rounded-lg group-hover:bg-teal-500/20 transition-colors">
@@ -84,7 +77,6 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {/* Expense Card */}
         <div className="card group hover:border-rose-500/30">
           <div className="flex items-start justify-between mb-3">
             <div className="p-2 bg-rose-500/10 rounded-lg group-hover:bg-rose-500/20 transition-colors">
@@ -99,9 +91,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Calendar & Budget Section */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-        {/* Calendar Section */}
         <div className="xl:col-span-2">
           <div className="card">
             <div className="flex items-center justify-between mb-4">
@@ -119,7 +109,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Budget Section */}
         <div className="xl:col-span-3">
           <DashboardBudget budgets={budgets} categoryTotals={categoryTotals} />
         </div>

@@ -14,6 +14,8 @@ model Budget {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   budgetUsages BudgetUsage[]
+
+  @@index([category])
 }
 
 model Transaction {
@@ -27,6 +29,13 @@ model Transaction {
   walletId    String?
   Wallet      Wallet?       @relation(fields: [walletId], references: [id])
   budgets     BudgetUsage[]
+
+  @@index([date])
+  @@index([category])
+  @@index([type])
+  @@index([walletId])
+  @@index([date, category])
+  @@index([date, type])
 }
 
 model BudgetUsage {
@@ -37,6 +46,9 @@ model BudgetUsage {
   createdAt     DateTime    @default(now())
   Transaction   Transaction @relation(fields: [transactionId], references: [id])
   Budget        Budget      @relation(fields: [budgetId], references: [id])
+
+  @@index([transactionId])
+  @@index([budgetId])
 }
 
 model Wallet {
@@ -45,6 +57,8 @@ model Wallet {
   balance      Float         @default(0)
   createdAt    DateTime      @default(now())
   transactions Transaction[]
+
+  @@index([balance])
 }
 
 model FinancialGoal {
@@ -56,6 +70,8 @@ model FinancialGoal {
   description   String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([deadline])
 }
 
 model Debt {
@@ -69,6 +85,10 @@ model Debt {
   dueDate     DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([dueDate])
 }
 
 model RecurringTransaction {
@@ -80,4 +100,7 @@ model RecurringTransaction {
   frequency   String // 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY'
   nextDate    DateTime
   createdAt   DateTime @default(now())
+
+  @@index([nextDate])
+  @@index([frequency])
 }

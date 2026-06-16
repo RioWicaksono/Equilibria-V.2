@@ -1,78 +1,83 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/infrastructure/database/PrismaClient';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
+import { PrismaWalletRepository } from '@/infrastructure/repositories/PrismaWalletRepository';
+
+const walletRepo = new PrismaWalletRepository();
 
 export async function GET() {
   try {
-    if (!prisma) {
-      return NextResponse.json({ wallets: [], error: 'Database not configured' }, { status: 200 });
-    }
-    const wallets = await prisma.wallet.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return NextResponse.json({ wallets });
+    const wallets = await walletRepo.findAll();
+    return ApiResponse.ok({ wallets });
   } catch (error) {
-    console.error('[GET /api/wallets]', error);
-    return NextResponse.json({ wallets: [], error: 'Database not available - using local fallback' }, { status: 200 });
+    logger.error('[GET /api/wallets]', { error });
+    return ApiResponse.internalError('Failed to fetch wallets');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
     const { name, balance } = await req.json();
-    if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    if (!name) {
+      return ApiResponse.badRequest('Name is required');
+    }
 
-    const wallet = await prisma.wallet.create({
-      data: {
-        name,
-        balance: balance || 0,
-      },
-    });
-    return NextResponse.json({ success: true, wallet });
+    const wallet = {
+      id: crypto.randomUUID(),
+      name,
+      balance: balance || 0,
+      createdAt: new Date(),
+    };
+
+    await walletRepo.save(wallet);
+    return ApiResponse.created({ wallet });
   } catch (error) {
-    console.error('[POST /api/wallets]', error);
-    return NextResponse.json({ error: 'Failed to create wallet' }, { status: 500 });
+    logger.error('[POST /api/wallets]', { error });
+    return ApiResponse.internalError('Failed to create wallet');
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
     const { id, name, balance } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
+    }
 
-    const wallet = await prisma.wallet.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(balance !== undefined && { balance }),
-      },
-    });
-    return NextResponse.json({ success: true, wallet });
+    const existing = await walletRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Wallet');
+    }
+
+    const updated = {
+      ...existing,
+      ...(name && { name }),
+      ...(balance !== undefined && { balance }),
+    };
+
+    await walletRepo.save(updated);
+    return ApiResponse.ok({ wallet: updated });
   } catch (error) {
-    console.error('[PUT /api/wallets]', error);
-    return NextResponse.json({ error: 'Failed to update wallet' }, { status: 500 });
+    logger.error('[PUT /api/wallets]', { error });
+    return ApiResponse.internalError('Failed to update wallet');
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
+    }
 
-    await prisma.wallet.delete({
-      where: { id },
-    });
-    return NextResponse.json({ success: true });
+    const existing = await walletRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Wallet');
+    }
+
+    await walletRepo.delete(id);
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('[DELETE /api/wallets]', error);
-    return NextResponse.json({ error: 'Failed to delete wallet' }, { status: 500 });
+    logger.error('[DELETE /api/wallets]', { error });
+    return ApiResponse.internalError('Failed to delete wallet');
   }
 }

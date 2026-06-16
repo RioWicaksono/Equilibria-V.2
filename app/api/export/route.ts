@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
 import { getFinanceService } from '@/application/services/FinanceService';
 import { ExportQuerySchema } from '@/lib/validation';
 import { exportToCSV, exportToXLSX, exportToJSON, getExportFilename } from '@/lib/export';
@@ -22,11 +24,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!validation.success) {
-      return NextResponse.json({
-        success: false,
-        error: 'Parameter tidak valid',
-        details: validation.error.flatten().fieldErrors,
-      }, { status: 400 });
+      return ApiResponse.badRequest('Parameter tidak valid', validation.error.flatten().fieldErrors);
     }
 
     const financeService = getFinanceService();
@@ -91,10 +89,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Export error:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Gagal mengekspor data',
-    }, { status: 500 });
+    logger.error('[GET /api/export]', { error });
+    return ApiResponse.internalError('Gagal mengekspor data');
   }
 }

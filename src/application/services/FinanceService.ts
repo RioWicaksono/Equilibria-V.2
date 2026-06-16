@@ -3,7 +3,7 @@ import { IBudgetRepository } from '../../domain/repositories/IBudgetRepository';
 import { Transaction } from '../../domain/entities/Transaction';
 import { Budget } from '../../domain/entities/Budget';
 import { TransactionType } from '../../domain/value-objects/TransactionType';
-import { InMemoryTransactionRepository } from '../../infrastructure/repositories/InMemoryTransactionRepository';
+import { getRepositories } from '../../infrastructure/repositories';
 
 // Factory function for repository selection
 export type RepositoryFactory = () => {
@@ -11,43 +11,14 @@ export type RepositoryFactory = () => {
   budget: IBudgetRepository;
 };
 
-// Default factory - uses in-memory repositories for simplicity
+// Default factory - uses Prisma repositories for database persistence
 const defaultFactory: RepositoryFactory = () => {
+  const repos = getRepositories();
   return {
-    transaction: new InMemoryTransactionRepository(),
-    budget: new InMemoryTransactionRepositoryBudget(),
+    transaction: repos.transaction,
+    budget: repos.budget,
   };
 };
-
-// In-memory budget implementation for development
-class InMemoryTransactionRepositoryBudget implements IBudgetRepository {
-  private budgets: Budget[] = [];
-
-  async save(budget: Budget): Promise<void> {
-    const index = this.budgets.findIndex((b) => b.id === budget.id || b.category === budget.category);
-    if (index >= 0) {
-      this.budgets[index] = budget;
-    } else {
-      this.budgets.push(budget);
-    }
-  }
-
-  async findAll(): Promise<Budget[]> {
-    return [...this.budgets];
-  }
-
-  async findById(id: string): Promise<Budget | null> {
-    return this.budgets.find((b) => b.id === id) || null;
-  }
-
-  async findByCategory(category: string): Promise<Budget | null> {
-    return this.budgets.find((b) => b.category === category) || null;
-  }
-
-  async delete(id: string): Promise<void> {
-    this.budgets = this.budgets.filter((b) => b.id !== id);
-  }
-}
 
 // Lazy load use cases
 async function createTransactionUseCases(repo: ITransactionRepository) {

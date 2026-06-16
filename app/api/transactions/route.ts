@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { FinanceService } from '@/application/services/FinanceService';
 import { CreateTransactionSchema, UpdateTransactionSchema } from '@/lib/validation';
 import { ZodError } from 'zod';
+import { ApiResponse, parsePaginationParams, createPaginationMeta } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
 
 const financeService = new FinanceService();
 
@@ -9,14 +11,21 @@ function formatZodError(error: ZodError): string {
   return error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { page = 1, limit = 20 } = parsePaginationParams(req.nextUrl.searchParams);
     const transactions = await financeService.getTransactions();
     const summary = await financeService.getSummary();
-    return NextResponse.json({ transactions, summary });
+
+    // Apply pagination
+    const start = (page - 1) * limit;
+    const paginatedTransactions = transactions.slice(start, start + limit);
+    const meta = createPaginationMeta(page, limit, transactions.length);
+
+    return ApiResponse.ok({ transactions: paginatedTransactions, summary }, meta);
   } catch (error) {
-    console.error('[GET /api/transactions]', error);
-    return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
+    logger.error('[GET /api/transactions]', error);
+    return ApiResponse.internalError('Failed to fetch transactions');
   }
 }
 
@@ -44,23 +53,26 @@ export async function POST(req: Request) {
       });
     } catch (error) {
       if (error instanceof ZodError) {
-        return NextResponse.json(
-          { error: 'Validation failed', details: formatZodError(error) },
-          { status: 400 }
-        );
+        return ApiResponse.badRequest('Validation failed', formatZodError(error));
       }
       throw error;
     }
 
     if (amount > 0) {
-      const transaction = await financeService.addTransaction(amount, type as 'INCOME' | 'EXPENSE', category, description, date);
-      return NextResponse.json({ success: true, transaction });
+      const transaction = await financeService.addTransaction(
+        amount,
+        type as 'INCOME' | 'EXPENSE',
+        category,
+        description,
+        date
+      );
+      return ApiResponse.created({ transaction });
     }
 
-    return NextResponse.json({ error: 'Invalid amount' }, { status: 400 });
+    return ApiResponse.badRequest('Invalid amount');
   } catch (error) {
-    console.error('[POST /api/transactions]', error);
-    return NextResponse.json({ error: 'Failed to add transaction' }, { status: 500 });
+    logger.error('[POST /api/transactions]', { error });
+    return ApiResponse.internalError('Failed to add transaction');
   }
 }
 
@@ -90,35 +102,41 @@ export async function PUT(req: Request) {
       });
     } catch (error) {
       if (error instanceof ZodError) {
-        return NextResponse.json(
-          { error: 'Validation failed', details: formatZodError(error) },
-          { status: 400 }
-        );
+        return ApiResponse.badRequest('Validation failed', formatZodError(error));
       }
       throw error;
     }
 
     if (amount > 0 && id) {
-      const transaction = await financeService.updateTransaction(id, amount, type as 'INCOME' | 'EXPENSE', category, description, date);
-      return NextResponse.json({ success: true, transaction });
+      const transaction = await financeService.updateTransaction(
+        id,
+        amount,
+        type as 'INCOME' | 'EXPENSE',
+        category,
+        description,
+        date
+      );
+      return ApiResponse.ok({ transaction });
     }
 
-    return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
+    return ApiResponse.badRequest('Invalid input');
   } catch (error) {
-    console.error('[PUT /api/transactions]', error);
-    return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 });
+    logger.error('[PUT /api/transactions]', { error });
+    return ApiResponse.internalError('Failed to update transaction');
   }
 }
 
 export async function DELETE(req: Request) {
   try {
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: 'Missing transaction id' }, { status: 400 });
+    if (!id) {
+      return ApiResponse.badRequest('Missing transaction id');
+    }
 
     await financeService.deleteTransaction(id);
-    return NextResponse.json({ success: true });
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('[DELETE /api/transactions]', error);
-    return NextResponse.json({ error: 'Failed to delete transaction' }, { status: 500 });
+    logger.error('[DELETE /api/transactions]', { error });
+    return ApiResponse.internalError('Failed to delete transaction');
   }
 }

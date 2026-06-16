@@ -1,7 +1,19 @@
 'use client';
 
-import SwaggerUI from 'swagger-ui-react';
-import 'swagger-ui-react/swagger-ui.css';
+import dynamic from 'next/dynamic';
+
+// Lazy load swagger-ui-react (~500KB heavy package)
+const SwaggerUI = dynamic(() => import('swagger-ui-react'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-96">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-teal-500/30 border-t-teal-500 rounded-full animate-spin" />
+        <p className="text-zinc-400">Loading API Documentation...</p>
+      </div>
+    </div>
+  ),
+});
 
 export default function ApiDocsPage() {
   return (

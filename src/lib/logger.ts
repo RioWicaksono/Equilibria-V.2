@@ -1,7 +1,7 @@
 import pino from 'pino';
 
 // Simple logger without pino-pretty transport to avoid build issues
-const logger = pino({
+const pinoLogger = pino({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   formatters: {
     level: (label) => ({ level: label }),
@@ -10,8 +10,49 @@ const logger = pino({
 });
 
 // Create child logger for specific modules
-export const createModuleLogger = (moduleName: string) => {
-  return logger.child({ module: moduleName });
+const createModuleLogger = (moduleName: string) => {
+  return pinoLogger.child({ module: moduleName });
+};
+
+// Main logger export
+export const logger = {
+  info: (message: string, data?: Record<string, unknown>) => {
+    if (data) {
+      pinoLogger.info({ ...data, message });
+    } else {
+      pinoLogger.info(message);
+    }
+  },
+  error: (message: string, error?: unknown) => {
+    if (error instanceof Error) {
+      pinoLogger.error({
+        message,
+        error: {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        },
+      });
+    } else if (typeof error === 'object' && error !== null) {
+      pinoLogger.error({ message, ...(error as Record<string, unknown>) });
+    } else {
+      pinoLogger.error(message);
+    }
+  },
+  warn: (message: string, data?: Record<string, unknown>) => {
+    if (data) {
+      pinoLogger.warn({ ...data, message });
+    } else {
+      pinoLogger.warn(message);
+    }
+  },
+  debug: (message: string, data?: Record<string, unknown>) => {
+    if (data) {
+      pinoLogger.debug({ ...data, message });
+    } else {
+      pinoLogger.debug(message);
+    }
+  },
 };
 
 // Pre-configured loggers
@@ -72,4 +113,4 @@ export const logSecurityEvent = (event: string, details: Record<string, unknown>
   });
 };
 
-export default logger;
+export default pinoLogger;

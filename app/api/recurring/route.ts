@@ -1,90 +1,91 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/infrastructure/database/PrismaClient';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
+import { PrismaRecurringTransactionRepository } from '@/infrastructure/repositories/PrismaRecurringTransactionRepository';
+
+const recurringRepo = new PrismaRecurringTransactionRepository();
 
 export async function GET() {
   try {
-    if (!prisma) {
-      return NextResponse.json({ recurring: [], error: 'Database not configured' }, { status: 200 });
-    }
-    const recurring = await prisma.recurringTransaction.findMany({
-      orderBy: { nextDate: 'asc' },
-    });
-    return NextResponse.json({ recurring });
+    const recurring = await recurringRepo.findAll();
+    return ApiResponse.ok({ recurring });
   } catch (error) {
-    console.error('[GET /api/recurring]', error);
-    return NextResponse.json({ recurring: [], error: 'Database not available - using local fallback' }, { status: 200 });
+    logger.error('[GET /api/recurring]', { error });
+    return ApiResponse.internalError('Failed to fetch recurring transactions');
   }
 }
 
 export async function POST(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
-    const { name, amount, type, category, frequency, nextDate } = await req.json();
+    const { name, amount, type, category, frequency, nextDate, description } = await req.json();
     if (!name || !amount || !frequency || !nextDate) {
-      return NextResponse.json({ error: 'Name, amount, frequency, and nextDate are required' }, { status: 400 });
+      return ApiResponse.badRequest('Name, amount, frequency, and nextDate are required');
     }
 
-    const recurring = await prisma.recurringTransaction.create({
-      data: {
-        description: name,
-        amount: parseFloat(amount),
-        type: type || 'EXPENSE',
-        category: category || 'Lainnya',
-        frequency,
-        nextDate: new Date(nextDate),
-      },
-    });
-    return NextResponse.json({ success: true, recurring });
+    const recurring = {
+      id: crypto.randomUUID(),
+      amount: parseFloat(amount),
+      type: (type || 'EXPENSE') as 'INCOME' | 'EXPENSE',
+      category: category || 'Lainnya',
+      description: description || name,
+      frequency: frequency as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY',
+      nextDate: new Date(nextDate),
+      createdAt: new Date(),
+    };
+
+    await recurringRepo.save(recurring);
+    return ApiResponse.created({ recurring });
   } catch (error) {
-    console.error('[POST /api/recurring]', error);
-    return NextResponse.json({ error: 'Failed to create recurring transaction' }, { status: 500 });
+    logger.error('[POST /api/recurring]', { error });
+    return ApiResponse.internalError('Failed to create recurring transaction');
   }
 }
 
 export async function PUT(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    const { id, name, amount, type, category, frequency, nextDate, description } = await req.json();
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
     }
-    const { id, name, amount, type, category, description, frequency, nextDate } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
 
-    const updateData: Record<string, unknown> = {};
-    if (name) updateData.description = name;
-    if (amount) updateData.amount = parseFloat(amount);
-    if (type) updateData.type = type;
-    if (category) updateData.category = category;
-    if (description !== undefined) updateData.description = description;
-    if (frequency) updateData.frequency = frequency;
-    if (nextDate) updateData.nextDate = new Date(nextDate);
+    const existing = await recurringRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Recurring transaction');
+    }
 
-    const recurring = await prisma.recurringTransaction.update({
-      where: { id },
-      data: updateData,
-    });
-    return NextResponse.json({ success: true, recurring });
+    const updated = {
+      ...existing,
+      ...(amount && { amount: parseFloat(amount) }),
+      ...(type && { type: type as 'INCOME' | 'EXPENSE' }),
+      ...(category && { category }),
+      ...(frequency && { frequency: frequency as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' }),
+      ...(nextDate && { nextDate: new Date(nextDate) }),
+      ...((description !== undefined || name) && { description: description || name }),
+    };
+
+    await recurringRepo.save(updated);
+    return ApiResponse.ok({ recurring: updated });
   } catch (error) {
-    console.error('[PUT /api/recurring]', error);
-    return NextResponse.json({ error: 'Failed to update recurring transaction' }, { status: 500 });
+    logger.error('[PUT /api/recurring]', { error });
+    return ApiResponse.internalError('Failed to update recurring transaction');
   }
 }
 
 export async function DELETE(req: Request) {
   try {
-    if (!prisma) {
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
     const { id } = await req.json();
-    if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+    if (!id) {
+      return ApiResponse.badRequest('ID is required');
+    }
 
-    await prisma.recurringTransaction.delete({
-      where: { id },
-    });
-    return NextResponse.json({ success: true });
+    const existing = await recurringRepo.findById(id);
+    if (!existing) {
+      return ApiResponse.notFound('Recurring transaction');
+    }
+
+    await recurringRepo.delete(id);
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('[DELETE /api/recurring]', error);
-    return NextResponse.json({ error: 'Failed to delete recurring transaction' }, { status: 500 });
+    logger.error('[DELETE /api/recurring]', { error });
+    return ApiResponse.internalError('Failed to delete recurring transaction');
   }
 }

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Lock, Delete, Fingerprint, Smartphone, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { comparePin, base64Decode } from '@/lib/crypto';
+import { base64Encode } from '@/lib/crypto';
+import bcrypt from 'bcryptjs';
 
 const STORAGE_KEYS = {
-  PIN: 'equilibria_pin',
+  PIN_HASH: 'equilibria_pin_hash',
   AUTH: 'equilibria_auth',
   BIOMETRIC_ENABLED: 'equilibria_biometric_enabled',
   BIOMETRIC_CREDENTIAL: 'equilibria_biometric_credential',
@@ -14,41 +15,57 @@ const STORAGE_KEYS = {
 } as const;
 
 const DEFAULT_TIMEOUT_MINUTES = 5;
-const DEFAULT_PIN = '123789';
 
-const getStoredPin = (): string => {
-  if (typeof window === 'undefined') return DEFAULT_PIN;
-  const stored = localStorage.getItem(STORAGE_KEYS.PIN);
-  if (stored) {
-    try {
-      return base64Decode(stored);
-    } catch {
-      return DEFAULT_PIN;
-    }
+/**
+ * Verify PIN against stored bcrypt hash (client-side)
+ */
+async function verifyPin(inputPin: string, storedHash: string): Promise<boolean> {
+  try {
+    return await bcrypt.compare(inputPin, storedHash);
+  } catch {
+    return false;
   }
-  // Initialize default PIN
-  const encoded = btoa(DEFAULT_PIN);
-  localStorage.setItem(STORAGE_KEYS.PIN, encoded);
-  return DEFAULT_PIN;
+}
+
+const getStoredPinHash = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(STORAGE_KEYS.PIN_HASH);
+};
+
+const hasPinSet = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(STORAGE_KEYS.PIN_HASH) !== null;
+};
+
+const savePinHash = async (pin: string): Promise<void> => {
+  if (typeof window === 'undefined') return;
+  const hash = await bcrypt.hash(pin, 12);
+  localStorage.setItem(STORAGE_KEYS.PIN_HASH, hash);
 };
 
 export default function PinProtection({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [storedPin, setStoredPin] = useState<string>(DEFAULT_PIN);
+  const [storedPinHash, setStoredPinHash] = useState<string | null>(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [biometricError, setBiometricError] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isSetupMode, setIsSetupMode] = useState(false);
+  const [setupStep, setSetupStep] = useState<'enter' | 'confirm'>('enter');
 
   useEffect(() => {
     const init = () => {
       setIsClient(true);
-      const pin = getStoredPin();
-      setStoredPin(pin);
+      const pinHash = getStoredPinHash();
+      const hasPin = hasPinSet();
+      setStoredPinHash(pinHash);
+      setIsSetupMode(!hasPin);
+      setSetupStep('enter');
       setIsInitialized(true);
       // Always reset showSuccess on init
       setShowSuccess(false);
@@ -62,7 +79,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
 
       // Check existing auth session
       const auth = sessionStorage.getItem(STORAGE_KEYS.AUTH);
-      if (auth === 'true') {
+      if (auth === 'true' && hasPin) {
         setIsAuthenticated(true);
         setShowSuccess(false); // Don't show success screen if already authenticated
       }
@@ -108,15 +125,74 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     };
   }, [isAuthenticated]);
 
-  const handleKeyPress = (num: number) => {
-    if (pin.length < 6 && isInitialized) {
+  const handleKeyPress = async (num: number) => {
+    if (!isInitialized) return;
+
+    // Setup mode: First PIN entry
+    if (isSetupMode && setupStep === 'enter') {
+      if (pin.length < 6) {
+        setError(false);
+        const newPin = pin + num.toString();
+        setPin(newPin);
+
+        if (newPin.length === 6) {
+          // Move to confirmation step
+          setTimeout(() => {
+            setSetupStep('confirm');
+            setPin('');
+          }, 300);
+        }
+      }
+      return;
+    }
+
+    // Setup mode: Confirm PIN entry
+    if (isSetupMode && setupStep === 'confirm') {
+      if (confirmPin.length < 6) {
+        setError(false);
+        const newConfirmPin = confirmPin + num.toString();
+        setConfirmPin(newConfirmPin);
+
+        if (newConfirmPin.length === 6) {
+          // Compare with first entry
+          if (newConfirmPin === pin) {
+            // PINs match - hash and save
+            await savePinHash(newConfirmPin);
+            const hash = getStoredPinHash();
+            setStoredPinHash(hash);
+            setShowSuccess(true);
+            setTimeout(() => {
+              sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+              setIsAuthenticated(true);
+              setIsSetupMode(false);
+              setPin('');
+              setConfirmPin('');
+            }, 800);
+          } else {
+            // PINs don't match - reset
+            setError(true);
+            setTimeout(() => {
+              setPin('');
+              setConfirmPin('');
+              setSetupStep('enter');
+              setError(false);
+            }, 600);
+          }
+        }
+      }
+      return;
+    }
+
+    // Normal authentication mode
+    if (pin.length < 6) {
       setError(false);
       const newPin = pin + num.toString();
       setPin(newPin);
 
-      if (newPin.length === 6) {
-        // Direct PIN comparison
-        if (comparePin(newPin, storedPin)) {
+      if (newPin.length === 6 && storedPinHash) {
+        // Verify with bcrypt hash
+        const isValid = await verifyPin(newPin, storedPinHash);
+        if (isValid) {
           setShowSuccess(true);
           setTimeout(() => {
             sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
@@ -130,12 +206,23 @@ export default function PinProtection({ children }: { children: React.ReactNode 
             setError(false);
           }, 600);
         }
+      } else if (newPin.length === 6) {
+        // No stored hash - shouldn't happen but handle gracefully
+        setError(true);
+        setTimeout(() => {
+          setPin('');
+          setError(false);
+        }, 600);
       }
     }
   };
 
   const handleDelete = () => {
-    setPin(prev => prev.slice(0, -1));
+    if (isSetupMode && setupStep === 'confirm') {
+      setConfirmPin(prev => prev.slice(0, -1));
+    } else {
+      setPin(prev => prev.slice(0, -1));
+    }
     setError(false);
   };
 
@@ -250,7 +337,7 @@ export default function PinProtection({ children }: { children: React.ReactNode 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, pin, error, storedPin, isInitialized]);
+  }, [isAuthenticated, pin, error, isInitialized, handleKeyPress, handleDelete]);
 
   if (!isClient) return null;
 

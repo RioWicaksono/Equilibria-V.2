@@ -4,5 +4,7 @@ export interface FinancialGoal {
   targetAmount: number;
   currentAmount: number;
   deadline?: Date;
+  description?: string;
   createdAt: Date;
+  updatedAt: Date;
 }

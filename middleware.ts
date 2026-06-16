@@ -1,29 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Rate limit store (in production, use Redis or similar)
+// Rate limit store with TTL cleanup
 const rateLimitStore = new Map<string, { count: number; timestamp: number }>();
+const RATE_LIMIT_CLEANUP_INTERVAL = 5 * 60 * 1000; // Cleanup every 5 minutes
 
 // Rate limit config
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 100; // per minute
 
-// Paths that don't require rate limiting
+// Protected API paths (require authentication)
+const PROTECTED_PATHS = [
+  '/api/transactions',
+  '/api/budgets',
+  '/api/wallets',
+  '/api/goals',
+  '/api/debts',
+  '/api/recurring',
+  '/api/summary',
+  '/api/export',
+  '/api/cron',
+];
+
+// Public paths (no auth required)
 const PUBLIC_PATHS = [
   '/api/health',
   '/api/docs',
   '/api/docs-json',
+  '/api/telegram-webhook', // Telegram bot - uses bot token validation instead
 ];
 
 // Paths that need stricter rate limiting
 const SENSITIVE_PATHS = [
   '/api/telegram',
-  '/api/telegram-webhook',
 ];
 
 // Allowed origins for CORS
-const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-].filter(Boolean);
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'];
+
+const isProduction = process.env.NODE_ENV === 'production';
 
 // CSRF safe methods
 const CSRF_SAFE_METHODS = ['GET', 'HEAD', 'OPTIONS'];
@@ -43,6 +59,50 @@ function getClientIP(req: NextRequest): string {
 }
 
 /**
+ * Validate API key for protected endpoints
+ */
+function validateApiKey(req: NextRequest): boolean {
+  const apiKey = req.headers.get('x-api-key');
+  const expectedKey = process.env.API_SECRET_KEY;
+
+  if (!expectedKey) {
+    // If no API key is configured, allow access (development mode)
+    return !isProduction;
+  }
+
+  if (!apiKey) {
+    return false;
+  }
+
+  // Constant-time comparison to prevent timing attacks
+  if (apiKey.length !== expectedKey.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < apiKey.length; i++) {
+    result |= apiKey.codePointAt(i)! ^ expectedKey.codePointAt(i)!;
+  }
+
+  return result === 0;
+}
+
+/**
+ * Validate cron secret for scheduled endpoints
+ */
+function validateCronSecret(req: NextRequest): boolean {
+  const cronSecret = req.headers.get('x-cron-secret');
+  const expectedSecret = process.env.CRON_SECRET;
+
+  if (!expectedSecret) {
+    // If no secret is configured, allow access (development mode)
+    return !isProduction;
+  }
+
+  return cronSecret === expectedSecret;
+}
+
+/**
  * Check rate limit for a client
  */
 function checkRateLimit(
@@ -52,6 +112,15 @@ function checkRateLimit(
 ): { allowed: boolean; remaining: number; resetTime: number } {
   const ip = getClientIP(req);
   const now = Date.now();
+
+  // Periodic cleanup of expired entries
+  if (rateLimitStore.size > 10000) {
+    for (const [key, value] of rateLimitStore.entries()) {
+      if (now - value.timestamp > windowMs * 2) {
+        rateLimitStore.delete(key);
+      }
+    }
+  }
 
   const record = rateLimitStore.get(ip);
 
@@ -95,11 +164,11 @@ function checkRateLimit(
 }
 
 /**
- * Validate CORS origin
+ * Validate CORS origin with exact matching
  */
 function isValidOrigin(origin: string | null): boolean {
   if (!origin) return true; // Allow null for same-origin requests
-  return ALLOWED_ORIGINS.some((allowed) => origin.startsWith(allowed));
+  return ALLOWED_ORIGINS.includes(origin);
 }
 
 export async function middleware(req: NextRequest) {
@@ -110,12 +179,12 @@ export async function middleware(req: NextRequest) {
   // Add security headers to all responses
   const response = NextResponse.next();
 
-  // CORS headers
+  // CORS headers with exact origin matching
   if (isValidOrigin(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin || '*');
   }
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-CSRF-Token, X-Cron-Secret');
   response.headers.set('Access-Control-Allow-Credentials', 'true');
   response.headers.set('Access-Control-Max-Age', '86400');
 
@@ -138,14 +207,62 @@ export async function middleware(req: NextRequest) {
   response.headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
   response.headers.set('Cross-Origin-Opener-Policy', 'same-origin');
 
-  // CSRF protection for mutating requests
-  if (!CSRF_SAFE_METHODS.includes(method)) {
+  // Production security headers
+  if (isProduction) {
+    // Content Security Policy
+    response.headers.set(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.vercel.app https://*.neon.tech;"
+    );
+    // HTTP Strict Transport Security (1 year)
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    // Permissions Policy
+    response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
+  }
+
+  // Authentication check for protected endpoints
+  const isProtectedPath = PROTECTED_PATHS.some(p => path.startsWith(p));
+  if (isProtectedPath && !validateApiKey(req)) {
+    return NextResponse.json(
+      {
+        error: {
+          code: 'UNAUTHORIZED',
+          message: 'Invalid or missing API key. Include X-API-Key header.',
+          request_id: crypto.randomUUID(),
+        },
+      },
+      { status: 401, headers: { 'WWW-Authenticate': 'ApiKey' } }
+    );
+  }
+
+  // Cron secret validation for scheduled endpoints
+  if (path.startsWith('/api/cron') && !validateCronSecret(req)) {
+    return NextResponse.json(
+      {
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Invalid or missing cron secret.',
+          request_id: crypto.randomUUID(),
+        },
+      },
+      { status: 403 }
+    );
+  }
+
+  // CSRF protection for mutating requests (reject if missing)
+  if (!CSRF_SAFE_METHODS.includes(method) && isProduction) {
     const csrfToken = req.headers.get('x-csrf-token');
-    // In production, validate CSRF token against stored token
-    // For now, we just check it exists for mutating requests
     if (!csrfToken) {
-      // Log potential CSRF attempt (in production, use proper logging)
-      console.warn(`CSRF warning: Missing token for ${method} ${path}`);
+      return NextResponse.json(
+        {
+          error: {
+            code: 'CSRF_REQUIRED',
+            message: 'CSRF token required for mutating requests.',
+            request_id: crypto.randomUUID(),
+          },
+        },
+        { status: 403 }
+      );
     }
   }
 
