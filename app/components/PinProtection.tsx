@@ -148,7 +148,7 @@ export default function PinProtection({ children }: PinProtectionProps) {
 
     try {
       // Get stored hash from database
-      const res = await fetch('/api/pin');
+      const res = await fetch('/api/pin?verify=true');
       const data = await res.json();
 
       if (!data.success || !data.hasPin) {
