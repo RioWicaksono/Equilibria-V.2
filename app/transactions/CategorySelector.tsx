@@ -18,17 +18,28 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
 
-  // Load custom categories from localStorage
+  // Load custom categories from API
   useEffect(() => {
-    const stored = localStorage.getItem('equilibria_custom_categories');
-    if (stored) {
+    const loadCustomCategories = async () => {
       try {
-        setCustomCategories(JSON.parse(stored));
+        const res = await fetch(`/api/categories?type=${type}`);
+        const data = await res.json();
+        if (data.categories) {
+          setCustomCategories(data.categories.map((c: { id: string; name: string; icon: string; color: string; type: string }) => ({
+            id: c.id,
+            name: c.name,
+            icon: c.icon,
+            color: c.color,
+            type: c.type,
+            isDefault: false
+          })));
+        }
       } catch (e) {
         console.error('Failed to load custom categories', e);
       }
-    }
-  }, []);
+    };
+    loadCustomCategories();
+  }, [type]);
 
   // Combine default and custom categories
   const allCategories = [
@@ -45,24 +56,44 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
 
   const selectedCategory = allCategories.find(c => c.id === value);
 
-  const handleAddCustomCategory = () => {
+  const handleAddCustomCategory = async () => {
     if (!newCategoryName.trim()) return;
 
-    const newCategory: TransactionCategory = {
-      id: `custom_${Date.now()}`,
+    const newCategory = {
       name: newCategoryName.trim(),
       icon: newCategoryIcon || '📁',
       color: '#6b7280',
       type: type,
-      isDefault: false
     };
 
-    const updated = [...customCategories, newCategory];
-    setCustomCategories(updated);
-    localStorage.setItem('equilibria_custom_categories', JSON.stringify(updated));
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCategory),
+      });
+      const data = await res.json();
 
-    // Select the new category
-    onChange(newCategory.id);
+      if (data.category) {
+        const created: TransactionCategory = {
+          id: data.category.id,
+          name: data.category.name,
+          icon: data.category.icon,
+          color: data.category.color,
+          type: data.category.type,
+          isDefault: false
+        };
+
+        const updated = [...customCategories, created];
+        setCustomCategories(updated);
+
+        // Select the new category
+        onChange(created.id);
+      }
+    } catch (e) {
+      console.error('Failed to save custom category', e);
+    }
+
     setNewCategoryName('');
     setNewCategoryIcon('📁');
     setIsAddingCustom(false);

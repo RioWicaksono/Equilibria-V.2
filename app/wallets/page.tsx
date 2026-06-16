@@ -46,28 +46,30 @@ export default function WalletsPage() {
       if (data.wallets && data.wallets.length > 0) {
         setWallets(data.wallets);
       } else {
-        // Fallback to localStorage if no data in DB
-        const stored = localStorage.getItem('equilibria_wallets');
-        if (stored) {
-          setWallets(JSON.parse(stored));
-        } else {
-          // Set initial data with multi-currency
-          const initial: WalletItem[] = [
-            { id: '1', name: 'BCA Utama', balance: 5000000, description: 'Rekening utama untuk transaksi harian', currency: 'IDR' },
-            { id: '2', name: 'Gopay', balance: 150000, description: 'Dompet digital untuk pembayaran online', currency: 'IDR' },
-            { id: '3', name: 'Cash', balance: 350000, description: 'Uang tunai di dompet', currency: 'IDR' },
-            { id: '4', name: 'Travel Fund', balance: 100, description: 'Dollar savings for travel', currency: 'USD' },
-          ];
-          setWallets(initial);
-          localStorage.setItem('equilibria_wallets', JSON.stringify(initial));
+        // Create initial wallets via API
+        const initialWallets = [
+          { name: 'BCA Utama', balance: 5000000, description: 'Rekening utama untuk transaksi harian', currency: 'IDR' },
+          { name: 'Gopay', balance: 150000, description: 'Dompet digital untuk pembayaran online', currency: 'IDR' },
+          { name: 'Cash', balance: 350000, description: 'Uang tunai di dompet', currency: 'IDR' },
+          { name: 'Travel Fund', balance: 100, description: 'Dollar savings for travel', currency: 'USD' },
+        ];
+
+        const created: WalletItem[] = [];
+        for (const w of initialWallets) {
+          const res = await fetch('/api/wallets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: w.name, balance: w.balance }),
+          });
+          const data = await res.json();
+          if (data.wallet) {
+            created.push({ ...data.wallet, description: w.description, currency: w.currency });
+          }
         }
+        setWallets(created);
       }
     } catch {
-      // Fallback to localStorage on error
-      const stored = localStorage.getItem('equilibria_wallets');
-      if (stored) {
-        setWallets(JSON.parse(stored));
-      }
+      console.error('Error fetching wallets');
     } finally {
       setIsLoading(false);
     }
@@ -89,7 +91,6 @@ export default function WalletsPage() {
           const newWallet = { ...data.wallet, description: formData.description };
           const updated = [...wallets, newWallet];
           setWallets(updated);
-          localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
         }
       } else if (modalType === 'EDIT' && editingWallet) {
         const res = await fetch('/api/wallets', {
@@ -102,7 +103,6 @@ export default function WalletsPage() {
           const updatedWallet = { ...data.wallet, description: formData.description };
           const updated = wallets.map(w => w.id === editingWallet.id ? updatedWallet : w);
           setWallets(updated);
-          localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
         }
       } else if (selectedWalletId) {
         const wallet = wallets.find(w => w.id === selectedWalletId);
@@ -117,7 +117,6 @@ export default function WalletsPage() {
           if (data.wallet) {
             const updated = wallets.map(w => w.id === selectedWalletId ? data.wallet : w);
             setWallets(updated);
-            localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
           }
         }
       }
@@ -139,7 +138,6 @@ export default function WalletsPage() {
       });
       const updated = wallets.filter(w => w.id !== id);
       setWallets(updated);
-      localStorage.setItem('equilibria_wallets', JSON.stringify(updated));
     } catch (error) {
       console.error('Error deleting wallet:', error);
     }

@@ -36,21 +36,28 @@ export default function GoalsPage() {
       if (data.goals && data.goals.length > 0) {
         setGoals(data.goals);
       } else {
-        const stored = localStorage.getItem('equilibria_goals');
-        if (stored) {
-          setGoals(JSON.parse(stored));
-        } else {
-          const initial: GoalItem[] = [
-            { id: '1', name: 'Dana Darurat', targetAmount: 20000000, currentAmount: 5000000, deadline: '2026-12-31', description: 'Dana cadangan untuk keadaan darurat' },
-            { id: '2', name: 'Liburan ke Bali', targetAmount: 7000000, currentAmount: 1500000, deadline: '2026-08-15', description: 'Tabungan untuk berwisata ke Bali bersama keluarga' },
-          ];
-          setGoals(initial);
-          localStorage.setItem('equilibria_goals', JSON.stringify(initial));
+        // Create initial goals via API
+        const initialGoals = [
+          { name: 'Dana Darurat', targetAmount: 20000000, currentAmount: 5000000, deadline: '2026-12-31', description: 'Dana cadangan untuk keadaan darurat' },
+          { name: 'Liburan ke Bali', targetAmount: 7000000, currentAmount: 1500000, deadline: '2026-08-15', description: 'Tabungan untuk berwisata ke Bali bersama keluarga' },
+        ];
+
+        const created: GoalItem[] = [];
+        for (const g of initialGoals) {
+          const res = await fetch('/api/goals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(g),
+          });
+          const data = await res.json();
+          if (data.goal) {
+            created.push({ ...data.goal, deadline: g.deadline, description: g.description });
+          }
         }
+        setGoals(created);
       }
     } catch {
-      const stored = localStorage.getItem('equilibria_goals');
-      if (stored) setGoals(JSON.parse(stored));
+      console.error('Error fetching goals');
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +81,6 @@ export default function GoalsPage() {
           const updatedGoal = { ...data.goal, description: formData.description };
           const updated = goals.map(g => g.id === editingGoal.id ? updatedGoal : g);
           setGoals(updated);
-          localStorage.setItem('equilibria_goals', JSON.stringify(updated));
         }
       } else {
         const res = await fetch('/api/goals', {
@@ -87,7 +93,6 @@ export default function GoalsPage() {
           const newGoal = { ...data.goal, description: formData.description };
           const updated = [...goals, newGoal];
           setGoals(updated);
-          localStorage.setItem('equilibria_goals', JSON.stringify(updated));
         }
       }
     } catch {
@@ -108,7 +113,6 @@ export default function GoalsPage() {
       });
       const updated = goals.filter(g => g.id !== id);
       setGoals(updated);
-      localStorage.setItem('equilibria_goals', JSON.stringify(updated));
     } catch (error) {
       console.error('Error deleting goal:', error);
     }

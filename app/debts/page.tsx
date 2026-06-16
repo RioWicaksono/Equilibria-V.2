@@ -33,8 +33,12 @@ export default function DebtsPage() {
 
   // Check for debt reminders on mount
   useEffect(() => {
-    fetchDebts();
-    checkDebtReminders();
+    fetchDebts().then(() => {
+      // Check reminders after debts are loaded
+      if (debts.length > 0) {
+        checkDebtReminders(debts);
+      }
+    });
 
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
@@ -43,59 +47,49 @@ export default function DebtsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const checkDebtReminders = () => {
-    const stored = localStorage.getItem('equilibria_debts');
-    if (!stored) return;
+  const checkDebtReminders = (debtsList: DebtItem[]) => {
+    if (debtsList.length === 0) return;
 
-    try {
-      const debtsList: DebtItem[] = JSON.parse(stored);
-      const today = new Date();
+    const today = new Date();
 
-      debtsList.forEach(debt => {
-        if (debt.status === 'UNPAID' && debt.dueDate) {
-          const dueDate = new Date(debt.dueDate);
-          const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    debtsList.forEach(debt => {
+      if (debt.status === 'UNPAID' && debt.dueDate) {
+        const dueDate = new Date(debt.dueDate);
+        const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-          // Check if we already sent this reminder
-          const reminderKey = `debt_reminder_${debt.id}`;
-          const alreadyReminded = localStorage.getItem(reminderKey);
+        // Use sessionStorage for reminder flags (cleared on tab close)
+        const reminderKey = `debt_reminder_${debt.id}`;
+        const alreadyReminded = sessionStorage.getItem(reminderKey);
 
-          if (!alreadyReminded && daysUntilDue <= reminderDays && daysUntilDue >= 0) {
-            // Send reminder
-            localStorage.setItem(reminderKey, 'true');
+        if (!alreadyReminded && daysUntilDue <= reminderDays && daysUntilDue >= 0) {
+          // Send reminder
+          sessionStorage.setItem(reminderKey, 'true');
 
-            // Browser notification
-            if ('Notification' in window && Notification.permission === 'granted') {
-              const isOverdue = daysUntilDue < 0;
-              new Notification('Equilibria - Reminder Hutang/Piutang', {
-                body: isOverdue
-                  ? `⚠️ "${debt.name}" sudah jatuh tempo! Sisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`
-                  : `📅 "${debt.name}" jatuh tempo dalam ${daysUntilDue} hari!`,
-                icon: '/icon.svg',
-                tag: reminderKey,
-              });
-            }
-
-            // Telegram notification
-            const telegramToken = localStorage.getItem('equilibria_telegram_token');
-            if (telegramToken) {
-              const isOverdue = daysUntilDue < 0;
-              const message = isOverdue
-                ? `⚠️ *Reminder Hutang/Piutang*\n"${debt.name}" SUDAH JATUH TEMPO!\nSisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`
-                : `📅 *Reminder Hutang/Piutang*\n"${debt.name}" jatuh tempo dalam ${daysUntilDue} hari\nSisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`;
-
-              fetch('/api/telegram', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message }),
-              }).catch(console.error);
-            }
+          // Browser notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const isOverdue = daysUntilDue < 0;
+            new Notification('Equilibria - Reminder Hutang/Piutang', {
+              body: isOverdue
+                ? `⚠️ "${debt.name}" sudah jatuh tempo! Sisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`
+                : `📅 "${debt.name}" jatuh tempo dalam ${daysUntilDue} hari!`,
+              icon: '/icon.svg',
+              tag: reminderKey,
+            });
           }
+
+          // Telegram notification via API
+          fetch('/api/telegram', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              message: daysUntilDue < 0
+                ? `⚠️ *Reminder Hutang/Piutang*\n"${debt.name}" SUDAH JATUH TEMPO!\nSisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`
+                : `📅 *Reminder Hutang/Piutang*\n"${debt.name}" jatuh tempo dalam ${daysUntilDue} hari\nSisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`
+            }),
+          }).catch(console.error);
         }
-      });
-    } catch (e) {
-      console.error('Error checking debt reminders', e);
-    }
+      }
+    });
   };
 
   const fetchDebts = async () => {
@@ -104,19 +98,10 @@ export default function DebtsPage() {
       const data = await res.json();
       if (data.debts && data.debts.length > 0) {
         setDebts(data.debts);
-      } else {
-        const stored = localStorage.getItem('equilibria_debts');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          setDebts(parsed.map((d: DebtItem) => ({ ...d, paidAmount: d.paidAmount || 0 })));
-        }
+        checkDebtReminders(data.debts);
       }
     } catch {
-      const stored = localStorage.getItem('equilibria_debts');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setDebts(parsed.map((d: DebtItem) => ({ ...d, paidAmount: d.paidAmount || 0 })));
-      }
+      console.error('Error fetching debts');
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +123,6 @@ export default function DebtsPage() {
         if (data.debt) {
           const updated = debts.map(d => d.id === editingDebt.id ? { ...d, name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate } : d);
           setDebts(updated);
-          localStorage.setItem('equilibria_debts', JSON.stringify(updated));
         }
       } else {
         const res = await fetch('/api/debts', {
@@ -150,7 +134,6 @@ export default function DebtsPage() {
         if (data.debt) {
           const updated = [...debts, { ...data.debt, paidAmount: 0, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }];
           setDebts(updated);
-          localStorage.setItem('equilibria_debts', JSON.stringify(updated));
         }
       }
     } catch (error) {
@@ -180,7 +163,6 @@ export default function DebtsPage() {
           let updated = debts.map(d => d.id === selectedDebtId ? data.debt : d);
           updated = updated.filter(d => d.status !== 'PAID');
           setDebts(updated);
-          localStorage.setItem('equilibria_debts', JSON.stringify(updated));
         }
       }
     } catch (error) {
@@ -200,7 +182,6 @@ export default function DebtsPage() {
       });
       const updated = debts.filter(d => d.id !== id);
       setDebts(updated);
-      localStorage.setItem('equilibria_debts', JSON.stringify(updated));
     } catch (error) {
       console.error('Error deleting debt:', error);
     }

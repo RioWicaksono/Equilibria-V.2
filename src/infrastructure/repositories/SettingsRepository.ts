@@ -5,16 +5,18 @@ export interface Settings {
   language: string;
   currency: string;
   autoLockTimeout: number;
+  telegramToken: string;
 }
 
 export async function getSettings(): Promise<Settings> {
   const settings = await prisma.userSettings.findFirst();
-  if (!settings) return { theme: 'dark', language: 'id', currency: 'IDR', autoLockTimeout: 5 };
+  if (!settings) return { theme: 'dark', language: 'id', currency: 'IDR', autoLockTimeout: 5, telegramToken: '' };
   return {
     theme: settings.theme as Settings['theme'],
     language: settings.language,
     currency: settings.currency,
     autoLockTimeout: settings.autoLockTimeout,
+    telegramToken: settings.telegramToken || '',
   };
 }
 
@@ -29,5 +31,6 @@ export async function updateSettings(data: Partial<Settings>): Promise<Settings>
     language: updated?.language || 'id',
     currency: updated?.currency || 'IDR',
     autoLockTimeout: updated?.autoLockTimeout ?? 5,
+    telegramToken: updated?.telegramToken || '',
   };
 }

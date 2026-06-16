@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Lock, KeyRound, Palette, Globe, Bell, Trash2, Shield, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap } from 'lucide-react';
+import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-type TabType = 'general' | 'security' | 'integration' | 'advanced';
+type TabType = 'general' | 'integration' | 'advanced';
 
 interface Settings {
   theme: string;
@@ -34,15 +34,6 @@ export default function SettingsClient() {
   // Telegram Token State
   const [telegramToken, setTelegramToken] = useState('');
 
-  // PIN State - loaded from API
-  const [hasPin, setHasPin] = useState(false);
-  const [currentPin, setCurrentPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [pinError, setPinError] = useState('');
-  const [pinSuccess, setPinSuccess] = useState('');
-  const [isChangingPin, setIsChangingPin] = useState(false);
-
   // Auto-lock timeout state
   const [autoLockTimeout, setAutoLockTimeout] = useState(5);
 
@@ -65,26 +56,10 @@ export default function SettingsClient() {
           setTheme(data.settings.theme || 'dark');
           setLanguage(data.settings.language || 'id');
           setAutoLockTimeout(data.settings.autoLockTimeout ?? 5);
+          setTelegramToken(data.settings.telegramToken || '');
         }
       })
       .catch(console.error);
-  }, []);
-
-  // Load PIN status from API
-  useEffect(() => {
-    fetch('/api/pin')
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          setHasPin(data.hasPin || false);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  // Load Telegram token (kept in localStorage - not sensitive)
-  useEffect(() => {
-    setTelegramToken(localStorage.getItem('equilibria_telegram_token') || '');
   }, []);
 
   const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -139,109 +114,7 @@ export default function SettingsClient() {
     }
   };
 
-  const handleSavePin = async () => {
-    setPinError('');
-    setPinSuccess('');
 
-    // First time setting PIN - no need for current PIN
-    if (!hasPin) {
-      if (newPin.length !== 6) {
-        setPinError('PIN baru harus 6 digit');
-        return;
-      }
-
-      if (newPin !== confirmPin) {
-        setPinError('Konfirmasi PIN tidak cocok');
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: newPin }),
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          setHasPin(true);
-          setPinSuccess('PIN berhasil dibuat');
-          setCurrentPin('');
-          setNewPin('');
-          setConfirmPin('');
-          setIsChangingPin(false);
-          showToast('PIN berhasil dibuat');
-        } else {
-          setPinError(data.message || 'Gagal membuat PIN');
-        }
-      } catch {
-        setPinError('Gagal menyimpan PIN');
-      }
-      return;
-    }
-
-    // Changing existing PIN - require current PIN
-    if (currentPin.length !== 6) {
-      setPinError('PIN saat ini harus 6 digit');
-      return;
-    }
-
-    if (newPin.length !== 6) {
-      setPinError('PIN baru harus 6 digit');
-      return;
-    }
-
-    if (newPin !== confirmPin) {
-      setPinError('Konfirmasi PIN tidak cocok');
-      return;
-    }
-
-    // Verify current PIN first (stored hashed in DB)
-    // For now, just update to new PIN - in production would verify first
-    try {
-      const res = await fetch('/api/pin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: newPin }),
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        setPinSuccess('PIN berhasil diperbarui');
-        setCurrentPin('');
-        setNewPin('');
-        setConfirmPin('');
-        setIsChangingPin(false);
-        showToast('PIN berhasil diperbarui');
-      } else {
-        setPinError(data.message || 'Gagal memperbarui PIN');
-      }
-    } catch {
-      setPinError('Gagal menyimpan PIN');
-    }
-  };
-
-  const handleDeletePin = async () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus PIN?')) return;
-
-    try {
-      const res = await fetch('/api/pin', { method: 'DELETE' });
-      const data = await res.json();
-
-      if (data.success) {
-        setHasPin(false);
-        showToast('PIN berhasil dihapus');
-        setIsChangingPin(false);
-        setCurrentPin('');
-        setNewPin('');
-        setConfirmPin('');
-      } else {
-        showToast('Gagal menghapus PIN', 'error');
-      }
-    } catch {
-      showToast('Gagal menghapus PIN', 'error');
-    }
-  };
 
   const handleSaveTimeout = async () => {
     try {
@@ -476,13 +349,6 @@ export default function SettingsClient() {
             <Settings2 className="w-5 h-5" /> Umum
           </button>
           <button 
-            onClick={() => setActiveTab('security')}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${
-              activeTab === 'security' ? 'bg-teal-500/10 text-teal-400' : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1A1A1A]'
-            }`}
-          >
-            <Shield className="w-5 h-5" /> Keamanan
-          </button>
           <button 
             onClick={() => setActiveTab('integration')}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${
@@ -577,150 +443,6 @@ export default function SettingsClient() {
             </motion.div>
           )}
 
-          {activeTab === 'security' && (
-            <motion.div
-              key="security"
-              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-              className="space-y-8"
-            >
-              <div>
-                <h3 className="text-xl font-bold text-white mb-1"><Lock className="w-5 h-5 inline-block mr-2 text-teal-400" /> Keamanan & PIN</h3>
-                <p className="text-sm text-zinc-400 mb-6">Atur PIN perlindungan dan auto-lock untuk keamanan aplikasi.</p>
-
-                {/* Auto-Lock Timeout Setting */}
-                <div className="bg-[#1A1A1A] border border-[#262626] rounded-xl p-5 w-full max-w-md mb-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-white font-medium">Auto-Lock Timeout</p>
-                      <p className="text-xs text-zinc-400 mt-1">Aplikasi akan terkunci otomatis setelah waktu tertentu tidak aktif.</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 relative">
-                    <div className="relative">
-                      <select
-                        value={autoLockTimeout}
-                        onChange={(e) => setAutoLockTimeout(parseInt(e.target.value))}
-                        className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 cursor-pointer"
-                      >
-                        {timeoutOptions.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      onClick={handleSaveTimeout}
-                      className="w-full mt-3 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-black text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Save className="w-4 h-4" /> Simpan Auto-Lock
-                    </button>
-                  </div>
-                </div>
-
-                {/* PIN Change Section */}
-                <div className="bg-[#1A1A1A] border border-[#262626] rounded-xl p-5 w-full max-w-md">
-                  {!isChangingPin ? (
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <p className="text-sm text-white font-medium">Ubah PIN Aplikasi</p>
-                        <p className="text-xs text-zinc-500 mt-1">
-                          {hasPin ? 'PIN sudah diatur untuk mengamankan aplikasi.' : 'Belum ada PIN. Buat PIN untuk mengamankan aplikasi.'}
-                        </p>
-                      </div>
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <button
-                          onClick={() => setIsChangingPin(true)}
-                          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-[#252525] hover:bg-zinc-700 border border-[#333] text-white text-sm font-medium rounded-lg transition-colors"
-                        >
-                          <KeyRound className="w-4 h-4" /> {hasPin ? 'Ubah PIN' : 'Buat PIN'}
-                        </button>
-                        {hasPin && (
-                          <button
-                            onClick={handleDeletePin}
-                            className="flex items-center justify-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-sm font-medium rounded-lg transition-colors"
-                            title="Hapus PIN"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {!hasPin ? (
-                        <p className="text-xs text-teal-400/70 bg-teal-500/5 border border-teal-500/20 rounded-lg p-3">
-                          Anda belum memiliki PIN. Buat PIN 6 digit untuk mengamankan aplikasi.
-                        </p>
-                      ) : (
-                        <div>
-                          <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">MASUKKAN PIN SAAT INI</label>
-                          <input
-                            type="password"
-                            maxLength={6}
-                            value={currentPin}
-                            onChange={(e) => setCurrentPin(e.target.value.replace(/[^0-9]/g, ''))}
-                            className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                            placeholder="Masukkan PIN saat ini"
-                          />
-                        </div>
-                      )}
-
-                      <div>
-                        <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">PIN BARU (6 DIGIT)</label>
-                        <input
-                          type="password"
-                          maxLength={6}
-                          value={newPin}
-                          onChange={(e) => setNewPin(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                          placeholder="******"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block tracking-wide text-zinc-400 text-xs font-medium mb-2">KONFIRMASI PIN BARU</label>
-                        <input
-                          type="password"
-                          maxLength={6}
-                          value={confirmPin}
-                          onChange={(e) => setConfirmPin(e.target.value.replace(/[^0-9]/g, ''))}
-                          className="w-full bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-                          placeholder="******"
-                        />
-                      </div>
-
-                      {pinError && <p className="text-rose-500 text-xs font-medium">{pinError}</p>}
-
-                      <div className="flex gap-2 pt-2">
-                        <button
-                          onClick={handleSavePin}
-                          className="flex-1 px-4 py-2.5 bg-teal-500 hover:bg-teal-400 text-black text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Simpan
-                        </button>
-                        <button
-                          onClick={() => {
-                            setIsChangingPin(false);
-                            setPinError('');
-                            setCurrentPin('');
-                            setNewPin('');
-                            setConfirmPin('');
-                          }}
-                          className="px-4 py-2.5 bg-[#141414] hover:bg-zinc-800 border border-[#333] text-zinc-300 text-sm font-semibold rounded-lg transition-colors"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {pinSuccess && (
-                    <p className="text-emerald-400 text-sm font-medium flex items-center gap-1.5 mt-4">
-                      <CheckCircle className="w-4 h-4" /> {pinSuccess}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
           )}
 
           {activeTab === 'integration' && (
@@ -804,7 +526,7 @@ export default function SettingsClient() {
                       <label className="flex items-center gap-2 text-zinc-400 text-xs font-bold mb-2 uppercase tracking-wide">
                         <KeyRound className="w-3.5 h-3.5 text-zinc-500" /> Bot API Token
                       </label>
-                      {telegramStatus === 'ACTIVE' && localStorage.getItem('equilibria_telegram_token') ? (
+                      {telegramStatus === 'ACTIVE' && telegramToken ? (
                         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -820,7 +542,7 @@ export default function SettingsClient() {
                             </button>
                           </div>
                           <p className="text-xs text-zinc-500 mt-2 font-mono">
-                            {showTelegramToken ? localStorage.getItem('equilibria_telegram_token') : `${localStorage.getItem('equilibria_telegram_token')?.substring(0, 10)}...${localStorage.getItem('equilibria_telegram_token')?.substring(localStorage.getItem('equilibria_telegram_token')!.length - 5)}`}
+                            {showTelegramToken ? telegramToken : `${telegramToken?.substring(0, 10)}...${telegramToken?.substring(telegramToken!.length - 5)}`}
                           </p>
                         </div>
                       ) : (
@@ -845,14 +567,27 @@ export default function SettingsClient() {
 
                     <div className="flex gap-3 pt-2">
                       <button
-                        onClick={() => {
-                          localStorage.setItem('equilibria_telegram_token', telegramToken);
-                          showToast('Token Telegram disimpan');
-                          // Refresh status
-                          fetch('/api/telegram-webhook')
-                            .then(res => res.json())
-                            .then(data => setTelegramStatus(data.status))
-                            .catch(() => setTelegramStatus('INACTIVE'));
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('/api/settings', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ telegramToken }),
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              showToast('Token Telegram disimpan');
+                              // Refresh status
+                              fetch('/api/telegram-webhook')
+                                .then(res => res.json())
+                                .then(data => setTelegramStatus(data.status))
+                                .catch(() => setTelegramStatus('INACTIVE'));
+                            } else {
+                              showToast('Gagal menyimpan token', 'error');
+                            }
+                          } catch {
+                            showToast('Gagal menyimpan token', 'error');
+                          }
                         }}
                         className="flex-1 px-4 py-2.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                       >

@@ -3,16 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, ChevronLeft, ChevronRight, Lock, Wallet, CreditCard, Target, RefreshCw, Bell, BarChart3, LayoutGrid, Settings } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, ChevronLeft, ChevronRight, Wallet, CreditCard, Target, RefreshCw, Bell, BarChart3, LayoutGrid, Settings } from 'lucide-react';
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
-
-  const handleLock = () => {
-    sessionStorage.removeItem('equilibria_auth');
-    window.location.reload();
-  };
 
   const navItems = [
     { href: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -72,20 +67,6 @@ export default function Sidebar() {
             </Link>
           ))}
         </div>
-
-        {/* Lock Button */}
-        <button
-          onClick={handleLock}
-          title="Kunci Aplikasi"
-          className={`
-            flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 w-full mt-4
-            border border-rose-500/20 hover:border-rose-500/40 hover:bg-rose-500/10 text-rose-400
-            ${isCollapsed ? 'justify-center' : ''}
-          `}
-        >
-          <Lock className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span>Kunci Aplikasi</span>}
-        </button>
       </nav>
 
       {/* Collapse Button - Show on lg+ */}

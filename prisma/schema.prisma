@@ -112,12 +112,18 @@ model UserSettings {
   language        String   @default("id")
   currency        String   @default("IDR")
   autoLockTimeout Int      @default(5)
+  telegramToken   String?  @default("")
   updatedAt       DateTime @updatedAt
 }
 
-// PIN stored in database for cross-device auth
-model UserPin {
-  id        String   @id @default("pin")
-  hash      String
-  updatedAt DateTime @updatedAt
+// Custom categories created by user
+model CustomCategory {
+  id        String   @id @default(cuid())
+  name      String
+  icon      String   @default("📁")
+  color     String   @default("#6b7280")
+  type      String   // 'INCOME' | 'EXPENSE'
+  createdAt DateTime @default(now())
+
+  @@index([type])
 }

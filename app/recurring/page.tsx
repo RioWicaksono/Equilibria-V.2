@@ -36,21 +36,28 @@ export default function RecurringPage() {
       if (data.recurring && data.recurring.length > 0) {
         setRecurring(data.recurring);
       } else {
-        const stored = localStorage.getItem('equilibria_recurring');
-        if (stored) {
-          setRecurring(JSON.parse(stored));
-        } else {
-          const initial: RecurringItem[] = [
-            { id: '1', name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15', description: 'Hiburan streaming movie dan series' },
-            { id: '2', name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10', description: 'Sewa kamar kos bulanan' },
-          ];
-          setRecurring(initial);
-          localStorage.setItem('equilibria_recurring', JSON.stringify(initial));
+        // Create initial recurring items via API
+        const initialItems = [
+          { name: 'Langganan Netflix', amount: 153000, frequency: 'Bulanan', nextDate: '2026-06-15', description: 'Hiburan streaming movie dan series' },
+          { name: 'Biaya Kost / Sewa', amount: 2000000, frequency: 'Bulanan', nextDate: '2026-06-10', description: 'Sewa kamar kos bulanan' },
+        ];
+
+        const created: RecurringItem[] = [];
+        for (const item of initialItems) {
+          const res = await fetch('/api/recurring', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item),
+          });
+          const data = await res.json();
+          if (data.recurring) {
+            created.push({ ...data.recurring, description: item.description });
+          }
         }
+        setRecurring(created);
       }
     } catch {
-      const stored = localStorage.getItem('equilibria_recurring');
-      if (stored) setRecurring(JSON.parse(stored));
+      console.error('Error fetching recurring');
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +80,6 @@ export default function RecurringPage() {
           const updatedItem = { ...data.recurring, description: formData.description };
           const updated = recurring.map(r => r.id === editingItem.id ? updatedItem : r);
           setRecurring(updated);
-          localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
         }
       } else {
         const res = await fetch('/api/recurring', {
@@ -86,7 +92,6 @@ export default function RecurringPage() {
           const newItem = { ...data.recurring, description: formData.description };
           const updated = [...recurring, newItem];
           setRecurring(updated);
-          localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
         }
       }
     } catch (error) {
@@ -107,7 +112,6 @@ export default function RecurringPage() {
       });
       const updated = recurring.filter(r => r.id !== id);
       setRecurring(updated);
-      localStorage.setItem('equilibria_recurring', JSON.stringify(updated));
     } catch (error) {
       console.error('Error deleting recurring:', error);
     }

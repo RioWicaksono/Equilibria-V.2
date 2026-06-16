@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Sidebar from './components/Sidebar';
 import PWARegistration from './components/PWARegistration';
-import PinProtection from './components/PinProtection';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { QueryProvider } from './providers/QueryProvider';
@@ -58,8 +57,7 @@ export default function RootLayout({
           <QueryProvider>
             <PWARegistration />
             <SettingsProvider>
-              <PinProtection>
-                <div className="flex min-h-screen">
+              <div className="flex min-h-screen">
                   {/* Desktop Sidebar - Hidden on mobile and tablet (< 1024px) */}
                   <div className="hidden lg:block">
                     <Sidebar />
@@ -90,7 +88,6 @@ export default function RootLayout({
                     <MobileNav />
                   </div>
                 </div>
-              </PinProtection>
             </SettingsProvider>
           </QueryProvider>
         </ErrorBoundary>

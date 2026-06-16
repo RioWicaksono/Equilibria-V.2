@@ -35,18 +35,11 @@ export default function BudgetsPage() {
     try {
       const res = await fetch('/api/budgets');
       const data = await res.json();
-
       if (data.budgets && data.budgets.length > 0) {
         setBudgets(data.budgets);
-      } else {
-        const stored = localStorage.getItem('equilibria_budgets');
-        if (stored) {
-          setBudgets(JSON.parse(stored));
-        }
       }
     } catch {
-      const stored = localStorage.getItem('equilibria_budgets');
-      if (stored) setBudgets(JSON.parse(stored));
+      console.error('Error fetching budgets');
     } finally {
       setIsLoading(false);
     }
@@ -88,12 +81,10 @@ export default function BudgetsPage() {
       if (editingBudget) {
         const updated = budgets.map(b => b.id === editingBudget.id ? data.budget || { ...editingBudget, ...budgetData } : b);
         setBudgets(updated);
-        localStorage.setItem('equilibria_budgets', JSON.stringify(updated));
       } else {
         const newBudget = data.budget || { ...budgetData, id: Date.now().toString(), spent: 0 };
         const updated = [...budgets, newBudget];
         setBudgets(updated);
-        localStorage.setItem('equilibria_budgets', JSON.stringify(updated));
       }
     } catch (error) {
       console.error('Error saving budget:', error);
@@ -109,7 +100,6 @@ export default function BudgetsPage() {
       await fetch(`/api/budgets?id=${id}`, { method: 'DELETE' });
       const updated = budgets.filter(b => b.id !== id);
       setBudgets(updated);
-      localStorage.setItem('equilibria_budgets', JSON.stringify(updated));
     } catch (error) {
       console.error('Error deleting budget:', error);
     }
