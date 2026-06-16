@@ -1,28 +1,31 @@
-import { NextRequest } from 'next/server';
-import { getPin, setPin, verifyPin, clearPin } from '@/infrastructure/repositories/PinRepository';
-import { ApiResponse } from '@/lib/api-helpers';
+import { NextRequest, NextResponse } from 'next/server';
+import { getPin, setPin, clearPin } from '@/infrastructure/repositories/PinRepository';
 
 export async function GET() {
   const hash = await getPin();
-  return ApiResponse.ok({ hasPin: hash !== null });
+  return NextResponse.json({ success: true, hasPin: hash !== null });
 }
 
 export async function POST(req: NextRequest) {
   try {
     const { pin } = await req.json();
     if (!pin || pin.length !== 6) {
-      return ApiResponse.badRequest('PIN must be 6 digits');
+      return NextResponse.json({ success: false, message: 'PIN must be 6 digits' }, { status: 400 });
     }
     const bcrypt = await import('bcryptjs');
     const hash = await bcrypt.hash(pin, 10);
     await setPin(hash);
-    return ApiResponse.ok({ success: true });
+    return NextResponse.json({ success: true });
   } catch {
-    return ApiResponse.internalError();
+    return NextResponse.json({ success: false, message: 'Failed to save PIN' }, { status: 500 });
   }
 }
 
 export async function DELETE() {
-  await clearPin();
-  return ApiResponse.ok({ success: true });
+  try {
+    await clearPin();
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ success: false, message: 'Failed to delete PIN' }, { status: 500 });
+  }
 }
