@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Lock, Delete, Smartphone } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { Lock, Delete } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-// Simple hash for PIN (fallback if bcrypt fails)
+const STORAGE_KEYS = {
+  PIN_HASH: 'equilibria_pin_hash',
+  AUTH: 'equilibria_auth',
+  AUTO_LOCK_TIMEOUT: 'equilibria_auto_lock_timeout',
+};
+
 function simpleHash(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
@@ -16,212 +20,58 @@ function simpleHash(str: string): string {
   return Math.abs(hash).toString(16).padStart(8, '0');
 }
 
-const STORAGE_KEYS = {
-  PIN_HASH: 'equilibria_pin_hash',
-  AUTH: 'equilibria_auth',
-  AUTO_LOCK_TIMEOUT: 'equilibria_auto_lock_timeout',
-} as const;
-
-const DEFAULT_TIMEOUT_MINUTES = 5;
-
-// Simple verify (sync fallback)
-function simpleVerify(input: string, stored: string): boolean {
-  return simpleHash(input) === stored;
-}
-
-// Async verify (tries bcrypt first, falls back to simple)
-async function verifyPin(input: string, stored: string): Promise<boolean> {
-  try {
-    const bcrypt = await import('bcryptjs');
-    return await bcrypt.compare(input, stored);
-  } catch {
-    // Fallback to simple hash
-    return simpleVerify(input, stored);
-  }
-}
-
-async function hashPin(pin: string): Promise<string> {
-  try {
-    const bcrypt = await import('bcryptjs');
-    return await bcrypt.hash(pin, 10);
-  } catch {
-    // Fallback to simple hash
-    return simpleHash(pin);
-  }
-}
-
-const getStoredHash = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(STORAGE_KEYS.PIN_HASH);
-};
-
-const hasPinSet = (): boolean => {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem(STORAGE_KEYS.PIN_HASH) !== null;
-};
-
 export default function PinProtection({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [storedHash, setStoredHash] = useState<string | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isSetupMode, setIsSetupMode] = useState(false);
+  const [isSetup, setIsSetup] = useState(false);
   const [setupStep, setSetupStep] = useState<'enter' | 'confirm'>('enter');
-  const router = useRouter();
+  const [storedHash, setStoredHash] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    const init = () => {
-      setIsClient(true);
-      const pinHash = getStoredPinHash();
-      const hasPin = hasPinSet();
-      setStoredPinHash(pinHash);
-      setIsSetupMode(!hasPin);
-      setSetupStep('enter');
-      setIsInitialized(true);
-      // Always reset showSuccess on init
-      setShowSuccess(false);
-
-      // Check biometric availability
-      if (window.PublicKeyCredential) {
-        const storedBiometric = localStorage.getItem(STORAGE_KEYS.BIOMETRIC_ENABLED);
-        setBiometricEnabled(storedBiometric === 'true');
-        setBiometricAvailable(true);
-      }
-
-      // Check existing auth session
-      const auth = sessionStorage.getItem(STORAGE_KEYS.AUTH);
-      if (auth === 'true' && hasPin) {
-        setIsAuthenticated(true);
-        setShowSuccess(false); // Don't show success screen if already authenticated
-      }
-    };
-    init();
+    const stored = localStorage.getItem(STORAGE_KEYS.PIN_HASH);
+    if (!stored) {
+      setIsSetup(true);
+    } else {
+      setStoredHash(stored);
+    }
+    setIsLoading(false);
   }, []);
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  const handleKeyPress = useCallback((num: number) => {
+    if (pin.length >= 6) return;
+    const newPin = pin + num.toString();
+    setPin(newPin);
 
-    const timeoutMinutes = parseInt(
-      localStorage.getItem(STORAGE_KEYS.AUTO_LOCK_TIMEOUT) || String(DEFAULT_TIMEOUT_MINUTES),
-      10
-    );
-
-    let timeout: ReturnType<typeof setTimeout>;
-    let lastActivity = Date.now();
-
-    const resetTimer = () => {
-      clearTimeout(timeout);
-      lastActivity = Date.now();
-      timeout = setTimeout(() => {
-        setIsAuthenticated(false);
-        setShowSuccess(false); // Reset success state when timeout
-        sessionStorage.removeItem(STORAGE_KEYS.AUTH);
-      }, timeoutMinutes * 60 * 1000);
-    };
-
-    const handleActivity = () => {
-      const now = Date.now();
-      if (now - lastActivity > 1000) {
-        resetTimer();
-      }
-    };
-
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    events.forEach(e => document.addEventListener(e, handleActivity, { passive: true }));
-    resetTimer();
-
-    return () => {
-      clearTimeout(timeout);
-      events.forEach(e => document.removeEventListener(e, handleActivity));
-    };
-  }, [isAuthenticated]);
-
-  const handleKeyPress = async (num: number) => {
-    if (!isInitialized) return;
-
-    // Setup mode: First PIN entry
-    if (isSetupMode && setupStep === 'enter') {
-      if (pin.length < 6) {
-        setError(false);
-        const newPin = pin + num.toString();
-        setPin(newPin);
-
-        if (newPin.length === 6) {
-          // Move to confirmation step
-          setTimeout(() => {
-            setSetupStep('confirm');
-            setPin('');
-          }, 300);
-        }
-      }
-      return;
-    }
-
-    // Setup mode: Confirm PIN entry
-    if (isSetupMode && setupStep === 'confirm') {
-      if (confirmPin.length < 6) {
-        setError(false);
-        const newConfirmPin = confirmPin + num.toString();
-        setConfirmPin(newConfirmPin);
-
-        if (newConfirmPin.length === 6) {
-          // Compare with first entry
-          if (newConfirmPin === pin) {
-            // PINs match - hash and save
-            await savePinHash(newConfirmPin);
-            const hash = getStoredPinHash();
-            setStoredPinHash(hash);
-            setShowSuccess(true);
-            setTimeout(() => {
-              sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-              setIsAuthenticated(true);
-              setIsSetupMode(false);
-              setPin('');
-              setConfirmPin('');
-            }, 800);
-          } else {
-            // PINs don't match - reset
-            setError(true);
-            setTimeout(() => {
-              setPin('');
-              setConfirmPin('');
-              setSetupStep('enter');
-              setError(false);
-            }, 600);
-          }
-        }
-      }
-      return;
-    }
-
-    // Normal authentication mode
-    if (pin.length < 6) {
-      setError(false);
-      const newPin = pin + num.toString();
-      setPin(newPin);
-
-      if (newPin.length === 6 && storedPinHash) {
-        // Verify with bcrypt hash
-        const isValid = await verifyPin(newPin, storedPinHash);
-        if (isValid) {
-          setShowSuccess(true);
-          setTimeout(() => {
-            sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-            setIsAuthenticated(true);
-            setPin('');
-          }, 800);
+    if (newPin.length === 6) {
+      if (isSetup && setupStep === 'enter') {
+        setSetupStep('confirm');
+        setConfirmPin('');
+        setTimeout(() => setPin(''), 300);
+      } else if (isSetup && setupStep === 'confirm') {
+        if (newPin === confirmPin) {
+          const hash = simpleHash(newPin);
+          localStorage.setItem(STORAGE_KEYS.PIN_HASH, hash);
+          setStoredHash(hash);
+          setIsSetup(false);
+          setIsAuthenticated(true);
         } else {
           setError(true);
           setTimeout(() => {
             setPin('');
+            setConfirmPin('');
+            setSetupStep('enter');
             setError(false);
           }, 600);
         }
-      } else if (newPin.length === 6) {
-        // No stored hash - shouldn't happen but handle gracefully
+      } else if (storedHash && simpleHash(newPin) === storedHash) {
+        sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
+        setShowSuccess(true);
+        setTimeout(() => setIsAuthenticated(true), 800);
+      } else {
         setError(true);
         setTimeout(() => {
           setPin('');
@@ -229,329 +79,72 @@ export default function PinProtection({ children }: { children: React.ReactNode 
         }, 600);
       }
     }
-  };
+  }, [pin, storedHash, isSetup, setupStep, confirmPin]);
 
-  const handleDelete = () => {
-    if (isSetupMode && setupStep === 'confirm') {
-      setConfirmPin(prev => prev.slice(0, -1));
-    } else {
-      setPin(prev => prev.slice(0, -1));
-    }
+  const handleDelete = useCallback(() => {
+    setPin(p => p.slice(0, -1));
     setError(false);
-  };
+  }, []);
 
-  const handleBiometricAuth = async () => {
-    setBiometricError('');
-
-    if (!window.PublicKeyCredential) {
-      setBiometricError('Biometric not supported');
-      return;
-    }
-
-    try {
-      const storedCredential = localStorage.getItem(STORAGE_KEYS.BIOMETRIC_CREDENTIAL);
-      if (!storedCredential) {
-        await registerBiometric();
-        return;
-      }
-
-      const credential = JSON.parse(storedCredential);
-
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge: new Uint8Array([1, 2, 3, 4, 5, 6]),
-          allowCredentials: [{
-            id: new Uint8Array(credential.rawId),
-            type: 'public-key'
-          }],
-          userVerification: 'required'
-        }
-      });
-
-      if (assertion) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-          setIsAuthenticated(true);
-        }, 800);
-      }
-    } catch (err: unknown) {
-      console.error('Biometric error:', err);
-      const error = err as Error;
-      if (error.name === 'NotAllowedError') {
-        setBiometricError('Authentication cancelled');
-      } else {
-        setBiometricError('Authentication failed');
-      }
-    }
-  };
-
-  const registerBiometric = async () => {
-    setBiometricError('');
-
-    try {
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: new Uint8Array([1, 2, 3, 4, 5, 6]),
-          rp: { name: 'Equilibria Finance', id: window.location.hostname },
-          user: {
-            id: new Uint8Array([1, 2, 3, 4]),
-            name: 'Equilibria User',
-            displayName: 'Equilibria User'
-          },
-          pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
-          authenticatorSelection: {
-            authenticatorAttachment: 'platform',
-            userVerification: 'required'
-          }
-        }
-      }) as PublicKeyCredential;
-
-      if (credential) {
-        const credentialData = {
-          rawId: Array.from(new Uint8Array(credential.rawId)),
-          id: credential.id,
-          type: credential.type
-        };
-
-        localStorage.setItem(STORAGE_KEYS.BIOMETRIC_CREDENTIAL, JSON.stringify(credentialData));
-        localStorage.setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, 'true');
-        setBiometricEnabled(true);
-
-        setShowSuccess(true);
-        setTimeout(() => {
-          sessionStorage.setItem(STORAGE_KEYS.AUTH, 'true');
-          setIsAuthenticated(true);
-        }, 800);
-      }
-    } catch {
-      console.error('Biometric registration error');
-      setBiometricError('Registration failed');
-    }
-  };
-
-  useEffect(() => {
-    // Reset showSuccess when auth state changes (e.g., after timeout)
-    if (!isAuthenticated) {
-      setShowSuccess(false);
-    }
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (isAuthenticated) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= '0' && e.key <= '9') {
-        handleKeyPress(parseInt(e.key, 10));
-      } else if (e.key === 'Backspace') {
-        handleDelete();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, pin, error, isInitialized, handleKeyPress, handleDelete]);
-
-  if (!isClient) return null;
-
-  if (isAuthenticated) {
-    return <>{children}</>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-zinc-700 border-t-teal-500 rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  return (
-    <div className="fixed inset-0 bg-[#0A0A0A] z-50 flex items-center justify-center overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/3 left-1/4 w-48 h-48 bg-teal-500/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-1/3 right-1/4 w-64 h-64 bg-teal-500/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1.5s' }} />
-      </div>
-
-      <AnimatePresence mode="wait">
-        {showSuccess ? (
-          <motion.div
-            key="success"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 1.2, opacity: 0 }}
-            className="flex flex-col items-center"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', damping: 10, stiffness: 100 }}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center animate-pulse-glow"
-            >
-              <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-            </motion.div>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-base sm:text-lg font-semibold text-white mt-4"
-            >
-              Access Granted
-            </motion.p>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="pin"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-xs sm:max-w-sm flex flex-col items-center px-4"
-          >
-            {/* Logo */}
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', damping: 10, stiffness: 80, delay: 0.1 }}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-600/10 border border-teal-500/30 flex items-center justify-center mb-3 sm:mb-4 animate-pulse-glow"
-            >
-              <Lock className="w-7 h-7 sm:w-8 sm:h-8 text-teal-400" />
-            </motion.div>
-
-            {/* Title */}
-            <motion.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-xl sm:text-2xl font-bold text-white gradient-text"
-            >
-              Equilibria
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="text-zinc-400 text-xs sm:text-sm mt-1"
-            >
-              Masukkan PIN untuk melanjutkan
-            </motion.p>
-
-            {/* PIN Indicators */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="flex gap-2 sm:gap-3 mt-4 sm:mt-6 mb-4"
-            >
-              {[...Array(6)].map((_, i) => (
-                <motion.div
+  if (!isAuthenticated) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0A0A]">
+        <div className="text-center max-w-sm mx-auto px-4">
+          <Lock className="w-12 h-12 text-teal-400 mx-auto mb-8" />
+          <h2 className="text-white text-xl font-semibold mb-6">
+            {isSetup ? 'Setup PIN Baru' : 'Masukkan PIN'}
+          </h2>
+          <div className="flex gap-3 justify-center mb-8">
+            <div className="flex gap-2">
+              {(isSetup ? pin : '*'.repeat(pin.length)).split('').map((_, i) => (
+                <div
                   key={i}
-                  initial={{ scale: 0 }}
-                  animate={{
-                    scale: i < pin.length ? [0, 1.3, 1] : 1,
-                    backgroundColor: error
-                      ? '#f43f5e'
-                      : i < pin.length ? '#2dd4bf' : 'transparent'
-                  }}
-                  transition={{ duration: 0.2, delay: i * 0.05 }}
-                  className={`w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 ${
-                    error ? 'border-rose-500' : i < pin.length ? 'border-teal-400' : 'border-zinc-700'
-                  }`}
+                  className={`w-3 h-3 rounded-full ${error ? 'bg-rose-500' : 'bg-teal-500'}`}
                 />
               ))}
-            </motion.div>
-
-            {/* Error Message */}
-            <AnimatePresence>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-rose-500 text-xs mb-2 animate-shake"
-                >
-                  PIN salah, coba lagi
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            {biometricError && (
-              <p className="text-amber-500 text-xs mb-2">{biometricError}</p>
-            )}
-
-            {/* Numpad - Compact */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="grid grid-cols-3 gap-2 sm:gap-3 w-full max-w-[220px] sm:max-w-[260px]"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                <motion.button
-                  key={num}
-                  whileTap={{ scale: 0.85 }}
-                  onClick={() => handleKeyPress(num)}
-                  className="btn-keypad aspect-square rounded-full bg-[#141414] border border-[#262626] hover:border-teal-500/30 text-lg sm:text-xl font-medium text-white flex items-center justify-center transition-smooth shadow-lg shadow-black/20"
-                >
-                  {num}
-                </motion.button>
-              ))}
-              <div className="aspect-square" />
-              <motion.button
-                whileTap={{ scale: 0.85 }}
-                onClick={() => handleKeyPress(0)}
-                className="btn-keypad aspect-square rounded-full bg-[#141414] border border-[#262626] hover:border-teal-500/30 text-lg sm:text-xl font-medium text-white flex items-center justify-center transition-smooth shadow-lg shadow-black/20"
+            </div>
+          </div>
+          {error && (
+            <p className="text-rose-500 text-sm mb-4">PIN salah</p>
+          )}
+          <div className="grid grid-cols-3 gap-4 max-w-xs mx-auto">
+            {[1,2,3,4,5,6,7,8,9,'DEL',0,''].map((n, i) => (
+              <button
+                key={i}
+                onClick={() => n === 'DEL' ? handleDelete() : n !== '' && handleKeyPress(Number(n))}
+                className="p-4 rounded-xl bg-zinc-800 text-white text-2xl font-bold hover:bg-zinc-700 transition-colors disabled:opacity-50"
               >
-                0
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.85 }}
-                onClick={handleDelete}
-                className="btn-keypad aspect-square rounded-full bg-[#1a1a1a] border border-[#262626] hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 flex items-center justify-center transition-smooth"
-              >
-                <Delete className="w-5 h-5 sm:w-6 sm:h-6" />
-              </motion.button>
-            </motion.div>
+                {n === 'DEL' ? <Delete className="w-6 h-6 mx-auto" /> : n}
+              </button>
+            ))}
+          </div>
+          {isSetup && (
+            <p className="text-zinc-500 text-sm mt-4">Masukkan 6 digit PIN</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
-            {/* Biometric Button */}
-            {biometricAvailable && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.6 }}
-                className="mt-4 sm:mt-6"
-              >
-                {biometricEnabled ? (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleBiometricAuth}
-                    className="flex items-center gap-2 px-4 py-2 glass-light rounded-full hover:bg-teal-500/20 transition-smooth"
-                  >
-                    <Smartphone className="w-4 h-4 text-teal-400" />
-                    <span className="text-xs sm:text-sm font-medium text-teal-400">Biometric</span>
-                  </motion.button>
-                ) : (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleBiometricAuth}
-                    className="flex items-center gap-2 px-4 py-2 glass rounded-full hover:bg-zinc-800/50 transition-smooth"
-                  >
-                    <Fingerprint className="w-4 h-4 text-zinc-400" />
-                    <span className="text-xs sm:text-sm font-medium text-zinc-400">Aktifkan</span>
-                  </motion.button>
-                )}
-              </motion.div>
-            )}
+  if (showSuccess) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0A0A]">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="w-20 h-20 rounded-full gradient-to-br from-teal-400 to-teal-600"
+        />
+      </div>
+    );
+  }
 
-            {/* Footer */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.7 }}
-              className="mt-6 sm:mt-8 flex items-center gap-2 text-zinc-600"
-            >
-              <Shield className="w-3 h-3" />
-              <span className="text-[10px] sm:text-xs">Secure by Equilibria</span>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+  return <>{children}</>;
 }
