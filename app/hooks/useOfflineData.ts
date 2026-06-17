@@ -102,10 +102,15 @@ export function useOfflineData(options: UseOfflineDataOptions = {}): UseOfflineD
   }, [updatePendingCount]);
 
   useEffect(() => {
-    offlineDB.init().then(() => {
-      updatePendingCount();
-      updateOnlineStatus();
-    });
+    offlineDB.init()
+      .then(() => {
+        updatePendingCount();
+        updateOnlineStatus();
+      })
+      .catch(() => {
+        console.log('[OfflineData] IndexedDB not available, running in online-only mode');
+        setOnline(true);
+      });
 
     const handleOnline = () => {
       updateOnlineStatus();

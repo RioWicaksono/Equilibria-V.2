@@ -82,7 +82,8 @@ export default function OfflineIndicator({
         </motion.div>
       )}
 
-      {online && pendingCount === 0 && (
+      {/* Synced indicator hidden */}
+      {/* {online && pendingCount === 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -94,7 +95,7 @@ export default function OfflineIndicator({
             <span className="text-[10px] text-teal-400 font-medium">Synced</span>
           </div>
         </motion.div>
-      )}
+      )} */}
     </AnimatePresence>
   );
 }

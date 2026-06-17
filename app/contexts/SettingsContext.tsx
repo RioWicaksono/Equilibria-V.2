@@ -33,20 +33,31 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(true);
   const [ready, setReady] = useState(false);
 
-  // Load from API
+  // Load from API with timeout fallback
   useEffect(() => {
-    fetch('/api/settings').then(r => r.json()).then(data => {
-      if (data.success && data.settings) {
-        const s = data.settings;
-        setThemeState(s.theme || 'auto');
-        setCurrencyState(s.currency || 'IDR');
-        setLanguageState(s.language || 'id');
-        const dark = s.theme === 'auto' ? getSystemTheme() : s.theme === 'light';
-        setIsDark(dark);
-        applyTheme(dark);
-      }
+    const timeoutId = setTimeout(() => {
       setReady(true);
-    }).catch(() => setReady(true));
+    }, 5000);
+
+    fetch('/api/settings')
+      .then(r => r.json())
+      .then(data => {
+        clearTimeout(timeoutId);
+        if (data.success && data.settings) {
+          const s = data.settings;
+          setThemeState(s.theme || 'auto');
+          setCurrencyState(s.currency || 'IDR');
+          setLanguageState(s.language || 'id');
+          const dark = s.theme === 'auto' ? getSystemTheme() : s.theme === 'light';
+          setIsDark(dark);
+          applyTheme(dark);
+        }
+        setReady(true);
+      })
+      .catch(() => {
+        clearTimeout(timeoutId);
+        setReady(true);
+      });
   }, []);
 
   const setTheme = (t: 'dark' | 'light' | 'auto') => {
