@@ -67,11 +67,10 @@ export default function SystemStatus() {
             setSystemStatus('red');
           } else {
             const data = await res.json();
-            // Check if database and API are passing
+            // Only check database status for system health
             const dbPass = data.checks?.database?.status === 'pass';
-            const apiPass = data.checks?.api?.status === 'pass';
 
-            if (dbPass && apiPass) {
+            if (dbPass) {
               setSystemStatus(isUnstable ? 'yellow' : 'green');
             } else {
               setSystemStatus('red');
