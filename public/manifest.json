@@ -1,10 +1,11 @@
 {
-  "name": "Equilibria - Finance Tracker",
+  "name": "Equilibria - Aplikasi Keuangan",
   "short_name": "Equilibria",
   "description": "Aplikasi pencatatan keuangan pribadi dengan fitur lengkap untuk mengelola transaksi, tabungan, dan budget",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait-primary",
   "background_color": "#0A0A0A",
   "theme_color": "#0A0A0A",
@@ -15,21 +16,21 @@
   "icons": [
     {
       "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/icon.svg",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [],
@@ -54,11 +55,39 @@
       "description": "Lihat statistik keuangan",
       "url": "/statistics",
       "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Budget",
+      "short_name": "Budget",
+      "description": "Kelola budget",
+      "url": "/budgets",
+      "icons": [{ "src": "/icon.svg", "sizes": "96x96" }]
     }
   ],
   "related_applications": [],
   "handle_links": "preferred",
   "launch_handler": {
     "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "file_handlers": [
+    {
+      "action": "/import",
+      "accept": {
+        "application/json": [".json"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
   }
 }

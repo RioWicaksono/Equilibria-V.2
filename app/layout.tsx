@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import Sidebar from './components/Sidebar';
 import PWARegistration from './components/PWARegistration';
+import NotificationToast from './components/NotificationToast';
+import OfflineIndicator from './components/OfflineIndicator';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { ErrorBoundary } from './components/shared/ErrorBoundary';
 import { QueryProvider } from './providers/QueryProvider';
@@ -56,6 +58,8 @@ export default function RootLayout({
         <ErrorBoundary>
           <QueryProvider>
             <PWARegistration />
+            <NotificationToast enabled={true} />
+            <OfflineIndicator position="top" showPendingCount={true} />
             <SettingsProvider>
               <div className="flex min-h-screen">
                   {/* Desktop Sidebar - Hidden on mobile and tablet (< 1024px) */}
