@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 interface PrismaInstance {
   client: PrismaClient | null;
@@ -12,7 +12,9 @@ const instance: PrismaInstance = {
   source: null,
 };
 
-const PRISMA_LOG_LEVEL = process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'];
+const PRISMA_LOG_LEVEL: Prisma.LogLevel[] = process.env.NODE_ENV === 'development'
+  ? ['error', 'warn']
+  : ['error'];
 
 async function createPrismaClient(datasourceUrl: string): Promise<PrismaClient> {
   return new PrismaClient({
