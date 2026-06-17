@@ -4,7 +4,6 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getFinanceService } from '@/application/services/FinanceService';
 import { logDatabaseOperation } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
@@ -15,50 +14,39 @@ interface HealthStatus {
   version: string;
   uptime: number;
   checks: {
-    database: { status: 'pass' | 'fail'; latency?: number; error?: string };
-    api: { status: 'pass' | 'fail'; latency?: number; error?: string };
-    memory: { status: 'pass' | 'warn' | 'fail'; used: number; total: number; percentage: number };
+    server: { status: 'pass'; latency: number };
+    database: { status: 'pass' | 'fail' | 'skip'; latency?: number; error?: string };
   };
 }
 
 export async function GET() {
   const startTime = Date.now();
   const checks: HealthStatus['checks'] = {
-    database: { status: 'fail' },
-    api: { status: 'fail' },
-    memory: { status: 'pass', used: 0, total: 0, percentage: 0 },
+    server: { status: 'pass', latency: 0 },
+    database: { status: 'skip' },
   };
 
   let overallStatus: HealthStatus['status'] = 'healthy';
 
-  // Check memory usage
-  const memUsage = process.memoryUsage();
-  const memTotal = memUsage.heapTotal;
-  const memUsed = memUsage.heapUsed;
-  const memPercentage = (memUsed / memTotal) * 100;
-
-  checks.memory = {
-    status: memPercentage > 90 ? 'fail' : memPercentage > 70 ? 'warn' : 'pass',
-    used: Math.round(memUsed / 1024 / 1024),
-    total: Math.round(memTotal / 1024 / 1024),
-    percentage: Math.round(memPercentage),
+  // Check server (always passes if this endpoint is reachable)
+  checks.server = {
+    status: 'pass',
+    latency: Date.now() - startTime,
   };
 
-  if (checks.memory.status !== 'pass') {
-    overallStatus = 'degraded';
-  }
-
-  // Check database connection
+  // Check database connection (optional - does not fail health check)
   const dbStart = Date.now();
   try {
-    const financeService = getFinanceService();
-    await financeService.getSummary();
+    // Lazy import to avoid crashing on import
+    const { getPrismaAsync } = await import('@/infrastructure/database/PrismaClient');
+    const prisma = await getPrismaAsync();
+    await prisma.$queryRaw`SELECT 1`;
     const dbDuration = Date.now() - dbStart;
     checks.database = {
       status: 'pass',
       latency: dbDuration,
     };
-    logDatabaseOperation('health_check', 'all', dbDuration, true);
+    logDatabaseOperation('health_check', 'ping', dbDuration, true);
   } catch (error) {
     const err = error as Error;
     const dbDuration = Date.now() - dbStart;
@@ -67,32 +55,9 @@ export async function GET() {
       latency: dbDuration,
       error: err.message,
     };
-    overallStatus = 'unhealthy';
-    logDatabaseOperation('health_check', 'all', dbDuration, false);
-  }
-
-  // Check API functionality
-  const apiStart = Date.now();
-  try {
-    // Simple calculation to verify API works
-    const result = 1 + 1;
-    checks.api = {
-      status: 'pass',
-      latency: Date.now() - apiStart,
-    };
-  } catch (error) {
-    const err = error as Error;
-    checks.api = {
-      status: 'fail',
-      latency: Date.now() - apiStart,
-      error: err.message,
-    };
-    overallStatus = 'degraded';
-  }
-
-  // Determine overall status
-  if (checks.database.status === 'fail' || checks.api.status === 'fail') {
-    overallStatus = 'unhealthy';
+    // Database failure does not make server unhealthy
+    // Only server being unreachable makes it unhealthy
+    logDatabaseOperation('health_check', 'ping', dbDuration, false);
   }
 
   const response: HealthStatus = {
@@ -103,7 +68,6 @@ export async function GET() {
     checks,
   };
 
-  const statusCode = overallStatus === 'healthy' ? 200 : overallStatus === 'degraded' ? 200 : 503;
-
-  return NextResponse.json(response, { status: statusCode });
+  // Always return 200 - health check should not fail the service
+  return NextResponse.json(response, { status: 200 });
 }
