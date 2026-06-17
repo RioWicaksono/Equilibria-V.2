@@ -40,7 +40,8 @@ export default function NotificationToast({
   const { notifications, isConnected } = useSSE({
     enabled,
     onMessage: (notification) => {
-      if (notification.type === 'HEARTBEAT') return;
+      // Only show real notifications, not system/heartbeat messages
+      if (notification.type === 'HEARTBEAT' || notification.type === 'SYSTEM') return;
 
       const key = `${notification.type}-${notification.timestamp}`;
       if (dismissed.has(key)) return;
