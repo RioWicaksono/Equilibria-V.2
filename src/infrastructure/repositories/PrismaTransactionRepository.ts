@@ -1,22 +1,7 @@
 import { Transaction } from '../../domain/entities/Transaction';
 import { ITransactionRepository, TransactionFilter } from '../../domain/repositories/ITransactionRepository';
 import { TransactionType } from '../../domain/value-objects/TransactionType';
-import { PrismaClient } from '@prisma/client';
-
-let prismaClientInstance: PrismaClient | undefined;
-
-const getPrisma = (): PrismaClient => {
-  if (!prismaClientInstance) {
-    const globalForPrisma = globalThis as unknown as {
-      prisma: PrismaClient | undefined;
-    };
-    prismaClientInstance = globalForPrisma.prisma ?? new PrismaClient({
-      datasourceUrl: process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL,
-    });
-    if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClientInstance;
-  }
-  return prismaClientInstance;
-};
+import { getPrismaAsync } from '@/infrastructure/database/PrismaClient';
 
 interface PrismaTransactionResult {
   id: string;
@@ -44,10 +29,11 @@ function mapPrismaTransaction(t: PrismaTransactionResult): Transaction {
 
 export class PrismaTransactionRepository implements ITransactionRepository {
   async save(transaction: Transaction): Promise<void> {
+    const prisma = await getPrismaAsync();
     const dateValue = new Date(transaction.date);
     const createdAtValue = transaction.createdAt ? new Date(transaction.createdAt) : new Date();
 
-    await getPrisma().transaction.upsert({
+    await prisma.transaction.upsert({
       where: { id: transaction.id },
       update: {
         amount: transaction.amount,
@@ -69,14 +55,16 @@ export class PrismaTransactionRepository implements ITransactionRepository {
   }
 
   async findAll(): Promise<Transaction[]> {
-    const data = await getPrisma().transaction.findMany({
+    const prisma = await getPrismaAsync();
+    const data = await prisma.transaction.findMany({
       orderBy: { date: 'desc' },
     });
     return data.map((item: PrismaTransactionResult) => mapPrismaTransaction(item));
   }
 
   async findById(id: string): Promise<Transaction | null> {
-    const data = await getPrisma().transaction.findUnique({
+    const prisma = await getPrismaAsync();
+    const data = await prisma.transaction.findUnique({
       where: { id },
     });
     if (!data) return null;
@@ -84,6 +72,7 @@ export class PrismaTransactionRepository implements ITransactionRepository {
   }
 
   async findByFilter(filter: TransactionFilter): Promise<Transaction[]> {
+    const prisma = await getPrismaAsync();
     const where: Record<string, unknown> = {};
     if (filter.type) where.type = filter.type;
     if (filter.category) where.category = filter.category;
@@ -93,7 +82,7 @@ export class PrismaTransactionRepository implements ITransactionRepository {
       if (filter.endDate) (where.date as Record<string, Date>).lte = filter.endDate;
     }
 
-    const data = await getPrisma().transaction.findMany({
+    const data = await prisma.transaction.findMany({
       where,
       orderBy: { date: 'desc' },
     });
@@ -101,7 +90,8 @@ export class PrismaTransactionRepository implements ITransactionRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await getPrisma().transaction.delete({
+    const prisma = await getPrismaAsync();
+    await prisma.transaction.delete({
       where: { id },
     });
   }

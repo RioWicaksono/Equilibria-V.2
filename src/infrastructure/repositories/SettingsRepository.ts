@@ -1,4 +1,4 @@
-import prisma from '../database/PrismaClient';
+import { getPrismaAsync } from '@/infrastructure/database/PrismaClient';
 
 export interface Settings {
   theme: 'dark' | 'light' | 'auto';
@@ -9,6 +9,7 @@ export interface Settings {
 }
 
 export async function getSettings(): Promise<Settings> {
+  const prisma = await getPrismaAsync();
   const settings = await prisma.userSettings.findFirst();
   if (!settings) return { theme: 'dark', language: 'id', currency: 'IDR', autoLockTimeout: 5, telegramToken: '' };
   return {
@@ -21,6 +22,7 @@ export async function getSettings(): Promise<Settings> {
 }
 
 export async function updateSettings(data: Partial<Settings>): Promise<Settings> {
+  const prisma = await getPrismaAsync();
   const updated = await prisma.userSettings.upsert({
     where: { id: 'default' },
     update: data,

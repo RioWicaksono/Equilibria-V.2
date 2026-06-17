@@ -1,18 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { Wallet } from '@/domain/entities/Wallet';
-
-let prismaClientInstance: PrismaClient | undefined;
-
-const getPrisma = (): PrismaClient => {
-  if (!prismaClientInstance) {
-    const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-    prismaClientInstance = globalForPrisma.prisma ?? new PrismaClient({
-      datasourceUrl: process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL,
-    });
-    if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClientInstance;
-  }
-  return prismaClientInstance;
-};
+import { getPrismaAsync } from '@/infrastructure/database/PrismaClient';
 
 export interface IWalletRepository {
   save(wallet: Wallet): Promise<void>;
@@ -24,7 +11,8 @@ export interface IWalletRepository {
 
 export class PrismaWalletRepository implements IWalletRepository {
   async save(wallet: Wallet): Promise<void> {
-    await getPrisma().wallet.upsert({
+    const prisma = await getPrismaAsync();
+    await prisma.wallet.upsert({
       where: { id: wallet.id },
       update: {
         name: wallet.name,
@@ -40,7 +28,8 @@ export class PrismaWalletRepository implements IWalletRepository {
   }
 
   async findAll(): Promise<Wallet[]> {
-    const data = await getPrisma().wallet.findMany({
+    const prisma = await getPrismaAsync();
+    const data = await prisma.wallet.findMany({
       orderBy: { name: 'asc' },
     });
     return data.map(w => ({
@@ -52,7 +41,8 @@ export class PrismaWalletRepository implements IWalletRepository {
   }
 
   async findById(id: string): Promise<Wallet | null> {
-    const w = await getPrisma().wallet.findUnique({ where: { id } });
+    const prisma = await getPrismaAsync();
+    const w = await prisma.wallet.findUnique({ where: { id } });
     if (!w) return null;
     return {
       id: w.id,
@@ -63,13 +53,15 @@ export class PrismaWalletRepository implements IWalletRepository {
   }
 
   async updateBalance(id: string, balance: number): Promise<void> {
-    await getPrisma().wallet.update({
+    const prisma = await getPrismaAsync();
+    await prisma.wallet.update({
       where: { id },
       data: { balance },
     });
   }
 
   async delete(id: string): Promise<void> {
-    await getPrisma().wallet.delete({ where: { id } });
+    const prisma = await getPrismaAsync();
+    await prisma.wallet.delete({ where: { id } });
   }
 }

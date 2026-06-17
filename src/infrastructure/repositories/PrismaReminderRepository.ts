@@ -1,4 +1,4 @@
-import prisma from '../database/PrismaClient';
+import { getPrismaAsync } from '@/infrastructure/database/PrismaClient';
 import { Prisma } from '@prisma/client';
 
 export type Reminder = Prisma.ReminderGetPayload<object>;
@@ -7,12 +7,14 @@ export type ReminderUpdateInput = Prisma.ReminderUpdateInput;
 
 export class PrismaReminderRepository {
   async findAll(): Promise<Reminder[]> {
+    const prisma = await getPrismaAsync();
     return prisma.reminder.findMany({
       orderBy: { date: 'asc' }
     });
   }
 
   async findByStatus(status: string): Promise<Reminder[]> {
+    const prisma = await getPrismaAsync();
     return prisma.reminder.findMany({
       where: { status },
       orderBy: { date: 'asc' }
@@ -20,6 +22,7 @@ export class PrismaReminderRepository {
   }
 
   async findByPriority(priority: string): Promise<Reminder[]> {
+    const prisma = await getPrismaAsync();
     return prisma.reminder.findMany({
       where: { priority },
       orderBy: { date: 'asc' }
@@ -27,10 +30,12 @@ export class PrismaReminderRepository {
   }
 
   async save(data: ReminderCreateInput): Promise<Reminder> {
+    const prisma = await getPrismaAsync();
     return prisma.reminder.create({ data });
   }
 
   async update(id: string, data: ReminderUpdateInput): Promise<Reminder> {
+    const prisma = await getPrismaAsync();
     return prisma.reminder.update({
       where: { id },
       data
@@ -38,6 +43,7 @@ export class PrismaReminderRepository {
   }
 
   async delete(id: string): Promise<void> {
+    const prisma = await getPrismaAsync();
     await prisma.reminder.delete({
       where: { id }
     });

@@ -1,18 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { Debt } from '@/domain/entities/Debt';
-
-let prismaClientInstance: PrismaClient | undefined;
-
-const getPrisma = (): PrismaClient => {
-  if (!prismaClientInstance) {
-    const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-    prismaClientInstance = globalForPrisma.prisma ?? new PrismaClient({
-      datasourceUrl: process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL,
-    });
-    if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClientInstance;
-  }
-  return prismaClientInstance;
-};
+import { getPrismaAsync } from '@/infrastructure/database/PrismaClient';
 
 export interface IDebtRepository {
   save(debt: Debt): Promise<void>;
@@ -25,7 +12,8 @@ export interface IDebtRepository {
 
 export class PrismaDebtRepository implements IDebtRepository {
   async save(debt: Debt): Promise<void> {
-    await getPrisma().debt.upsert({
+    const prisma = await getPrismaAsync();
+    await prisma.debt.upsert({
       where: { id: debt.id },
       update: {
         name: debt.name,
@@ -52,7 +40,8 @@ export class PrismaDebtRepository implements IDebtRepository {
   }
 
   async findAll(): Promise<Debt[]> {
-    const data = await getPrisma().debt.findMany({
+    const prisma = await getPrismaAsync();
+    const data = await prisma.debt.findMany({
       orderBy: { createdAt: 'desc' },
     });
     return data.map(d => ({
@@ -70,7 +59,8 @@ export class PrismaDebtRepository implements IDebtRepository {
   }
 
   async findById(id: string): Promise<Debt | null> {
-    const d = await getPrisma().debt.findUnique({ where: { id } });
+    const prisma = await getPrismaAsync();
+    const d = await prisma.debt.findUnique({ where: { id } });
     if (!d) return null;
     return {
       id: d.id,
@@ -87,20 +77,23 @@ export class PrismaDebtRepository implements IDebtRepository {
   }
 
   async updatePaidAmount(id: string, paidAmount: number): Promise<void> {
-    await getPrisma().debt.update({
+    const prisma = await getPrismaAsync();
+    await prisma.debt.update({
       where: { id },
       data: { paidAmount, updatedAt: new Date() },
     });
   }
 
   async markAsPaid(id: string): Promise<void> {
-    await getPrisma().debt.update({
+    const prisma = await getPrismaAsync();
+    await prisma.debt.update({
       where: { id },
       data: { status: 'PAID', updatedAt: new Date() },
     });
   }
 
   async delete(id: string): Promise<void> {
-    await getPrisma().debt.delete({ where: { id } });
+    const prisma = await getPrismaAsync();
+    await prisma.debt.delete({ where: { id } });
   }
 }

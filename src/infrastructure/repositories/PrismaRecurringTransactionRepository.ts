@@ -1,18 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { RecurringTransaction } from '@/domain/entities/RecurringTransaction';
-
-let prismaClientInstance: PrismaClient | undefined;
-
-const getPrisma = (): PrismaClient => {
-  if (!prismaClientInstance) {
-    const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
-    prismaClientInstance = globalForPrisma.prisma ?? new PrismaClient({
-      datasourceUrl: process.env.DATABASE_URL || process.env.RAILWAY_DATABASE_URL,
-    });
-    if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClientInstance;
-  }
-  return prismaClientInstance;
-};
+import { getPrismaAsync } from '@/infrastructure/database/PrismaClient';
 
 export interface IRecurringTransactionRepository {
   save(recurring: RecurringTransaction): Promise<void>;
@@ -25,7 +12,8 @@ export interface IRecurringTransactionRepository {
 
 export class PrismaRecurringTransactionRepository implements IRecurringTransactionRepository {
   async save(recurring: RecurringTransaction): Promise<void> {
-    await getPrisma().recurringTransaction.upsert({
+    const prisma = await getPrismaAsync();
+    await prisma.recurringTransaction.upsert({
       where: { id: recurring.id },
       update: {
         amount: recurring.amount,
@@ -49,7 +37,8 @@ export class PrismaRecurringTransactionRepository implements IRecurringTransacti
   }
 
   async findAll(): Promise<RecurringTransaction[]> {
-    const data = await getPrisma().recurringTransaction.findMany({
+    const prisma = await getPrismaAsync();
+    const data = await prisma.recurringTransaction.findMany({
       orderBy: { nextDate: 'asc' },
     });
     return data.map(r => ({
@@ -65,7 +54,8 @@ export class PrismaRecurringTransactionRepository implements IRecurringTransacti
   }
 
   async findById(id: string): Promise<RecurringTransaction | null> {
-    const r = await getPrisma().recurringTransaction.findUnique({ where: { id } });
+    const prisma = await getPrismaAsync();
+    const r = await prisma.recurringTransaction.findUnique({ where: { id } });
     if (!r) return null;
     return {
       id: r.id,
@@ -80,8 +70,9 @@ export class PrismaRecurringTransactionRepository implements IRecurringTransacti
   }
 
   async findDueRecurring(): Promise<RecurringTransaction[]> {
+    const prisma = await getPrismaAsync();
     const now = new Date();
-    const data = await getPrisma().recurringTransaction.findMany({
+    const data = await prisma.recurringTransaction.findMany({
       where: { nextDate: { lte: now } },
       orderBy: { nextDate: 'asc' },
     });
@@ -98,13 +89,15 @@ export class PrismaRecurringTransactionRepository implements IRecurringTransacti
   }
 
   async updateNextDate(id: string, nextDate: Date): Promise<void> {
-    await getPrisma().recurringTransaction.update({
+    const prisma = await getPrismaAsync();
+    await prisma.recurringTransaction.update({
       where: { id },
       data: { nextDate },
     });
   }
 
   async delete(id: string): Promise<void> {
-    await getPrisma().recurringTransaction.delete({ where: { id } });
+    const prisma = await getPrismaAsync();
+    await prisma.recurringTransaction.delete({ where: { id } });
   }
 }
