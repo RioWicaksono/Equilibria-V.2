@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaCustomCategoryRepository } from '@/infrastructure/repositories/PrismaCustomCategoryRepository';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
 
 const categoryRepo = new PrismaCustomCategoryRepository();
 
@@ -12,10 +14,10 @@ export async function GET(req: Request) {
       ? await categoryRepo.findByType(type)
       : await categoryRepo.findAll();
 
-    return NextResponse.json({ categories });
+    return ApiResponse.ok({ categories });
   } catch (error) {
-    console.error('[GET /api/categories]', error);
-    return NextResponse.json({ error: 'Failed to fetch categories' }, { status: 500 });
+    logger.error('[GET /api/categories]', error);
+    return ApiResponse.internalError('Failed to fetch categories');
   }
 }
 
@@ -24,7 +26,7 @@ export async function POST(req: Request) {
     const { name, icon, color, type } = await req.json();
 
     if (!name || !type) {
-      return NextResponse.json({ error: 'Name and type are required' }, { status: 400 });
+      return ApiResponse.badRequest('Name and type are required');
     }
 
     const category = await categoryRepo.save({
@@ -34,10 +36,10 @@ export async function POST(req: Request) {
       type,
     });
 
-    return NextResponse.json({ category }, { status: 201 });
+    return ApiResponse.created({ category });
   } catch (error) {
-    console.error('[POST /api/categories]', error);
-    return NextResponse.json({ error: 'Failed to create category' }, { status: 500 });
+    logger.error('[POST /api/categories]', error);
+    return ApiResponse.internalError('Failed to create category');
   }
 }
 
@@ -47,13 +49,13 @@ export async function DELETE(req: Request) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+      return ApiResponse.badRequest('ID is required');
     }
 
     await categoryRepo.delete(id);
-    return NextResponse.json({ success: true });
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('[DELETE /api/categories]', error);
-    return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });
+    logger.error('[DELETE /api/categories]', error);
+    return ApiResponse.internalError('Failed to delete category');
   }
 }

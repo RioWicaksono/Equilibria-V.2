@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaReminderRepository } from '@/infrastructure/repositories/PrismaReminderRepository';
+import { ApiResponse } from '@/lib/api-helpers';
+import { logger } from '@/lib/logger';
 
 const reminderRepo = new PrismaReminderRepository();
 
@@ -18,10 +20,10 @@ export async function GET(req: Request) {
       reminders = await reminderRepo.findAll();
     }
 
-    return NextResponse.json({ reminders });
+    return ApiResponse.ok({ reminders });
   } catch (error) {
-    console.error('Failed to fetch reminders:', error);
-    return NextResponse.json({ error: 'Failed to fetch reminders' }, { status: 500 });
+    logger.error('[GET /api/reminders]', error);
+    return ApiResponse.internalError('Failed to fetch reminders');
   }
 }
 
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
     const { title, date, amount, status, priority, frequency, urgent } = body;
 
     if (!title || !date) {
-      return NextResponse.json({ error: 'Title and date are required' }, { status: 400 });
+      return ApiResponse.badRequest('Title and date are required');
     }
 
     const reminder = await reminderRepo.save({
@@ -44,10 +46,10 @@ export async function POST(req: Request) {
       urgent: urgent || false
     });
 
-    return NextResponse.json({ reminder }, { status: 201 });
+    return ApiResponse.created({ reminder });
   } catch (error) {
-    console.error('Failed to create reminder:', error);
-    return NextResponse.json({ error: 'Failed to create reminder' }, { status: 500 });
+    logger.error('[POST /api/reminders]', error);
+    return ApiResponse.internalError('Failed to create reminder');
   }
 }
 
@@ -57,7 +59,7 @@ export async function PATCH(req: Request) {
     const { id, ...data } = body;
 
     if (!id) {
-      return NextResponse.json({ error: 'Reminder ID is required' }, { status: 400 });
+      return ApiResponse.badRequest('Reminder ID is required');
     }
 
     if (data.date) {
@@ -68,10 +70,10 @@ export async function PATCH(req: Request) {
     }
 
     const reminder = await reminderRepo.update(id, data);
-    return NextResponse.json({ reminder });
+    return ApiResponse.ok({ reminder });
   } catch (error) {
-    console.error('Failed to update reminder:', error);
-    return NextResponse.json({ error: 'Failed to update reminder' }, { status: 500 });
+    logger.error('[PATCH /api/reminders]', error);
+    return ApiResponse.internalError('Failed to update reminder');
   }
 }
 
@@ -81,13 +83,13 @@ export async function DELETE(req: Request) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json({ error: 'Reminder ID is required' }, { status: 400 });
+      return ApiResponse.badRequest('Reminder ID is required');
     }
 
     await reminderRepo.delete(id);
-    return NextResponse.json({ success: true });
+    return ApiResponse.noContent();
   } catch (error) {
-    console.error('Failed to delete reminder:', error);
-    return NextResponse.json({ error: 'Failed to delete reminder' }, { status: 500 });
+    logger.error('[DELETE /api/reminders]', error);
+    return ApiResponse.internalError('Failed to delete reminder');
   }
 }
