@@ -76,7 +76,7 @@ export default function RootLayout({
                     <MobileHeader />
 
                     {/* Content Container */}
-                    <div className="w-full max-w-[1400px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
+                    <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-1">
                       {children}
                     </div>
                   </main>

@@ -25,7 +25,6 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
       const dates = allReminders.map(r => new Date(r.date.split('T')[0]));
       setReminderDates(dates);
 
-      // Group reminders by date string
       const grouped: Record<string, Reminder[]> = {};
       allReminders.forEach(r => {
         const dateKey = r.date.split('T')[0];
@@ -59,26 +58,24 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
 
   return (
     <>
-      <div className="w-full flex justify-center text-white text-xs sm:text-sm relative">
+      <div className="w-full flex justify-center text-white relative">
         <style>{`
           .rdp {
-            --rdp-cell-size: 32px;
+            --rdp-cell-size: 20px;
             --rdp-accent-color: #2dd4bf;
             --rdp-background-color: #262626;
             --rdp-accent-color-dark: #14b8a6;
             --rdp-background-color-dark: #171717;
-            --rdp-outline: 2px solid var(--rdp-accent-color);
-            --rdp-outline-selected: 3px solid var(--rdp-accent-color);
             margin: 0;
-            font-size: 11px;
+            font-size: 8px;
           }
           .rdp-head_cell {
-            font-size: 9px;
- padding: 2px;
+            font-size: 6px;
+            padding: 0;
           }
           .rdp-day {
-            font-size: 11px;
-            padding: 2px;
+            font-size: 8px;
+            padding: 0;
           }
           .rdp-day_selected, .rdp-day_selected:focus-visible, .rdp-day_selected:hover {
             color: black;
@@ -93,17 +90,26 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
           .day-with-reminder::after {
             content: '';
             position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 5px;
-            height: 5px;
+            top: 0;
+            right: 0;
+            width: 3px;
+            height: 3px;
             background-color: #22c55e;
             border-radius: 50%;
             border: 1px solid #0a0a0a;
           }
-          .day-with-reminder:hover::after {
-            transform: scale(1.3);
-            background-color: #4ade80;
+          .rdp-nav {
+            width: 16px;
+            height: 16px;
+          }
+          .rdp-nav button {
+            padding: 0;
+          }
+          .rdp-caption_label {
+            font-size: 9px;
+          }
+          .rdp-months {
+            gap: 0;
           }
         `}</style>
         <DayPicker
@@ -123,10 +129,10 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
             hasTransaction: {
               fontWeight: 'bold',
               textDecoration: 'underline',
-              textDecorationColor: '#2dd4bf',
-              textUnderlineOffset: '4px'
+              textDecorationColor: '#2dd4bf'
             }
           }}
+          showOutsideDays
         />
       </div>
 
@@ -147,51 +153,43 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
               className="bg-[#141414] border border-[#262626] rounded-xl shadow-2xl w-full max-w-md overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-5 border-b border-[#262626] bg-[#1a1a1a]">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-teal-400" />
-                  <div>
-                    <h3 className="font-bold text-white">Detail Reminder</h3>
-                    <p className="text-xs text-zinc-400">
-                      {selectedDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                    </p>
-                  </div>
+              <div className="flex items-center justify-between p-3 border-b border-[#262626] bg-[#1a1a1a]">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-teal-400" />
+                  <span className="text-xs font-bold text-white">
+                    {selectedDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                  </span>
                 </div>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                  className="p-1 rounded text-zinc-400 hover:text-white"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="p-5 space-y-3 max-h-80 overflow-y-auto">
+              <div className="p-3 space-y-2 max-h-48 overflow-y-auto">
                 {(() => {
                   const dateKey = selectedDate.toISOString().split('T')[0];
                   const dayReminders = remindersByDate[dateKey] || [];
                   return dayReminders.map((reminder) => (
                     <div
                       key={reminder.id}
-                      className={`p-4 rounded-xl border ${reminder.status === 'COMPLETED' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-[#1A1A1A] border-[#262626]'}`}
+                      className={`p-2 rounded border ${reminder.status === 'COMPLETED' ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-[#1A1A1A] border-[#262626]'}`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            {reminder.status === 'COMPLETED' ? (
-                              <CheckCircle className="w-4 h-4 text-emerald-400" />
-                            ) : (
-                              <AlertCircle className={`w-4 h-4 ${reminder.priority === 'HIGH' ? 'text-rose-400' : 'text-amber-400'}`} />
-                            )}
-                            <h4 className={`font-semibold text-sm ${reminder.status === 'COMPLETED' ? 'text-emerald-400 line-through' : 'text-white'}`}>
-                              {reminder.title}
-                            </h4>
-                          </div>
-                          <p className="text-xs text-zinc-400 ml-6">
-                            Rp {(parseFloat(reminder.amount) || 0).toLocaleString('id-ID')}
-                          </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          {reminder.status === 'COMPLETED' ? (
+                            <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <AlertCircle className={`w-3 h-3 ${reminder.priority === 'HIGH' ? 'text-rose-400' : 'text-amber-400'}`} />
+                          )}
+                          <span className={`text-xs ${reminder.status === 'COMPLETED' ? 'text-emerald-400 line-through' : 'text-white'}`}>
+                            {reminder.title}
+                          </span>
                         </div>
-                        <span className={`text-[10px] font-bold px-2 py-1 rounded border ${priorityColors[reminder.priority]} uppercase`}>
-                          {reminder.priority === 'HIGH' ? 'Penting' : reminder.priority === 'MEDIUM' ? 'Sedang' : 'Rendah'}
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded border ${priorityColors[reminder.priority]}`}>
+                          {reminder.priority}
                         </span>
                       </div>
                     </div>

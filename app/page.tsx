@@ -1,6 +1,5 @@
 import { getFinanceService } from '@/application/services/FinanceService';
 import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
-import SystemStatus from './components/SystemStatus';
 import FormatCurrency from './components/FormatCurrency';
 import { headers } from 'next/headers';
 import DashboardCalendar from './components/DashboardCalendar';
@@ -30,80 +29,53 @@ export default async function DashboardPage() {
   const incomePercent = summary.totalIncome > 0 ? Math.round((summary.totalExpense / summary.totalIncome) * 100) : 0;
 
   return (
-    <div className="space-y-6 relative w-full min-w-0">
+    <div className="relative w-full min-w-0 h-full">
       <TransactionModal isFAB={true} />
 
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-slide-up">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-8 h-8 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-xs">
-              E
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">Dashboard</h1>
-          </div>
-          <p className="text-xs sm:text-sm text-zinc-500 ml-10">Ringkasan keuangan Anda hari ini</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <SystemStatus />
-        </div>
-      </header>
+      <div className="flex items-center gap-2 mb-1">
+        <span className="w-5 h-5 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded text-[9px]">
+          E
+        </span>
+        <h1 className="text-sm font-bold text-white">Dashboard</h1>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-        <div className="card group hover:border-teal-500/30">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2 bg-teal-500/10 rounded-lg group-hover:bg-teal-500/20 transition-colors">
-              <Wallet className="w-5 h-5 text-teal-400" />
-            </div>
-            <span className="badge badge-success">Total</span>
+      <div className="grid grid-cols-3 gap-1">
+        <div className="card p-1.5">
+          <div className="flex items-center gap-1 mb-0.5">
+            <Wallet className="w-2.5 h-2.5 text-teal-400" />
+            <span className="text-[7px] text-zinc-500 uppercase">Saldo</span>
           </div>
-          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Saldo</p>
-          <p className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          <p className="text-sm font-bold text-white truncate">
             <FormatCurrency amount={summary.balance} />
           </p>
         </div>
 
-        <div className="card group hover:border-teal-500/30">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2 bg-teal-500/10 rounded-lg group-hover:bg-teal-500/20 transition-colors">
-              <TrendingUp className="w-5 h-5 text-teal-400" />
-            </div>
-            <span className="badge badge-success">+{incomePercent}%</span>
+        <div className="card p-1.5">
+          <div className="flex items-center gap-1 mb-0.5">
+            <TrendingUp className="w-2.5 h-2.5 text-teal-400" />
+            <span className="text-[7px] text-zinc-500 uppercase">Masuk</span>
           </div>
-          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Pemasukan</p>
-          <p className="text-2xl sm:text-3xl font-bold text-teal-400 tracking-tight">
+          <p className="text-sm font-bold text-teal-400 truncate">
             <FormatCurrency amount={summary.totalIncome} />
           </p>
         </div>
 
-        <div className="card group hover:border-rose-500/30">
-          <div className="flex items-start justify-between mb-3">
-            <div className="p-2 bg-rose-500/10 rounded-lg group-hover:bg-rose-500/20 transition-colors">
-              <TrendingDown className="w-5 h-5 text-rose-400" />
-            </div>
-            <span className="badge badge-danger">{incomePercent}%</span>
+        <div className="card p-1.5">
+          <div className="flex items-center gap-1 mb-0.5">
+            <TrendingDown className="w-2.5 h-2.5 text-rose-400" />
+            <span className="text-[7px] text-zinc-500 uppercase">Keluar</span>
           </div>
-          <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1">Pengeluaran</p>
-          <p className="text-2xl sm:text-3xl font-bold text-rose-400 tracking-tight">
+          <p className="text-sm font-bold text-rose-400 truncate">
             <FormatCurrency amount={summary.totalExpense} />
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+      <div className="grid grid-cols-5 gap-1 mt-1">
         <div className="xl:col-span-2">
-          <div className="card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <svg className="w-4 h-4 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Kalender
-              </h3>
-              <span className="text-xs text-zinc-500">{new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</span>
-            </div>
-            <div className="w-full flex justify-center">
-              <DashboardCalendar transactions={transactions} />
-            </div>
+          <div className="card p-1">
+            <h3 className="text-[9px] font-semibold text-white mb-0.5">📅 Kalender</h3>
+            <DashboardCalendar transactions={transactions} />
           </div>
         </div>
 

@@ -17,15 +17,15 @@ const variantStyles: Record<CardVariant, string> = {
 
 const paddingStyles: Record<'none' | 'sm' | 'md' | 'lg', string> = {
   none: '',
-  sm: 'p-3',
-  md: 'p-4',
-  lg: 'p-6',
+  sm: 'p-1.5',
+  md: 'p-2',
+  lg: 'p-3',
 };
 
 export function Card({
   className,
   variant = 'default',
-  padding = 'md',
+  padding = 'sm',
   hoverable = false,
   children,
   ...props
