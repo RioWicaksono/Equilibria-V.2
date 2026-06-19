@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, ArrowLeftRight, ChevronLeft, ChevronRight, Wallet, CreditCard, Target, RefreshCw, Bell, BarChart3, LayoutGrid, Settings, Upload, Share2 } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, ChevronLeft, ChevronRight, Wallet, CreditCard, Target, RefreshCw, Bell, BarChart3, LayoutGrid, Settings, Upload, Share2, DollarSign, Repeat, TrendingUp } from 'lucide-react';
 
 export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -15,10 +15,11 @@ export default function Sidebar() {
     { href: '/summary', icon: LayoutGrid, label: 'Summary' },
     { href: '/statistics', icon: BarChart3, label: 'Statistik' },
     { href: '/wallets', icon: Wallet, label: 'Dompet' },
+    { href: '/networth', icon: TrendingUp, label: 'Net Worth' },
     { href: '/budgets', icon: CreditCard, label: 'Budget' },
     { href: '/goals', icon: Target, label: 'Target' },
-    { href: '/debts', icon: RefreshCw, label: 'Hutang' },
-    { href: '/recurring', icon: RefreshCw, label: 'Auto' },
+    { href: '/debts', icon: DollarSign, label: 'Hutang' },
+    { href: '/recurring', icon: Repeat, label: 'Auto' },
     { href: '/reminders', icon: Bell, label: 'Reminder' },
     { href: '/import', icon: Upload, label: 'Import' },
     { href: '/share', icon: Share2, label: 'Export' },

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { WifiOff, RefreshCw, Cloud, CloudOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useOfflineData } from '@/hooks/useOfflineData';
+import { useOfflineData } from '../hooks/useOfflineData';
 
 interface OfflineIndicatorProps {
   position?: 'top' | 'bottom';

@@ -11,6 +11,34 @@ export const runtime = 'nodejs';
 
 const encoder = new TextEncoder();
 
+/**
+ * Validate API key for SSE connection
+ */
+function validateApiKey(req: NextRequest): boolean {
+  const apiKey = req.headers.get('x-api-key');
+  const expectedKey = process.env.API_SECRET_KEY;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!expectedKey) {
+    return !isProduction;
+  }
+
+  if (!apiKey) {
+    return false;
+  }
+
+  if (apiKey.length !== expectedKey.length) {
+    return false;
+  }
+
+  let result = 0;
+  for (let i = 0; i < apiKey.length; i++) {
+    result |= apiKey.codePointAt(i)! ^ expectedKey.codePointAt(i)!;
+  }
+
+  return result === 0;
+}
+
 interface NotificationPayload {
   type: 'TRANSACTION' | 'REMINDER' | 'DEBT' | 'BUDGET' | 'SYSTEM' | 'HEARTBEAT';
   title: string;
@@ -131,6 +159,14 @@ async function getBudgetAlerts() {
 }
 
 export async function GET(request: NextRequest) {
+  // Authenticate request
+  if (!validateApiKey(request)) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const userAgent = request.headers.get('user-agent') || '';
 
   const stream = new ReadableStream({

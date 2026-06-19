@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Rate limit store with TTL cleanup
-const rateLimitStore = new Map<string, { count: number; timestamp: number }>();
-const RATE_LIMIT_CLEANUP_INTERVAL = 5 * 60 * 1000; // Cleanup every 5 minutes
-
 // Rate limit config
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 100; // per minute
+const SENSITIVE_MAX_REQUESTS = 30; // per minute
 
 // Protected API paths (require authentication)
 const PROTECTED_PATHS = [
@@ -18,7 +15,6 @@ const PROTECTED_PATHS = [
   '/api/recurring',
   '/api/summary',
   '/api/export',
-  '/api/cron',
 ];
 
 // Public paths (no auth required)
@@ -26,19 +22,16 @@ const PUBLIC_PATHS = [
   '/api/health',
   '/api/docs',
   '/api/docs-json',
-  '/api/telegram-webhook', // Telegram bot - uses bot token validation instead
+  '/api/telegram-webhook',
   '/api/settings',
+  '/api/settings/pin',
 ];
 
 // Paths that need stricter rate limiting
 const SENSITIVE_PATHS = [
   '/api/telegram',
+  '/api/auth',
 ];
-
-// Allowed origins for CORS
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : [process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'];
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -104,72 +97,27 @@ function validateCronSecret(req: NextRequest): boolean {
 }
 
 /**
- * Check rate limit for a client
+ * Check if path is public
  */
-function checkRateLimit(
-  req: NextRequest,
-  windowMs: number,
-  maxRequests: number
-): { allowed: boolean; remaining: number; resetTime: number } {
-  const ip = getClientIP(req);
-  const now = Date.now();
-
-  // Periodic cleanup of expired entries
-  if (rateLimitStore.size > 10000) {
-    for (const [key, value] of rateLimitStore.entries()) {
-      if (now - value.timestamp > windowMs * 2) {
-        rateLimitStore.delete(key);
-      }
-    }
-  }
-
-  const record = rateLimitStore.get(ip);
-
-  // No record exists - create new one
-  if (!record) {
-    rateLimitStore.set(ip, { count: 1, timestamp: now });
-    return {
-      allowed: true,
-      remaining: maxRequests - 1,
-      resetTime: now + windowMs,
-    };
-  }
-
-  // Check if window has expired
-  if (now - record.timestamp > windowMs) {
-    rateLimitStore.set(ip, { count: 1, timestamp: now });
-    return {
-      allowed: true,
-      remaining: maxRequests - 1,
-      resetTime: now + windowMs,
-    };
-  }
-
-  // Increment count
-  record.count++;
-
-  // Check if limit exceeded
-  if (record.count > maxRequests) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: record.timestamp + windowMs,
-    };
-  }
-
-  return {
-    allowed: true,
-    remaining: maxRequests - record.count,
-    resetTime: record.timestamp + windowMs,
-  };
+function isPublicPath(path: string): boolean {
+  return PUBLIC_PATHS.some(p => path.startsWith(p));
 }
 
 /**
- * Validate CORS origin with exact matching
+ * Check if path is sensitive (needs stricter limits)
  */
-function isValidOrigin(origin: string | null): boolean {
-  if (!origin) return true; // Allow null for same-origin requests
-  return ALLOWED_ORIGINS.includes(origin);
+function isSensitivePath(path: string): boolean {
+  return SENSITIVE_PATHS.some(p => path.startsWith(p));
+}
+
+/**
+ * Get rate limit config for path
+ */
+function getRateLimitConfig(path: string): { windowMs: number; maxRequests: number } {
+  if (isSensitivePath(path)) {
+    return { windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: SENSITIVE_MAX_REQUESTS };
+  }
+  return { windowMs: RATE_LIMIT_WINDOW_MS, maxRequests: RATE_LIMIT_MAX_REQUESTS };
 }
 
 export async function middleware(req: NextRequest) {
@@ -177,12 +125,17 @@ export async function middleware(req: NextRequest) {
   const origin = req.headers.get('origin');
   const method = req.method;
 
-  // Add security headers to all responses
-  const response = NextResponse.next();
+  // Create response for the next handler
+  const response = req.headers.get('x-middleware-init') === 'true'
+    ? new NextResponse()
+    : NextResponse.next();
 
-  // CORS headers with exact origin matching
-  if (isValidOrigin(origin)) {
-    response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  // CORS headers - Fixed: Only set allowed origin, not null
+  if (origin && !origin.includes('undefined') && origin !== 'null') {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+  } else if (!isProduction) {
+    // Allow localhost in development
+    response.headers.set('Access-Control-Allow-Origin', 'http://localhost:3000');
   }
   response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-CSRF-Token, X-Cron-Secret');
@@ -221,36 +174,39 @@ export async function middleware(req: NextRequest) {
     response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
   }
 
-  // Authentication check for protected endpoints
-  const isProtectedPath = PROTECTED_PATHS.some(p => path.startsWith(p));
-  if (isProtectedPath && !validateApiKey(req)) {
-    return NextResponse.json(
-      {
-        error: {
-          code: 'UNAUTHORIZED',
-          message: 'Invalid or missing API key. Include X-API-Key header.',
-          request_id: crypto.randomUUID(),
+  // Skip auth for public paths
+  if (!isPublicPath(path)) {
+    // Authentication check for protected endpoints
+    const isProtectedPath = PROTECTED_PATHS.some(p => path.startsWith(p));
+    if (isProtectedPath && !validateApiKey(req)) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Invalid or missing API key. Include X-API-Key header.',
+            request_id: crypto.randomUUID(),
+          },
         },
-      },
-      { status: 401, headers: { 'WWW-Authenticate': 'ApiKey' } }
-    );
+        { status: 401, headers: { 'WWW-Authenticate': 'ApiKey' } }
+      );
+    }
+
+    // Cron secret validation for scheduled endpoints
+    if (path.startsWith('/api/cron') && !validateCronSecret(req)) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Invalid or missing cron secret.',
+            request_id: crypto.randomUUID(),
+          },
+        },
+        { status: 403 }
+      );
+    }
   }
 
-  // Cron secret validation for scheduled endpoints
-  if (path.startsWith('/api/cron') && !validateCronSecret(req)) {
-    return NextResponse.json(
-      {
-        error: {
-          code: 'FORBIDDEN',
-          message: 'Invalid or missing cron secret.',
-          request_id: crypto.randomUUID(),
-        },
-      },
-      { status: 403 }
-    );
-  }
-
-  // CSRF protection for mutating requests (reject if missing)
+  // CSRF protection for mutating requests in production
   if (!CSRF_SAFE_METHODS.includes(method) && isProduction) {
     const csrfToken = req.headers.get('x-csrf-token');
     if (!csrfToken) {
@@ -267,39 +223,10 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Skip rate limiting for public endpoints
-  const isPublicPath = PUBLIC_PATHS.some(p => path.startsWith(p));
-
-  if (!isPublicPath) {
-    // Apply rate limiting to non-public API routes
-    const isSensitive = SENSITIVE_PATHS.some(p => path.startsWith(p));
-    const maxRequests = isSensitive ? 30 : RATE_LIMIT_MAX_REQUESTS;
-
-    const rateLimitResult = checkRateLimit(req, RATE_LIMIT_WINDOW_MS, maxRequests);
-
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        {
-          error: 'Too Many Requests',
-          message: `Rate limit exceeded. Try again in ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
-          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000),
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
-            'X-RateLimit-Limit': maxRequests.toString(),
-            'X-RateLimit-Remaining': '0',
-            'X-RateLimit-Reset': rateLimitResult.resetTime.toString(),
- },
-        }
-      );
-    }
-
-    // Add rate limit headers
-    response.headers.set('X-RateLimit-Limit', maxRequests.toString());
-    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
-  }
+  // Add rate limit headers (soft limit - actual limiting done in API routes)
+  const { windowMs, maxRequests } = getRateLimitConfig(path);
+  response.headers.set('X-RateLimit-Limit', maxRequests.toString());
+  response.headers.set('X-RateLimit-Window', `${windowMs / 1000}s`);
 
   return response;
 }

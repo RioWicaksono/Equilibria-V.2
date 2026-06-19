@@ -170,11 +170,25 @@ Equilibria Finance`);
       formData.append('description', description);
       formData.append('date', dateStr);
 
-      const baseUrl = process.env.APP_URL || 'https://equilibria-fiscal.vercel.app';
-      await fetch(`${baseUrl}/api/transactions`, {
+      // Use APP_URL - must be configured in production
+      const baseUrl = process.env.APP_URL;
+      if (!baseUrl) {
+        console.error('[Telegram] APP_URL not configured');
+        await sendMsg('⚠️ Konfigurasi server tidak lengkap. Hubungi admin.');
+        return NextResponse.json({ ok: false, error: 'Server misconfiguration' }, { status: 500 });
+      }
+
+      const response = await fetch(`${baseUrl}/api/transactions`, {
         method: 'POST',
         body: formData,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
     } catch (e) {
       console.error('Failed to save:', e);
     }

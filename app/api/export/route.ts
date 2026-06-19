@@ -8,12 +8,25 @@ import { Transaction } from '@/domain/entities/Transaction';
 
 export const dynamic = 'force-dynamic';
 
+// Export limits
+const EXPORT_CONFIG = {
+  MAX_RECORDS: 10000, // Maximum records per export
+  DEFAULT_LIMIT: 1000,
+};
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get('format') || 'csv';
     const type = searchParams.get('type') || 'all';
     const month = searchParams.get('month');
+
+    // Parse and validate pagination
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = Math.min(
+      parseInt(searchParams.get('limit') || String(EXPORT_CONFIG.DEFAULT_LIMIT), 10),
+      EXPORT_CONFIG.MAX_RECORDS
+    );
 
     // Validate query parameters
     const validation = ExportQuerySchema.safeParse({
@@ -42,6 +55,11 @@ export async function GET(request: NextRequest) {
           return yyyymm === month;
         });
       }
+
+      // Apply pagination
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      transactions = transactions.slice(startIndex, endIndex);
     }
 
     const exportData = {
@@ -86,6 +104,10 @@ export async function GET(request: NextRequest) {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${filename}"`,
+        'X-Export-Page': page.toString(),
+        'X-Export-Limit': limit.toString(),
+        'X-Export-Max': EXPORT_CONFIG.MAX_RECORDS.toString(),
+        'X-Export-Count': transactions.length.toString(),
       },
     });
   } catch (error) {

@@ -1,8 +1,27 @@
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaRecurringTransactionRepository } from '@/infrastructure/repositories/PrismaRecurringTransactionRepository';
+import { validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
 
 const recurringRepo = new PrismaRecurringTransactionRepository();
+
+/**
+ * Validate amount with proper bounds
+ */
+function safeParseAmount(amount: unknown): { valid: true; value: number } | { valid: false; error: string } {
+  const validation = validateAmount(amount, {
+    min: 1,
+    max: AMOUNT_LIMITS.MAX,
+    allowZero: false,
+    allowNegative: false,
+  });
+
+  if (!validation.valid || validation.amount === null) {
+    return { valid: false, error: validation.error || 'Invalid amount' };
+  }
+
+  return { valid: true, value: validation.amount };
+}
 
 export async function GET() {
   try {
@@ -21,14 +40,26 @@ export async function POST(req: Request) {
       return ApiResponse.badRequest('Name, amount, frequency, and nextDate are required');
     }
 
+    // Validate amount
+    const amountValidation = safeParseAmount(amount);
+    if (!amountValidation.valid) {
+      return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
+    }
+
+    // Validate date
+    const dateObj = new Date(nextDate);
+    if (Number.isNaN(dateObj.getTime())) {
+      return ApiResponse.badRequest('Invalid date format');
+    }
+
     const recurring = {
       id: crypto.randomUUID(),
-      amount: parseFloat(amount),
+      amount: amountValidation.value,
       type: (type || 'EXPENSE') as 'INCOME' | 'EXPENSE',
       category: category || 'Lainnya',
       description: description || name,
       frequency: frequency as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY',
-      nextDate: new Date(nextDate),
+      nextDate: dateObj,
       createdAt: new Date(),
     };
 
@@ -52,13 +83,34 @@ export async function PUT(req: Request) {
       return ApiResponse.notFound('Recurring transaction');
     }
 
+    let parsedAmount: number | undefined;
+    let parsedNextDate: Date | undefined;
+
+    // Validate amount if provided
+    if (amount !== undefined) {
+      const amountValidation = safeParseAmount(amount);
+      if (!amountValidation.valid) {
+        return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
+      }
+      parsedAmount = amountValidation.value;
+    }
+
+    // Validate date if provided
+    if (nextDate !== undefined) {
+      const dateObj = new Date(nextDate);
+      if (Number.isNaN(dateObj.getTime())) {
+        return ApiResponse.badRequest('Invalid date format');
+      }
+      parsedNextDate = dateObj;
+    }
+
     const updated = {
       ...existing,
-      ...(amount && { amount: parseFloat(amount) }),
+      ...(parsedAmount !== undefined && { amount: parsedAmount }),
       ...(type && { type: type as 'INCOME' | 'EXPENSE' }),
       ...(category && { category }),
       ...(frequency && { frequency: frequency as 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY' }),
-      ...(nextDate && { nextDate: new Date(nextDate) }),
+      ...(parsedNextDate !== undefined && { nextDate: parsedNextDate }),
       ...((description !== undefined || name) && { description: description || name }),
     };
 

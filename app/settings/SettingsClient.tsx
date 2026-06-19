@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap, KeyRound } from 'lucide-react';
+import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap, KeyRound, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 type TabType = 'general' | 'integration' | 'advanced';
@@ -37,6 +37,14 @@ export default function SettingsClient() {
   // Auto-lock timeout state
   const [autoLockTimeout, setAutoLockTimeout] = useState(5);
 
+  // PIN Lock state
+  const [isPinEnabled, setIsPinEnabled] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinMode, setPinMode] = useState<'enable' | 'disable'>('enable');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+
   const timeoutOptions = [
     { value: 0, label: 'Tidak Pernah' },
     { value: 1, label: '1 menit' },
@@ -57,6 +65,7 @@ export default function SettingsClient() {
           setLanguage(data.settings.language || 'id');
           setAutoLockTimeout(data.settings.autoLockTimeout ?? 5);
           setTelegramToken(data.settings.telegramToken || '');
+          setIsPinEnabled(data.settings.isPinEnabled || false);
         }
       })
       .catch(console.error);
@@ -132,6 +141,121 @@ export default function SettingsClient() {
       }
     } catch {
       showToast('Gagal menyimpan pengaturan auto-lock', 'error');
+    }
+  };
+
+  // PIN Lock handlers
+  const handleOpenPinSetup = () => {
+    setPinMode('enable');
+    setNewPin('');
+    setConfirmPin('');
+    setPinError('');
+    setShowPinModal(true);
+  };
+
+  const handleOpenPinDisable = () => {
+    setPinMode('disable');
+    setNewPin('');
+    setConfirmPin('');
+    setPinError('');
+    setShowPinModal(true);
+  };
+
+  const handlePinInput = (digit: string) => {
+    if (pinMode === 'enable') {
+      if (confirmPin === '') {
+        if (newPin.length < 6) setNewPin(prev => prev + digit);
+      } else {
+        if (confirmPin.length < 6) setConfirmPin(prev => prev + digit);
+      }
+    } else {
+      if (newPin.length < 6) setNewPin(prev => prev + digit);
+    }
+    setPinError('');
+  };
+
+  const handlePinBackspace = () => {
+    if (pinMode === 'enable') {
+      if (confirmPin !== '') {
+        setConfirmPin(prev => prev.slice(0, -1));
+      } else {
+        setNewPin(prev => prev.slice(0, -1));
+      }
+    } else {
+      setNewPin(prev => prev.slice(0, -1));
+    }
+    setPinError('');
+  };
+
+  const handlePinSubmit = async () => {
+    if (pinMode === 'enable') {
+      if (confirmPin === '') {
+        if (newPin.length < 4) {
+          setPinError('PIN minimal 4 digit');
+          return;
+        }
+        setConfirmPin('confirming');
+        setNewPin('');
+        return;
+      }
+
+      if (newPin !== confirmPin) {
+        setPinError('PIN tidak cocok');
+        setNewPin('');
+        setConfirmPin('');
+        return;
+      }
+
+      // Generate salt and hash
+      const salt = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+      const encoder = new TextEncoder();
+      const data = encoder.encode(newPin + salt);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hash = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+
+      try {
+        const res = await fetch('/api/settings/pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'enable', pinHash: hash, pinSalt: salt }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          setIsPinEnabled(true);
+          setShowPinModal(false);
+          showToast('PIN Lock berhasil diaktifkan');
+          window.dispatchEvent(new Event('settingsUpdated'));
+        } else {
+          setPinError(result.error || 'Gagal mengaktifkan PIN');
+        }
+      } catch {
+        setPinError('Gagal mengaktifkan PIN');
+      }
+    } else {
+      // Disable PIN - verify old PIN first
+      try {
+        const res = await fetch('/api/settings/pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pin: newPin }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          // PIN correct, now disable
+          await fetch('/api/settings/pin', { method: 'DELETE' });
+          setIsPinEnabled(false);
+          setShowPinModal(false);
+          showToast('PIN Lock dinonaktifkan');
+          window.dispatchEvent(new Event('settingsUpdated'));
+        } else {
+          setPinError(result.error || 'PIN salah');
+          setNewPin('');
+        }
+      } catch {
+        setPinError('Gagal menonaktifkan PIN');
+      }
     }
   };
 
@@ -427,6 +551,46 @@ export default function SettingsClient() {
                       </select>
                     </div>
                     <p className="text-xs text-zinc-600">Hanya Bahasa Indonesia yang tersedia</p>
+                  </div>
+
+                  {/* PIN Lock Section */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-zinc-300">Kunci Aplikasi</label>
+                    <div className="bg-[#1A1A1A] border border-[#262626] rounded-xl p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2.5 rounded-lg ${isPinEnabled ? 'bg-emerald-500/10' : 'bg-zinc-800/50'}`}>
+                            {isPinEnabled ? (
+                              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                            ) : (
+                              <ShieldOff className="w-5 h-5 text-zinc-500" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-white">PIN Lock</p>
+                            <p className="text-xs text-zinc-500">
+                              {isPinEnabled ? 'Aktif - Lindungi dengan PIN' : 'Nonaktif - Semua orang bisa akses'}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={isPinEnabled ? handleOpenPinDisable : handleOpenPinSetup}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                            isPinEnabled
+                              ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30'
+                              : 'bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/30'
+                          }`}
+                        >
+                          {isPinEnabled ? 'Nonaktifkan' : 'Aktifkan'}
+                        </button>
+                      </div>
+                      {isPinEnabled && (
+                        <div className="mt-3 pt-3 border-t border-[#262626] flex items-center gap-2 text-xs text-zinc-500">
+                          <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>PIN tersimpan di database - aktif di semua perangkat</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2 flex flex-col justify-end">
@@ -821,6 +985,160 @@ export default function SettingsClient() {
                     Sistem akan otomatis menentukan kategori berdasarkan kata kunci (cth: &quot;makan&quot; akan masuk kategori Food).
                   </p>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PIN Setup Modal */}
+      <AnimatePresence>
+        {showPinModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => !pinError && setShowPinModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-[#141414] border border-[#262626] rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-5 border-b border-[#262626] bg-[#1a1a1a]">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  {pinMode === 'enable' ? (
+                    <><Shield className="w-5 h-5 text-teal-400" /> Aktifkan PIN Lock</>
+                  ) : (
+                    <><ShieldOff className="w-5 h-5 text-rose-400" /> Nonaktifkan PIN Lock</>
+                  )}
+                </h3>
+                <button
+                  onClick={() => setShowPinModal(false)}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6">
+                {pinMode === 'enable' ? (
+                  <div className="text-center">
+                    <p className="text-sm text-zinc-400 mb-6">
+                      {confirmPin === '' ? 'Masukkan PIN baru (4-6 digit)' : 'Konfirmasi PIN Anda'}
+                    </p>
+
+                    {/* PIN Dots */}
+                    <div className="flex justify-center gap-3 mb-6">
+                      {Array(6).fill(0).map((_, i) => {
+                        const currentPin = confirmPin === 'confirming' ? confirmPin : (confirmPin !== '' ? confirmPin : newPin);
+                        return (
+                          <div
+                            key={i}
+                            className={`w-3 h-3 rounded-full transition-all ${
+                              i < currentPin.length
+                                ? 'bg-teal-400 scale-110'
+                                : 'bg-zinc-800 border border-zinc-700'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {/* Keypad */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(digit => (
+                        <button
+                          key={digit}
+                          onClick={() => handlePinInput(digit)}
+                          className="h-12 bg-[#1A1A1A] border border-[#262626] rounded-xl text-lg font-bold text-white hover:bg-[#222] active:scale-95 transition-all"
+                        >
+                          {digit}
+                        </button>
+                      ))}
+                      <div />
+                      <button
+                        onClick={() => handlePinInput('0')}
+                        className="h-12 bg-[#1A1A1A] border border-[#262626] rounded-xl text-lg font-bold text-white hover:bg-[#222] active:scale-95 transition-all"
+                      >
+                        0
+                      </button>
+                      <button
+                        onClick={handlePinBackspace}
+                        className="h-12 bg-[#1A1A1A] border border-[#262626] rounded-xl flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#222] active:scale-95 transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-sm text-zinc-400 mb-6">Masukkan PIN lama untuk konfirmasi</p>
+
+                    {/* PIN Dots */}
+                    <div className="flex justify-center gap-3 mb-6">
+                      {Array(6).fill(0).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`w-3 h-3 rounded-full transition-all ${
+                            i < newPin.length
+                              ? 'bg-rose-400 scale-110'
+                              : 'bg-zinc-800 border border-zinc-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Keypad */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(digit => (
+                        <button
+                          key={digit}
+                          onClick={() => handlePinInput(digit)}
+                          className="h-12 bg-[#1A1A1A] border border-[#262626] rounded-xl text-lg font-bold text-white hover:bg-[#222] active:scale-95 transition-all"
+                        >
+                          {digit}
+                        </button>
+                      ))}
+                      <div />
+                      <button
+                        onClick={() => handlePinInput('0')}
+                        className="h-12 bg-[#1A1A1A] border border-[#262626] rounded-xl text-lg font-bold text-white hover:bg-[#222] active:scale-95 transition-all"
+                      >
+                        0
+                      </button>
+                      <button
+                        onClick={handlePinBackspace}
+                        className="h-12 bg-[#1A1A1A] border border-[#262626] rounded-xl flex items-center justify-center text-zinc-400 hover:text-white hover:bg-[#222] active:scale-95 transition-all"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {pinError && (
+                  <div className="mb-4 px-3 py-2 bg-rose-500/10 border border-rose-500/30 rounded-lg text-rose-400 text-sm text-center">
+                    {pinError}
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button
+                  onClick={handlePinSubmit}
+                  disabled={pinMode === 'enable' ? (confirmPin === '' ? newPin.length < 4 : confirmPin.length < 4) : newPin.length < 4}
+                  className={`w-full py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    pinMode === 'enable'
+                      ? 'bg-teal-500 hover:bg-teal-400 text-black'
+                      : 'bg-rose-500 hover:bg-rose-400 text-white'
+                  }`}
+                >
+                  {pinMode === 'enable' ? (confirmPin === '' || confirmPin === 'confirming' ? 'Lanjut' : 'Aktifkan PIN') : 'Nonaktifkan PIN'}
+                </button>
               </div>
             </motion.div>
           </motion.div>

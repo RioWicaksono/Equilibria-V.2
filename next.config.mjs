@@ -32,6 +32,10 @@ const nextConfig = {
       '@/domain': path.resolve(__dirname, 'src/domain'),
       '@/application': path.resolve(__dirname, 'src/application'),
       '@/infrastructure': path.resolve(__dirname, 'src/infrastructure'),
+      '@/hooks': path.resolve(__dirname, 'app/hooks'),
+      '@/hooks/': path.resolve(__dirname, 'app/hooks/'),
+      '@/components': path.resolve(__dirname, 'app/components'),
+      '@/components/': path.resolve(__dirname, 'app/components/'),
     };
     return config;
   },

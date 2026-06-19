@@ -107,13 +107,23 @@ model RecurringTransaction {
 
 // User settings stored in database for cross-device sync
 model UserSettings {
-  id              String   @id @default("default")
-  theme           String   @default("dark")
-  language        String   @default("id")
-  currency        String   @default("IDR")
-  autoLockTimeout Int      @default(5)
-  telegramToken   String?  @default("")
-  updatedAt       DateTime @updatedAt
+  id              String    @id @default("default")
+  theme           String    @default("dark")
+  language        String    @default("id")
+  currency        String    @default("IDR")
+  autoLockTimeout Int       @default(5)
+  telegramToken   String?   @default("")
+  updatedAt       DateTime  @updatedAt
+
+  // PIN Lock fields for cross-device privacy protection
+  isPinEnabled    Boolean   @default(false)
+  pinHash         String?   // SHA-256 hash of PIN with salt
+  pinSalt         String?   // Random salt for PIN hashing
+  failedAttempts  Int       @default(0) // Track failed login attempts
+  lockoutUntil    DateTime? // Account lockout expiration time
+
+  @@index([lockoutUntil])
+  @@index([isPinEnabled])
 }
 
 // Custom categories created by user
@@ -144,4 +154,14 @@ model Reminder {
   @@index([status])
   @@index([date])
   @@index([priority])
+}
+
+// Rate limiting entries for serverless-compatible rate limiting
+model RateLimitEntry {
+  id        String   @id @default(uuid())
+  key       String   // Rate limit key (e.g., "rl:api:192.168.1.1")
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+  @@index([createdAt])
 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Bell, X, CheckCircle, AlertTriangle, Info, TrendingUp, TrendingDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useSSE, SSENotification } from '@/hooks/useSSE';
+import { useSSE, SSENotification } from '../hooks/useSSE';
 
 interface NotificationToastProps {
   enabled?: boolean;

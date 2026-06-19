@@ -1,8 +1,27 @@
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaFinancialGoalRepository } from '@/infrastructure/repositories/PrismaFinancialGoalRepository';
+import { validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
 
 const goalRepo = new PrismaFinancialGoalRepository();
+
+/**
+ * Validate amount with proper bounds
+ */
+function safeParseAmount(amount: unknown): { valid: true; value: number } | { valid: false; error: string } {
+  const validation = validateAmount(amount, {
+    min: 1,
+    max: AMOUNT_LIMITS.MAX,
+    allowZero: false,
+    allowNegative: false,
+  });
+
+  if (!validation.valid || validation.amount === null) {
+    return { valid: false, error: validation.error || 'Invalid amount' };
+  }
+
+  return { valid: true, value: validation.amount };
+}
 
 export async function GET() {
   try {
@@ -17,15 +36,34 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { name, targetAmount, currentAmount, deadline, description } = await req.json();
-    if (!name || !targetAmount) {
-      return ApiResponse.badRequest('Name and targetAmount are required');
+    if (!name) {
+      return ApiResponse.badRequest('Name is required');
+    }
+
+    // Validate targetAmount
+    const targetValidation = safeParseAmount(targetAmount);
+    if (!targetValidation.valid) {
+      return ApiResponse.badRequest(targetValidation.error || 'Invalid target amount');
+    }
+
+    // Validate currentAmount if provided
+    if (currentAmount !== undefined) {
+      const currentValidation = validateAmount(currentAmount, {
+        min: 0,
+        max: AMOUNT_LIMITS.MAX,
+        allowZero: true,
+        allowNegative: false,
+      });
+      if (!currentValidation.valid) {
+        return ApiResponse.badRequest(currentValidation.error || 'Invalid current amount');
+      }
     }
 
     const goal = {
       id: crypto.randomUUID(),
       name,
-      targetAmount: parseFloat(targetAmount),
-      currentAmount: currentAmount ? parseFloat(currentAmount) : 0,
+      targetAmount: targetValidation.value,
+      currentAmount: currentAmount ? validateAmount(currentAmount, { min: 0, allowZero: true }).amount! : 0,
       description: description || undefined,
       deadline: deadline ? new Date(deadline) : undefined,
       createdAt: new Date(),
@@ -52,11 +90,37 @@ export async function PUT(req: Request) {
       return ApiResponse.notFound('Goal');
     }
 
+    let parsedTargetAmount: number | undefined;
+    let parsedCurrentAmount: number | undefined;
+
+    // Validate targetAmount if provided
+    if (targetAmount !== undefined) {
+      const targetValidation = safeParseAmount(targetAmount);
+      if (!targetValidation.valid) {
+        return ApiResponse.badRequest(targetValidation.error || 'Invalid target amount');
+      }
+      parsedTargetAmount = targetValidation.value;
+    }
+
+    // Validate currentAmount if provided
+    if (currentAmount !== undefined) {
+      const currentValidation = validateAmount(currentAmount, {
+        min: 0,
+        max: AMOUNT_LIMITS.MAX,
+        allowZero: true,
+        allowNegative: false,
+      });
+      if (!currentValidation.valid) {
+        return ApiResponse.badRequest(currentValidation.error || 'Invalid current amount');
+      }
+      parsedCurrentAmount = currentValidation.amount!;
+    }
+
     const updated = {
       ...existing,
       ...(name && { name }),
-      ...(targetAmount && { targetAmount: parseFloat(targetAmount) }),
-      ...(currentAmount !== undefined && { currentAmount: parseFloat(currentAmount) }),
+      ...(parsedTargetAmount !== undefined && { targetAmount: parsedTargetAmount }),
+      ...(parsedCurrentAmount !== undefined && { currentAmount: parsedCurrentAmount }),
       ...(description !== undefined && { description }),
       ...(deadline && { deadline: new Date(deadline) }),
       updatedAt: new Date(),

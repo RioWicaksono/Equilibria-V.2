@@ -1,9 +1,43 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Edit3 } from 'lucide-react';
+import { Plus, Search, Edit3, Clock } from 'lucide-react';
 import { getCategoriesByType, TransactionCategory } from '@/domain/value-objects/TransactionCategory';
+
+const RECENT_CATEGORIES_KEY = 'recent_categories';
+
+interface RecentCategories {
+  [type: string]: Array<{ id: string; timestamp: number }>;
+}
+
+function getRecentCategories(type: 'INCOME' | 'EXPENSE'): string[] {
+  try {
+    const stored = localStorage.getItem(RECENT_CATEGORIES_KEY);
+    if (stored) {
+      const data: RecentCategories = JSON.parse(stored);
+      const recent = data[type] || [];
+      const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      return recent
+        .filter(r => r.timestamp > oneWeekAgo)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 5)
+        .map(r => r.id);
+    }
+  } catch {}
+  return [];
+}
+
+function addToRecentCategories(type: 'INCOME' | 'EXPENSE', categoryId: string) {
+  try {
+    const stored = localStorage.getItem(RECENT_CATEGORIES_KEY);
+    const data: RecentCategories = stored ? JSON.parse(stored) : {};
+    const current = data[type] || [];
+    const filtered = current.filter(r => r.id !== categoryId);
+    data[type] = [{ id: categoryId, timestamp: Date.now() }, ...filtered].slice(0, 10);
+    localStorage.setItem(RECENT_CATEGORIES_KEY, JSON.stringify(data));
+  } catch {}
+}
 
 interface CategorySelectorProps {
   value: string;
@@ -18,7 +52,8 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIcon, setNewCategoryIcon] = useState('📁');
 
-  // Load custom categories from API
+  const recentCategoryIds = useMemo(() => getRecentCategories(type), [type]);
+
   useEffect(() => {
     const loadCustomCategories = async () => {
       try {
@@ -41,7 +76,6 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
     loadCustomCategories();
   }, [type]);
 
-  // Combine default and custom categories
   const allCategories = [
     ...getCategoriesByType(type),
     ...customCategories.filter(c => {
@@ -50,11 +84,31 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
     })
   ];
 
-  const filteredCategories = allCategories.filter(c =>
+  // Sort categories - recent first, then alphabetical
+  const sortedCategories = useMemo(() => {
+    const recent = recentCategoryIds
+      .map(id => allCategories.find(c => c.id === id))
+      .filter((c): c is TransactionCategory => c !== undefined);
+
+    const rest = allCategories
+      .filter(c => !recentCategoryIds.includes(c.id))
+      .sort((a, b) => a.name.localeCompare(b.name, 'id'));
+
+    return [...recent, ...rest];
+  }, [allCategories, recentCategoryIds]);
+
+  const filteredCategories = sortedCategories.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const selectedCategory = allCategories.find(c => c.id === value);
+
+  const handleCategorySelect = (categoryId: string) => {
+    onChange(categoryId);
+    addToRecentCategories(type, categoryId);
+    setSearch('');
+    document.getElementById('category-dropdown')?.classList.add('hidden');
+  };
 
   const handleAddCustomCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -86,9 +140,7 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
 
         const updated = [...customCategories, created];
         setCustomCategories(updated);
-
-        // Select the new category
-        onChange(created.id);
+        handleCategorySelect(created.id);
       }
     } catch (e) {
       console.error('Failed to save custom category', e);
@@ -97,9 +149,11 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
     setNewCategoryName('');
     setNewCategoryIcon('📁');
     setIsAddingCustom(false);
-    setSearch('');
-    document.getElementById('category-dropdown')?.classList.add('hidden');
   };
+
+  const recentCategories = recentCategoryIds
+    .map(id => sortedCategories.find(c => c.id === id))
+    .filter((c): c is TransactionCategory => c !== undefined);
 
   return (
     <div className="space-y-2">
@@ -139,6 +193,29 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
           </div>
         </div>
 
+        {/* Recent Categories - only show when not searching */}
+        {search === '' && recentCategories.length > 0 && (
+          <div className="p-2 border-b border-[#262626] bg-teal-500/5">
+            <div className="flex items-center gap-1 mb-2">
+              <Clock className="w-3 h-3 text-teal-400" />
+              <span className="text-[10px] text-teal-400 font-medium">Baru saja digunakan</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {recentCategories.slice(0, 4).map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => handleCategorySelect(cat.id)}
+                  className="flex items-center gap-1.5 px-2 py-1 bg-[#0A0A0A] hover:bg-teal-500/20 border border-[#333] hover:border-teal-500/30 rounded-lg transition-colors"
+                >
+                  <span className="text-sm">{cat.icon}</span>
+                  <span className="text-xs text-zinc-300">{cat.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Add Custom Category Button */}
         <div className="p-2 border-b border-[#262626]">
           <button
@@ -172,7 +249,7 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Icon (emoji)"
+                    placeholder="Icon"
                     value={newCategoryIcon}
                     onChange={(e) => setNewCategoryIcon(e.target.value)}
                     className="w-16 bg-[#0A0A0A] border border-[#333] text-white rounded-lg px-3 py-2 text-center text-lg focus:outline-none focus:border-teal-500"
@@ -206,28 +283,28 @@ export default function CategorySelector({ value, onChange, type }: CategorySele
         {/* Category Grid */}
         <div className="max-h-60 overflow-y-auto p-2 custom-scrollbar">
           <div className="grid grid-cols-2 gap-1">
-            {filteredCategories.map(category => (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => {
-                  onChange(category.id);
-                  setSearch('');
-                  document.getElementById('category-dropdown')?.classList.add('hidden');
-                }}
-                className={`flex items-center gap-2 p-2 rounded-lg transition-colors text-left ${
-                  value === category.id
-                    ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30'
-                    : 'hover:bg-zinc-800 text-white'
-                }`}
-              >
-                <span className="text-lg">{category.icon}</span>
-                <span className="text-xs truncate flex-1">{category.name}</span>
-                {category.id.startsWith('custom_') && (
-                  <Edit3 className="w-3 h-3 text-teal-400/50" />
-                )}
-              </button>
-            ))}
+            {filteredCategories.map(category => {
+              const isRecent = recentCategoryIds.includes(category.id);
+              return (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => handleCategorySelect(category.id)}
+                  className={`flex items-center gap-2 p-2 rounded-lg transition-colors text-left ${
+                    value === category.id
+                      ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30'
+                      : 'hover:bg-zinc-800 text-white'
+                  }`}
+                >
+                  <span className="text-lg">{category.icon}</span>
+                  <span className="text-xs truncate flex-1">{category.name}</span>
+                  {category.id.startsWith('custom_') && (
+                    <Edit3 className="w-3 h-3 text-teal-400/50" />
+                  )}
+                  {isRecent && <Clock className="w-3 h-3 text-teal-400/30" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 

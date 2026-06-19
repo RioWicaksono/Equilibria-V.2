@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo, memo } from 'react';
-import { Trash2, Edit2, CloudOff, X, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo, memo, useRef, TouchEvent } from 'react';
+import { Trash2, Edit2, CloudOff, X, AlertTriangle, Copy, Check, CopyCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '../contexts/SettingsContext';
@@ -16,6 +16,14 @@ type TransactionItem = Transaction | OfflineQueueItem;
 function isOfflineItem(item: TransactionItem): item is OfflineQueueItem {
   return 'isOffline' in item && (item as OfflineQueueItem).isOffline === true;
 }
+
+interface SwipeState {
+  id: string;
+  offset: number;
+  action: 'edit' | 'delete' | null;
+}
+
+const SWIPE_THRESHOLD = 80;
 
 const ClientTransactionList = memo(function ClientTransactionList({
   initialTransactions,
@@ -32,6 +40,12 @@ const ClientTransactionList = memo(function ClientTransactionList({
   const [editingItem, setEditingItem] = useState<Transaction | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [swipeStates, setSwipeStates] = useState<Record<string, SwipeState>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
+  const touchStartX = useRef<Record<string, number>>({});
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const queueStr = localStorage.getItem('transaction_queue') || '[]';
@@ -88,6 +102,89 @@ const ClientTransactionList = memo(function ClientTransactionList({
     }
     return result;
   }, [selectedTag, searchQuery, allCombined]);
+
+  // Touch handlers for swipe actions
+  const handleTouchStart = (id: string, e: TouchEvent) => {
+    touchStartX.current[id] = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (id: string, e: TouchEvent) => {
+    if (!touchStartX.current[id]) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - touchStartX.current[id];
+
+    // Determine swipe direction and action
+    let action: 'edit' | 'delete' | null = null;
+    let offset = 0;
+
+    if (diff < -SWIPE_THRESHOLD) {
+      action = 'delete';
+      offset = Math.min(Math.abs(diff) - SWIPE_THRESHOLD, 100);
+    } else if (diff > SWIPE_THRESHOLD) {
+      action = 'edit';
+      offset = Math.min(Math.abs(diff) - SWIPE_THRESHOLD, 100);
+    } else if (diff < -30) {
+      action = 'delete';
+      offset = Math.abs(diff) - 30;
+    } else if (diff > 30) {
+      action = 'edit';
+      offset = Math.abs(diff) - 30;
+    }
+
+    setSwipeStates(prev => ({
+      ...prev,
+      [id]: { id, offset, action }
+    }));
+  };
+
+  const handleTouchEnd = (id: string) => {
+    const state = swipeStates[id];
+    if (state?.action && state.offset > SWIPE_THRESHOLD / 2) {
+      // Trigger action
+      if (state.action === 'delete' && !isOfflineItem(filteredTransactions.find(t => t.id === id)!)) {
+        setDeletingId(id);
+      } else if (state.action === 'edit' && !isOfflineItem(filteredTransactions.find(t => t.id === id)!)) {
+        const item = filteredTransactions.find(t => t.id === id) as Transaction;
+        if (item) {
+          const dateObj = new Date(item.date);
+          const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+          setEditingItem({ ...item, date: localIso });
+        }
+      }
+    }
+
+    touchStartX.current[id] = 0;
+    setSwipeStates(prev => {
+      const newState = { ...prev };
+      delete newState[id];
+      return newState;
+    });
+  };
+
+  const handleDuplicate = async (item: Transaction) => {
+    setDuplicatingId(item.id);
+
+    const formData = new FormData();
+    formData.append('type', item.type);
+    formData.append('amount', item.amount.toString());
+    formData.append('category', item.category);
+    formData.append('description', item.description || '');
+    formData.append('date', new Date().toISOString().split('T')[0]);
+
+    try {
+      if (navigator.onLine) {
+        await fetch('/api/transactions', {
+          method: 'POST',
+          body: formData,
+        });
+        router.refresh();
+        setCopiedId(item.id);
+        setTimeout(() => setCopiedId(null), 2000);
+      }
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,6 +248,11 @@ const ClientTransactionList = memo(function ClientTransactionList({
         )}
       </div>
 
+      {/* Mobile hint */}
+      <p className="text-[10px] text-zinc-600 md:hidden">
+        Geser kiri untuk hapus, geser kanan untuk edit/duplikat
+      </p>
+
       {filteredTransactions.length === 0 ? (
         <div className="text-center py-12 text-zinc-500">
           Belum ada transaksi ditemukan.
@@ -158,61 +260,126 @@ const ClientTransactionList = memo(function ClientTransactionList({
       ) : (
         <div className="space-y-4">
           <AnimatePresence mode="popLayout">
-            {filteredTransactions.map((t) => (
-              <motion.div
-                key={t.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-zinc-800/50 bg-[#141414] hover:bg-[#1A1A1A] hover:border-zinc-700 transition-colors gap-4"
-               >
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">
-                      {t.category}
-                    </span>
-                    {isOfflineItem(t) && (
-                      <span className="flex items-center gap-1 text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-medium" title="Menunggu sinkronisasi (Offline)">
-                        <CloudOff className="w-3 h-3" />
-                        Tertunda
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm text-zinc-500 mt-1 whitespace-pre-wrap">
-                    {t.description || "Tanpa Keterangan"} • {new Date(t.date).toLocaleDateString('id-ID')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between sm:justify-end sm:space-x-6 w-full sm:w-auto mt-2 sm:mt-0">
-                  <span className={`font-semibold ${t.type === 'INCOME' ? 'text-teal-400' : 'text-rose-400'}`}>
-                    {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount)}
-                  </span>
-                  {!isOfflineItem(t) && (
-                    <div className="flex items-center">
+            {filteredTransactions.map((t) => {
+              const swipeState = swipeStates[t.id];
+              const swipeOffset = swipeState?.offset || 0;
+              const swipeAction = swipeState?.action || null;
+              const isCopied = copiedId === t.id;
+              const isDuplicating = duplicatingId === t.id;
+
+              return (
+                <div key={t.id} className="relative overflow-hidden rounded-xl">
+                  {/* Swipe action backgrounds */}
+                  <div className="absolute inset-0 flex">
+                    {/* Edit/Duplicate background (right swipe) */}
+                    <div className={`flex-1 flex items-center justify-start pl-4 transition-colors ${swipeAction === 'edit' ? 'bg-teal-500/30' : 'bg-teal-500/10'}`}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            const dateObj = new Date(t.date);
+                            const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                            setEditingItem({ ...t, date: localIso });
+                          }}
+                          disabled={isOfflineItem(t)}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-teal-500/20 hover:bg-teal-500/30 rounded-lg text-teal-400 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDuplicate(t)}
+                          disabled={isOfflineItem(t) || isDuplicating}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-teal-500/20 hover:bg-teal-500/30 rounded-lg text-teal-400 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isDuplicating ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </motion.div>
+                          ) : isCopied ? (
+                            <CopyCheck className="w-3.5 h-3.5" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                          {isCopied ? 'Tersalin!' : 'Duplikat'}
+                        </button>
+                      </div>
+                    </div>
+                    {/* Delete background (left swipe) */}
+                    <div className={`flex items-center justify-end pr-4 transition-colors ${swipeAction === 'delete' ? 'bg-rose-500/30' : 'bg-rose-500/10'}`}>
                       <button
-                        onClick={() => {
-                          const dateObj = new Date(t.date);
-                          const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                          setEditingItem({ ...t, date: localIso });
-                        }}
-                        className="text-zinc-500 hover:text-teal-400 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
+                        onClick={() => !isOfflineItem(t) && setDeletingId(t.id)}
+                        disabled={isOfflineItem(t)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-rose-500/20 hover:bg-rose-500/30 rounded-lg text-rose-400 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Edit2 className="h-4 w-4" />
-                        <span className="text-xs">Ubah</span>
-                      </button>
-                      <button
-                        onClick={() => setDeletingId(t.id)}
-                        className="text-zinc-500 hover:text-rose-500 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="text-xs">Hapus</span>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Hapus
                       </button>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Main card */}
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1, x: swipeOffset }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="relative bg-[#141414] hover:bg-[#1A1A1A] transition-colors"
+                    style={{
+                      x: swipeOffset,
+                      touchAction: 'pan-y'
+                    }}
+                    onTouchStart={(e) => handleTouchStart(t.id, e)}
+                    onTouchMove={(e) => handleTouchMove(t.id, e)}
+                    onTouchEnd={() => handleTouchEnd(t.id)}
+                    ref={(el) => { itemRefs.current[t.id] = el; }}
+                  >
+                    <div className="p-4 border border-zinc-800/50 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white">
+                            {t.category}
+                          </span>
+                          {isOfflineItem(t) && (
+                            <span className="flex items-center gap-1 text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 px-1.5 py-0.5 rounded-full font-medium" title="Menunggu sinkronisasi (Offline)">
+                              <CloudOff className="w-3 h-3" />
+                              Tertunda
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm text-zinc-500 mt-1 whitespace-pre-wrap">
+                          {t.description || "Tanpa Keterangan"} • {new Date(t.date).toLocaleDateString('id-ID')}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end sm:space-x-6 w-full sm:w-auto mt-2 sm:mt-0">
+                        <span className={`font-semibold ${t.type === 'INCOME' ? 'text-teal-400' : 'text-rose-400'}`}>
+                          {t.type === 'INCOME' ? '+' : '-'}{formatCurrency(t.amount)}
+                        </span>
+                        {!isOfflineItem(t) && (
+                          <div className="flex items-center md:hidden">
+                            <button
+                              onClick={() => handleDuplicate(t)}
+                              className="text-zinc-500 hover:text-teal-400 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
+                            >
+                              {isCopied ? <CopyCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                            </button>
+                            <button
+                              onClick={() => setDeletingId(t.id)}
+                              className="text-zinc-500 hover:text-rose-500 transition-colors py-2 px-3 flex items-center gap-1.5 font-medium rounded-lg hover:bg-[#1A1A1A] border border-transparent hover:border-[#262626]"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
                 </div>
-              </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
@@ -224,7 +391,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.95, y: 20 }}
@@ -259,8 +426,8 @@ const ClientTransactionList = memo(function ClientTransactionList({
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Nominal (Rp)</label>
                   <input
                     type="text"
-                    value={editingItem.amount}
-                    onChange={(e) => setEditingItem({...editingItem, amount: Number(e.target.value.replace(/\D/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.'))})}
+                    value={editingItem.amount.toLocaleString('id-ID')}
+                    onChange={(e) => setEditingItem({...editingItem, amount: Number(e.target.value.replace(/\D/g, ''))})}
                     required
                     pattern="[0-9]*"
                     inputMode="numeric"
@@ -297,7 +464,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
                     onChange={(e) => setEditingItem({...editingItem, date: e.target.value})}
                     max={new Date().toISOString().split('T')[0]}
                     required
-                    className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm [color-scheme:dark]"
+                    className="w-full bg-[#1A1A1A] border border-[#262626] text-white rounded-lg py-2.5 px-3 focus:outline-none focus:ring-1 focus:ring-teal-500 text-sm scheme-dark"
                   />
                 </div>
 
@@ -323,7 +490,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           >
             <motion.div
               initial={{ scale: 0.95, y: 20 }}

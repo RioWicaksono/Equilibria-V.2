@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { processRecurringTransactions } from '@/lib/cron';
+import { withCronAuth } from '@/lib/cronAuth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function GET() {
+const handler = async () => {
   try {
     const result = await processRecurringTransactions();
 
@@ -21,4 +22,7 @@ export async function GET() {
       error: 'Failed to process recurring transactions',
     }, { status: 500 });
   }
-}
+};
+
+// Apply cron authentication
+export const GET = withCronAuth(handler);

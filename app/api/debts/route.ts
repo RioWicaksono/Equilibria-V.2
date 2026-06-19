@@ -1,8 +1,27 @@
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaDebtRepository } from '@/infrastructure/repositories/PrismaDebtRepository';
+import { validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
 
 const debtRepo = new PrismaDebtRepository();
+
+/**
+ * Validate amount with proper bounds
+ */
+function safeParseAmount(amount: unknown): { valid: true; value: number } | { valid: false; error: string } {
+  const validation = validateAmount(amount, {
+    min: 1,
+    max: AMOUNT_LIMITS.MAX,
+    allowZero: false,
+    allowNegative: false,
+  });
+
+  if (!validation.valid || validation.amount === null) {
+    return { valid: false, error: validation.error || 'Invalid amount' };
+  }
+
+  return { valid: true, value: validation.amount };
+}
 
 export async function GET() {
   try {
@@ -17,14 +36,20 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { name, amount, type, dueDate, description } = await req.json();
-    if (!name || !amount) {
-      return ApiResponse.badRequest('Name and amount are required');
+    if (!name) {
+      return ApiResponse.badRequest('Name is required');
+    }
+
+    // Validate amount
+    const amountValidation = safeParseAmount(amount);
+    if (!amountValidation.valid) {
+      return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
     }
 
     const debt = {
       id: crypto.randomUUID(),
       name,
-      amount: parseFloat(amount),
+      amount: amountValidation.value,
       type: type || 'DEBT',
       status: 'UNPAID' as const,
       paidAmount: 0,
@@ -54,14 +79,40 @@ export async function PUT(req: Request) {
       return ApiResponse.notFound('Debt');
     }
 
+    let parsedAmount: number | undefined;
+    let parsedPaidAmount: number | undefined;
+
+    // Validate amount if provided
+    if (amount !== undefined) {
+      const amountValidation = safeParseAmount(amount);
+      if (!amountValidation.valid) {
+        return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
+      }
+      parsedAmount = amountValidation.value;
+    }
+
+    // Validate paidAmount if provided
+    if (paidAmount !== undefined) {
+      const paidValidation = validateAmount(paidAmount, {
+        min: 0,
+        max: AMOUNT_LIMITS.MAX,
+        allowZero: true,
+        allowNegative: false,
+      });
+      if (!paidValidation.valid) {
+        return ApiResponse.badRequest(paidValidation.error || 'Invalid paid amount');
+      }
+      parsedPaidAmount = paidValidation.amount!;
+    }
+
     const updated = {
       ...existing,
       ...(name && { name }),
-      ...(amount && { amount: parseFloat(amount) }),
+      ...(parsedAmount !== undefined && { amount: parsedAmount }),
       ...(type && { type: type as 'DEBT' | 'LOAN' }),
       ...(status && { status: status as 'UNPAID' | 'PAID' }),
       ...(description !== undefined && { description }),
-      ...(paidAmount !== undefined && { paidAmount: parseFloat(paidAmount) }),
+      ...(parsedPaidAmount !== undefined && { paidAmount: parsedPaidAmount }),
       ...(dueDate && { dueDate: new Date(dueDate) }),
       updatedAt: new Date(),
     };

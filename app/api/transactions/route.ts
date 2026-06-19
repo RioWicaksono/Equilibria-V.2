@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { FinanceService } from '@/application/services/FinanceService';
 import { CreateTransactionSchema, UpdateTransactionSchema } from '@/lib/validation';
+import { parseAmount, validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
 import { ZodError } from 'zod';
 import { ApiResponse, parsePaginationParams, createPaginationMeta } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
@@ -34,18 +35,27 @@ export async function POST(req: Request) {
     const formData = await req.formData();
 
     const rawAmount = formData.get('amount') as string;
-    const cleanAmount = rawAmount.replace(/\D/g, '');
-    const amount = Number(cleanAmount) || 0;
-
     const type = formData.get('type') as string;
     const category = formData.get('category') as string;
     const description = formData.get('description') as string;
     const date = formData.get('date') as string;
 
+    // Validate amount with proper parsing
+    const amountValidation = validateAmount(rawAmount, {
+      min: 1,
+      max: AMOUNT_LIMITS.MAX,
+      allowZero: false,
+      allowNegative: false,
+    });
+
+    if (!amountValidation.valid) {
+      return ApiResponse.badRequest(amountValidation.error || 'Jumlah tidak valid');
+    }
+
     // Validate with Zod
     try {
       CreateTransactionSchema.parse({
-        amount,
+        amount: amountValidation.amount,
         type,
         category,
         description,
@@ -58,18 +68,15 @@ export async function POST(req: Request) {
       throw error;
     }
 
-    if (amount > 0) {
-      const transaction = await financeService.addTransaction(
-        amount,
-        type as 'INCOME' | 'EXPENSE',
-        category,
-        description,
-        date
-      );
-      return ApiResponse.created({ transaction });
-    }
+    const transaction = await financeService.addTransaction(
+      amountValidation.amount!,
+      type as 'INCOME' | 'EXPENSE',
+      category,
+      description,
+      date
+    );
+    return ApiResponse.created({ transaction });
 
-    return ApiResponse.badRequest('Invalid amount');
   } catch (error) {
     logger.error('[POST /api/transactions]', { error });
     return ApiResponse.internalError('Failed to add transaction');
@@ -82,35 +89,48 @@ export async function PUT(req: Request) {
 
     const id = formData.get('id') as string;
     const rawAmount = formData.get('amount') as string;
-    const cleanAmount = rawAmount.replace(/\D/g, '');
-    const amount = Number(cleanAmount) || 0;
-
     const type = formData.get('type') as string;
     const category = formData.get('category') as string;
     const description = formData.get('description') as string;
     const date = formData.get('date') as string;
 
-    // Validate with Zod
-    try {
-      UpdateTransactionSchema.parse({
-        id,
-        amount,
-        type,
-        category,
-        description,
-        date,
-      });
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return ApiResponse.badRequest('Validation failed', formatZodError(error));
-      }
-      throw error;
+    if (!id) {
+      return ApiResponse.badRequest('ID transaksi wajib ada');
     }
 
-    if (amount > 0 && id) {
+    // Validate amount with proper parsing
+    if (rawAmount) {
+      const amountValidation = validateAmount(rawAmount, {
+        min: 1,
+        max: AMOUNT_LIMITS.MAX,
+        allowZero: false,
+        allowNegative: false,
+      });
+
+      if (!amountValidation.valid) {
+        return ApiResponse.badRequest(amountValidation.error || 'Jumlah tidak valid');
+      }
+
+      // Validate with Zod
+      try {
+        UpdateTransactionSchema.parse({
+          id,
+          amount: amountValidation.amount,
+          type,
+          category,
+          description,
+          date,
+        });
+      } catch (error) {
+        if (error instanceof ZodError) {
+          return ApiResponse.badRequest('Validation failed', formatZodError(error));
+        }
+        throw error;
+      }
+
       const transaction = await financeService.updateTransaction(
         id,
-        amount,
+        amountValidation.amount!,
         type as 'INCOME' | 'EXPENSE',
         category,
         description,
@@ -119,7 +139,17 @@ export async function PUT(req: Request) {
       return ApiResponse.ok({ transaction });
     }
 
-    return ApiResponse.badRequest('Invalid input');
+    // Update without amount
+    const transaction = await financeService.updateTransaction(
+      id,
+      0,
+      type as 'INCOME' | 'EXPENSE',
+      category,
+      description,
+      date
+    );
+    return ApiResponse.ok({ transaction });
+
   } catch (error) {
     logger.error('[PUT /api/transactions]', { error });
     return ApiResponse.internalError('Failed to update transaction');

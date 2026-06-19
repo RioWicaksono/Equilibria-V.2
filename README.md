@@ -17,6 +17,19 @@ Aplikasi pencatatan keuangan pribadi dengan fitur lengkap untuk mengelola transa
 - **📱 Mobile-First** - Responsive design
 - **🔔 Telegram Bot** - Catat transaksi via chat
 
+### 🚀 Fitur Input Cepat (Gratis!)
+
+| Fitur | Deskripsi |
+|-------|-----------|
+| 📝 **Quick Templates** | Simpan transaksi favorit, akses instan |
+| 🎤 **Voice Input** | Catat dengan suara, parsing otomatis |
+| ⌨️ **Calculator Mode** | Ketik "150+50-20", langsung hasil |
+| 📋 **Recent Categories** | Kategori favorit diurutkan otomatis |
+| 📄 **Duplicate** | Duplikat transaksi dengan 1 klik |
+| 👆 **Swipe Actions** | Geser untuk edit/hapus/duplikat |
+| 🏠 **PWA Shortcuts** | Tambah transaksi dari homescreen |
+| 📷 **OCR Scanner** | Scan struk, baca nominal otomatis |
+
 ## 🏗️ Tech Stack
 
 | Layer | Technology |
