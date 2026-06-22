@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Target, Plus, X, Bell } from 'lucide-react';
+import { Target, Plus, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Budget } from '@/domain/entities/Budget';
 import { useSettings } from '../contexts/SettingsContext';
@@ -101,33 +101,40 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
     }
   };
 
+  const hasAlert = budgets.some(b => {
+    const spent = categoryTotals[b.category] || 0;
+    return (spent / b.limit) * 100 >= alertThreshold;
+  });
+
   return (
-    <div className="bg-[#141414] border border-[#262626] rounded-lg p-1.5 h-full" role="region" aria-label="Pelacakan Anggaran Bulanan">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1">
-          <Target className="w-2.5 h-2.5 text-indigo-400" />
-          <h3 className="text-[9px] font-bold text-white">Anggaran</h3>
-          {budgets.some(b => {
-            const spent = categoryTotals[b.category] || 0;
-            return (spent / b.limit) * 100 >= alertThreshold;
-          }) && (
-            <Bell className="w-2 h-2 text-amber-400 animate-pulse" />
+    <div className="bg-[#141414] border border-[#262626] rounded-xl p-3 h-full" role="region" aria-label="Pelacakan Anggaran Bulanan">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+            <Target className="w-3.5 h-3.5 text-indigo-400" />
+          </div>
+          <h3 className="text-xs font-bold text-white">Anggaran Bulanan</h3>
+          {hasAlert && (
+            <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
           )}
         </div>
         {!isAdding && (
           <button
-            aria-label="Tambah"
+            aria-label="Tambah Budget"
             onClick={() => setIsAdding(true)}
-            className="p-0.5 text-zinc-500 hover:text-indigo-400 rounded"
+            className="p-1.5 text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
           >
-            <Plus className="w-2.5 h-2.5" />
+            <Plus className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      <div className="space-y-0.5 max-h-[90px] overflow-y-auto">
+      <div className="space-y-2 max-h-28 overflow-y-auto">
         {budgets.length === 0 && !isAdding && (
-          <div className="text-center text-[8px] text-zinc-500 py-1">Belum ada anggaran.</div>
+          <div className="text-center text-xs text-zinc-500 py-4">
+            Belum ada anggaran bulanan.<br />
+            <span className="text-[10px]">Klik + untuk menambahkan</span>
+          </div>
         )}
 
         {budgets.map((budget) => {
@@ -137,41 +144,58 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
           const isOverLimit = progress >= 100;
 
           return (
-            <div key={budget.id} className="flex items-center gap-1 p-0.5 rounded bg-[#1A1A1A]">
-              <span className="text-[8px] text-zinc-300 truncate flex-1 w-12">{budget.category}</span>
-              <div className="flex-1 h-0.5 bg-zinc-800 rounded-full overflow-hidden">
+            <div key={budget.id} className="space-y-1.5 p-2 rounded-lg bg-[#1A1A1A]">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-zinc-200 truncate">{budget.category}</span>
+                <span className={`text-xs font-bold ${isOverLimit ? 'text-rose-400' : isNearLimit ? 'text-amber-400' : 'text-indigo-400'}`}>
+                  {Math.round(progress)}%
+                </span>
+              </div>
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${isOverLimit ? 'bg-rose-500' : isNearLimit ? 'bg-amber-500' : 'bg-indigo-500'}`}
+                  className={`h-full rounded-full transition-all ${isOverLimit ? 'bg-rose-500' : isNearLimit ? 'bg-amber-500' : 'bg-indigo-500'}`}
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <span className="text-[7px] text-zinc-500">{Math.round(progress)}%</span>
+              <div className="flex justify-between text-[10px] text-zinc-500">
+                <span>Rp {formatCurrency(spent)}</span>
+                <span>Rp {formatCurrency(budget.limit)}</span>
+              </div>
             </div>
           );
         })}
 
         {isAdding && (
-          <div className="p-1.5 rounded border border-indigo-500/30 bg-indigo-500/5 space-y-1">
-            <div className="flex gap-1">
+          <div className="p-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 space-y-2">
+            <div className="flex gap-2">
               <input
-                type="text" placeholder="Kategori"
-                value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}
-                className="flex-1 bg-[#1A1A1A] border border-[#262626] text-white rounded text-[8px] p-1 focus:border-indigo-500 outline-none"
+                type="text"
+                placeholder="Nama kategori"
+                value={formData.category}
+                onChange={e => setFormData({...formData, category: e.target.value})}
+                className="flex-1 bg-[#1A1A1A] border border-[#262626] text-white rounded-lg text-xs p-2 focus:border-indigo-500 outline-none"
               />
               <input
-                type="text" placeholder="Limit"
-                value={formData.limit} onChange={e => setFormData({...formData, limit: e.target.value.replace(/\D/g, '')})}
-                className="w-16 bg-[#1A1A1A] border border-[#262626] text-white rounded text-[8px] p-1 focus:border-indigo-500 outline-none"
+                type="text"
+                placeholder="Limit"
+                value={formData.limit}
+                onChange={e => setFormData({...formData, limit: e.target.value.replace(/\D/g, '')})}
+                className="w-28 bg-[#1A1A1A] border border-[#262626] text-white rounded-lg text-xs p-2 focus:border-indigo-500 outline-none"
               />
             </div>
-            <div className="flex gap-1">
-              <button onClick={() => setIsAdding(false)} className="flex-1 py-0.5 text-[8px] text-zinc-400 rounded bg-zinc-800">Batal</button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsAdding(false)}
+                className="flex-1 py-1.5 text-xs text-zinc-400 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors"
+              >
+                Batal
+              </button>
               <button
                 disabled={isSubmitting || !formData.category || !formData.limit}
                 onClick={handleSave}
-                className="flex-1 py-0.5 text-[8px] font-bold text-white bg-indigo-500 rounded disabled:opacity-50"
+                className="flex-1 py-1.5 text-xs font-bold text-white bg-indigo-500 rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {isSubmitting ? '...' : 'Simpan'}
+                {isSubmitting ? 'Menyimpan...' : 'Simpan'}
               </button>
             </div>
           </div>

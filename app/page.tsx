@@ -27,63 +27,72 @@ export default async function DashboardPage() {
     }
   });
 
-  const incomePercent = summary.totalIncome > 0 ? Math.round((summary.totalExpense / summary.totalIncome) * 100) : 0;
-
   return (
-    <div className="relative w-full min-w-0 h-full">
+    <div className="relative w-full min-w-0 h-full flex flex-col">
       <TransactionModal isFAB={true} />
 
-      <div className="flex items-center justify-between mb-1">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="w-5 h-5 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded text-[9px]">
+          <span className="w-7 h-7 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded-lg text-xs">
             E
           </span>
-          <h1 className="text-sm font-bold text-white">Dashboard</h1>
+          <h1 className="text-base font-bold text-white">Dashboard</h1>
         </div>
         <SystemStatus />
       </div>
 
-      <div className="grid grid-cols-3 gap-1">
-        <div className="card p-1.5">
-          <div className="flex items-center gap-1 mb-0.5">
-            <Wallet className="w-2.5 h-2.5 text-teal-400" />
-            <span className="text-[7px] text-zinc-500 uppercase">Saldo</span>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-3 mb-4 shrink-0">
+        <div className="card p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+              <Wallet className="w-4 h-4 text-teal-400" />
+            </div>
+            <span className="text-xs text-zinc-400 uppercase tracking-wide">Saldo</span>
           </div>
-          <p className="text-sm font-bold text-white truncate">
+          <p className="text-lg font-bold text-white truncate">
             <FormatCurrency amount={summary.balance} />
           </p>
         </div>
 
-        <div className="card p-1.5">
-          <div className="flex items-center gap-1 mb-0.5">
-            <TrendingUp className="w-2.5 h-2.5 text-teal-400" />
-            <span className="text-[7px] text-zinc-500 uppercase">Masuk</span>
+        <div className="card p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-teal-400" />
+            </div>
+            <span className="text-xs text-zinc-400 uppercase tracking-wide">Pemasukan</span>
           </div>
-          <p className="text-sm font-bold text-teal-400 truncate">
+          <p className="text-lg font-bold text-teal-400 truncate">
             <FormatCurrency amount={summary.totalIncome} />
           </p>
         </div>
 
-        <div className="card p-1.5">
-          <div className="flex items-center gap-1 mb-0.5">
-            <TrendingDown className="w-2.5 h-2.5 text-rose-400" />
-            <span className="text-[7px] text-zinc-500 uppercase">Keluar</span>
+        <div className="card p-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center">
+              <TrendingDown className="w-4 h-4 text-rose-400" />
+            </div>
+            <span className="text-xs text-zinc-400 uppercase tracking-wide">Pengeluaran</span>
           </div>
-          <p className="text-sm font-bold text-rose-400 truncate">
+          <p className="text-lg font-bold text-rose-400 truncate">
             <FormatCurrency amount={summary.totalExpense} />
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-1 mt-1">
-        <div className="xl:col-span-2">
-          <div className="card p-1">
-            <h3 className="text-[9px] font-semibold text-white mb-0.5">📅 Kalender</h3>
+      {/* Calendar & Budget */}
+      <div className="grid grid-cols-5 gap-2 flex-1 min-h-0">
+        <div className="xl:col-span-2 min-h-0">
+          <div className="card p-3 h-full">
+            <h3 className="text-xs font-semibold text-white mb-2 flex items-center gap-1">
+              <span>📅</span> Kalender
+            </h3>
             <DashboardCalendar transactions={transactions} />
           </div>
         </div>
 
-        <div className="xl:col-span-3">
+        <div className="xl:col-span-3 min-h-0">
           <DashboardBudget budgets={budgets} categoryTotals={categoryTotals} />
         </div>
       </div>
