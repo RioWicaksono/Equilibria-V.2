@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import DashboardCalendar from './components/DashboardCalendar';
 import DashboardBudget from './components/DashboardBudget';
 import TransactionModal from './transactions/TransactionModal';
+import SystemStatus from './components/SystemStatus';
 
 interface Summary {
   balance: number;
@@ -32,11 +33,14 @@ export default async function DashboardPage() {
     <div className="relative w-full min-w-0 h-full">
       <TransactionModal isFAB={true} />
 
-      <div className="flex items-center gap-2 mb-1">
-        <span className="w-5 h-5 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded text-[9px]">
-          E
-        </span>
-        <h1 className="text-sm font-bold text-white">Dashboard</h1>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <span className="w-5 h-5 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04] rounded text-[9px]">
+            E
+          </span>
+          <h1 className="text-sm font-bold text-white">Dashboard</h1>
+        </div>
+        <SystemStatus />
       </div>
 
       <div className="grid grid-cols-3 gap-1">
