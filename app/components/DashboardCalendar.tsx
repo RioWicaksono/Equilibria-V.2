@@ -61,21 +61,45 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
       <div className="w-full flex justify-center text-white relative overflow-auto max-h-full">
         <style>{`
           .rdp {
-            --rdp-cell-size: 24px;
+            --rdp-cell-size: 28px;
             --rdp-accent-color: #14b8a6;
             --rdp-background-color: #27272a;
             margin: 0;
-            font-size: 10px;
+            font-size: 11px;
+          }
+          @media (min-width: 1024px) {
+            .rdp {
+              --rdp-cell-size: 36px;
+              font-size: 13px;
+            }
+          }
+          @media (min-width: 1280px) {
+            .rdp {
+              --rdp-cell-size: 40px;
+              font-size: 14px;
+            }
           }
           .rdp-head_cell {
-            font-size: 8px;
+            font-size: 9px;
             padding: 1px;
             color: #71717a;
           }
+          @media (min-width: 1024px) {
+            .rdp-head_cell {
+              font-size: 11px;
+              padding: 2px;
+            }
+          }
           .rdp-day {
-            font-size: 10px;
+            font-size: 11px;
             padding: 1px;
             color: #e4e4e7;
+          }
+          @media (min-width: 1024px) {
+            .rdp-day {
+              font-size: 13px;
+              padding: 2px;
+            }
           }
           .rdp-day_selected, .rdp-day_selected:focus-visible, .rdp-day_selected:hover {
             color: white;
@@ -90,24 +114,41 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
           .day-with-reminder::after {
             content: '';
             position: absolute;
-            top: 1px;
-            right: 1px;
-            width: 3px;
-            height: 3px;
+            top: 2px;
+            right: 2px;
+            width: 4px;
+            height: 4px;
             background-color: #22c55e;
             border-radius: 50%;
           }
+          @media (min-width: 1024px) {
+            .day-with-reminder::after {
+              width: 5px;
+              height: 5px;
+            }
+          }
           .rdp-nav {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
+          }
+          @media (min-width: 1024px) {
+            .rdp-nav {
+              width: 32px;
+              height: 32px;
+            }
           }
           .rdp-nav button {
             padding: 0;
           }
           .rdp-caption_label {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             color: #fafafa;
+          }
+          @media (min-width: 1024px) {
+            .rdp-caption_label {
+              font-size: 14px;
+            }
           }
           .rdp-months {
             gap: 0;
