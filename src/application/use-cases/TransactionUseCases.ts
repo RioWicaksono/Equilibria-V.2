@@ -81,24 +81,6 @@ export class TransactionUseCases {
     balance: number;
     transactionCount: number;
   }> {
-    const transactions = await this.transactionRepository.findAll();
-
-    const summary = transactions.reduce(
-      (acc, t) => {
-        if (t.type === 'INCOME') {
-          acc.totalIncome += t.amount;
-        } else {
-          acc.totalExpense += t.amount;
-        }
-        return acc;
-      },
-      { totalIncome: 0, totalExpense: 0 }
-    );
-
-    return {
-      ...summary,
-      balance: summary.totalIncome - summary.totalExpense,
-      transactionCount: transactions.length,
-    };
+    return this.transactionRepository.getFinancialSummary();
   }
 }

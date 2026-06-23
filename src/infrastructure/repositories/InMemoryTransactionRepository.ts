@@ -1,5 +1,5 @@
 import { Transaction } from '../../domain/entities/Transaction';
-import { ITransactionRepository, TransactionFilter } from '../../domain/repositories/ITransactionRepository';
+import { ITransactionRepository, TransactionFilter, FinancialSummaryResult } from '../../domain/repositories/ITransactionRepository';
 import { TransactionType } from '../../domain/value-objects/TransactionType';
 
 const globalForStore = globalThis as unknown as {
@@ -45,6 +45,27 @@ export class InMemoryTransactionRepository implements ITransactionRepository {
 
   async findAll(): Promise<Transaction[]> {
     return [...store].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  async getFinancialSummary(): Promise<FinancialSummaryResult> {
+    const transactions = store;
+    const summary = transactions.reduce(
+      (acc, t) => {
+        if (t.type === 'INCOME') {
+          acc.totalIncome += t.amount;
+        } else {
+          acc.totalExpense += t.amount;
+        }
+        return acc;
+      },
+      { totalIncome: 0, totalExpense: 0 }
+    );
+
+    return {
+      ...summary,
+      balance: summary.totalIncome - summary.totalExpense,
+      transactionCount: transactions.length,
+    };
   }
 
   async findById(id: string): Promise<Transaction | null> {

@@ -8,10 +8,18 @@ export interface TransactionFilter {
   endDate?: Date;
 }
 
+export interface FinancialSummaryResult {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  transactionCount: number;
+}
+
 export interface ITransactionRepository {
   save(transaction: Transaction): Promise<void>;
   findAll(): Promise<Transaction[]>;
   findById(id: string): Promise<Transaction | null>;
   findByFilter(filter: TransactionFilter): Promise<Transaction[]>;
   delete(id: string): Promise<void>;
+  getFinancialSummary(): Promise<FinancialSummaryResult>;
 }

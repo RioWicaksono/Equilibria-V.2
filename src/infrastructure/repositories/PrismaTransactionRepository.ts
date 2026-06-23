@@ -27,6 +27,13 @@ function mapPrismaTransaction(t: PrismaTransactionResult): Transaction {
   };
 }
 
+export interface FinancialSummaryResult {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+  transactionCount: number;
+}
+
 export class PrismaTransactionRepository implements ITransactionRepository {
   async save(transaction: Transaction): Promise<void> {
     const prisma = await getPrismaAsync();
@@ -60,6 +67,34 @@ export class PrismaTransactionRepository implements ITransactionRepository {
       orderBy: { date: 'desc' },
     });
     return data.map((item: PrismaTransactionResult) => mapPrismaTransaction(item));
+  }
+
+  async getFinancialSummary(): Promise<FinancialSummaryResult> {
+    const prisma = await getPrismaAsync();
+    const result = await prisma.transaction.aggregate({
+      _sum: { amount: true },
+      _count: true,
+    });
+
+    const incomeResult = await prisma.transaction.aggregate({
+      where: { type: 'INCOME' },
+      _sum: { amount: true },
+    });
+
+    const expenseResult = await prisma.transaction.aggregate({
+      where: { type: 'EXPENSE' },
+      _sum: { amount: true },
+    });
+
+    const totalIncome = Number(incomeResult._sum.amount) || 0;
+    const totalExpense = Number(expenseResult._sum.amount) || 0;
+
+    return {
+      totalIncome,
+      totalExpense,
+      balance: totalIncome - totalExpense,
+      transactionCount: result._count || 0,
+    };
   }
 
   async findById(id: string): Promise<Transaction | null> {
