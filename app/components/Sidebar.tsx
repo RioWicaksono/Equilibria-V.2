@@ -69,14 +69,14 @@ export default function Sidebar() {
       -translate-x-full lg:translate-x-0
     `}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-zinc-800/50">
-        <div className="w-9 h-9 flex items-center justify-center font-bold bg-teal-500 text-white rounded-lg shadow-lg shadow-teal-500/20 flex-shrink-0">
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-800/50">
+        <span className="w-8 h-8 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04]/50 rounded-lg text-xs shrink-0 shadow-md">
           E
-        </div>
+        </span>
         {!isCollapsed && (
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-bold text-white">Equilibria</span>
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Finance App</span>
+            <span className="text-xs font-bold text-white truncate">Equilibria</span>
+            <span className="text-[9px] text-zinc-500 uppercase tracking-wider">Finance</span>
           </div>
         )}
       </div>
@@ -120,7 +120,7 @@ export default function Sidebar() {
                           : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
                       )}
                     >
-                      <item.icon className={cn('w-4 h-4 flex-shrink-0', isActive(item.href) ? 'text-teal-400' : 'text-zinc-500')} />
+                      <item.icon className={cn('w-4 h-4 shrink-0', isActive(item.href) ? 'text-teal-400' : 'text-zinc-500')} />
                       <span className="truncate">{item.label}</span>
                       {isActive(item.href) && (
                         <span className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400" />

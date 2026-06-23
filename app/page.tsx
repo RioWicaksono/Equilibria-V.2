@@ -32,21 +32,21 @@ export default async function DashboardPage() {
       <TransactionModal isFAB={true} />
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center font-bold bg-teal-500 text-white rounded-xl shadow-lg shadow-teal-500/20">
+      <div className="flex items-center justify-between mb-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="w-9 h-9 flex items-center justify-center font-black bg-black text-[#faff04] border border-[#faff04]/50 rounded-lg text-xs shadow-md shrink-0">
             E
-          </div>
+          </span>
           <div>
-            <h1 className="text-lg font-bold text-white">Dashboard</h1>
-            <p className="text-xs text-zinc-500">Ringkasan keuangan Anda</p>
+            <h1 className="text-base font-bold text-white">Dashboard</h1>
+            <p className="text-[10px] text-zinc-500">Ringkasan keuangan Anda</p>
           </div>
         </div>
         <SystemStatus />
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-5 shrink-0">
+      <div className="grid grid-cols-3 gap-3 mb-3 shrink-0">
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-teal-500/10 flex items-center justify-center">
@@ -85,17 +85,17 @@ export default async function DashboardPage() {
       </div>
 
       {/* Calendar & Budget */}
-      <div className="grid grid-cols-5 gap-4 flex-1 min-h-0">
-        <div className="xl:col-span-2 min-h-0">
-          <div className="card p-4 h-full">
-            <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+      <div className="grid grid-cols-5 gap-3 flex-1 min-h-0">
+        <div className="xl:col-span-2 min-h-0 flex">
+          <div className="card p-3 h-full w-full">
+            <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
               <span>📅</span> Kalender
             </h3>
             <DashboardCalendar transactions={transactions} />
           </div>
         </div>
 
-        <div className="xl:col-span-3 min-h-0">
+        <div className="xl:col-span-3 min-h-0 flex">
           <DashboardBudget budgets={budgets} categoryTotals={categoryTotals} />
         </div>
       </div>

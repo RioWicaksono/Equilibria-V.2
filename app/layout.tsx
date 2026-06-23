@@ -71,12 +71,12 @@ export default function RootLayout({
                   </div>
 
                   {/* Main Content Area */}
-                  <main className="flex-1 w-full min-w-0 pt-14 lg:pt-0 pb-20 lg:pb-6">
+                  <main className="flex-1 w-full min-w-0 pt-14 lg:pt-0 pb-20 lg:pb-6 flex flex-col overflow-hidden">
                     {/* Mobile/Tablet Header - Hidden on lg+ */}
                     <MobileHeader />
 
                     {/* Content Container */}
-                    <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-1">
+                    <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-1 flex-1 flex flex-col min-h-0">
                       {children}
                     </div>
                   </main>
