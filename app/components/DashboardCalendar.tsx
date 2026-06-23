@@ -184,6 +184,5 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
           showOutsideDays
         />
       </motion.div>
-    </motion.div>
   );
 }
