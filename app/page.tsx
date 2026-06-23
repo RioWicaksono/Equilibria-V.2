@@ -1,5 +1,5 @@
 import { getFinanceService } from '@/application/services/FinanceService';
-import { Wallet, TrendingUp, TrendingDown, Zap, ArrowUpRight, ArrowDownRight, Flame, TrendingUpDown, Calendar } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react';
 import FormatCurrency from './components/FormatCurrency';
 import { headers } from 'next/headers';
 import DashboardCalendar from './components/DashboardCalendar';
@@ -38,11 +38,6 @@ export default async function DashboardPage() {
       categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
     }
   });
-
-  // Calculate savings rate
-  const savingsRate = summary.totalIncome > 0
-    ? Math.round(((summary.totalIncome - summary.totalExpense) / summary.totalIncome) * 100)
-    : 0;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -129,59 +124,6 @@ export default async function DashboardPage() {
             <p className="text-sm lg:text-lg xl:text-xl font-bold text-rose-400 truncate">
               <FormatCurrency amount={summary.totalExpense} />
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Financial Health Indicator */}
-      <div className="mb-3 lg:mb-4 shrink-0">
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/20 p-3 lg:p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-indigo-500/30">
-                <Flame className={`w-5 h-5 lg:w-6 lg:h-6 ${savingsRate > 20 ? 'text-emerald-400' : savingsRate > 0 ? 'text-amber-400' : 'text-rose-400'}`} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs lg:text-sm font-semibold text-white">Tingkat Tabungan</p>
-                  <span className={`text-[10px] lg:text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                    savingsRate > 20 ? 'bg-emerald-500/20 text-emerald-400'
-                    : savingsRate > 0 ? 'bg-amber-500/20 text-amber-400'
-                    : 'bg-rose-500/20 text-rose-400'
-                  }`}>
-                    {savingsRate > 20 ? 'Sehat' : savingsRate > 0 ? 'Perlu Perbaikan' : 'Defisit'}
-                  </span>
-                </div>
-                <p className="text-[10px] lg:text-xs text-zinc-400 mt-0.5">
-                  {savingsRate > 20
-                    ? 'Bagus! Anda menabung lebih dari 20%'
-                    : savingsRate > 0
-                    ? 'Target ideal adalah 20% dari pemasukan'
-                    : 'Pengeluaran melebihi pemasukan'}
-                </p>
-              </div>
-            </div>
-            <div className="relative w-20 h-20 lg:w-24 lg:h-24">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" stroke="#27272a" strokeWidth="8" fill="none" />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  stroke={savingsRate > 20 ? '#34d399' : savingsRate > 0 ? '#fbbf24' : '#fb7185'}
-                  strokeWidth="8"
-                  fill="none"
-                  strokeLinecap="round"
-                  strokeDasharray={`${Math.min(savingsRate * 2.83, 283)} 283`}
-                  className="transition-all duration-1000"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-lg lg:text-xl font-bold ${savingsRate > 20 ? 'text-emerald-400' : savingsRate > 0 ? 'text-amber-400' : 'text-rose-400'}`}>
-                  {savingsRate}%
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
