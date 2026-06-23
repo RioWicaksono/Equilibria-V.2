@@ -87,21 +87,21 @@ export default async function DashboardPage() {
       </div>
 
       {/* Calendar & Budget - Wider layout */}
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-2 lg:gap-3 xl:gap-4">
+      <div className="flex-1 min-h-0 flex flex-col sm:flex-row gap-2 lg:gap-3 xl:gap-4">
         {/* Calendar - Takes more width on desktop */}
-        <div className="min-h-0 flex flex-1 lg:flex-[1.2] animate-fade-in">
-          <div className="card p-2 lg:p-3 xl:p-4 h-full w-full flex flex-col">
+        <div className="min-h-0 flex flex-1 sm:flex-[1.2] animate-fade-in">
+          <div className="card p-2 sm:p-3 xl:p-4 h-full w-full flex flex-col overflow-hidden">
             <h3 className="text-xs lg:text-sm font-semibold text-white mb-1.5 lg:mb-2 flex items-center gap-1.5 lg:gap-2 shrink-0">
               <span>📅</span> Kalender
             </h3>
-            <div className="flex-1 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-hidden flex items-center justify-center">
               <DashboardCalendar transactions={transactions} />
             </div>
           </div>
         </div>
 
         {/* Budget - Takes more width on desktop */}
-        <div className="min-h-0 flex flex-1 lg:flex-[1.5] animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="min-h-0 flex flex-1 sm:flex-[1.5] animate-fade-in" style={{ animationDelay: '100ms' }}>
           <DashboardBudget budgets={budgets} categoryTotals={categoryTotals} />
         </div>
       </div>

@@ -61,26 +61,26 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="w-full flex justify-center text-white relative overflow-auto max-h-full"
+      className="w-full h-full flex flex-col items-center justify-center text-white relative overflow-hidden"
     >
         <style>{`
           .rdp {
-            --rdp-cell-size: 28px;
+            --rdp-cell-size: 32px;
             --rdp-accent-color: #14b8a6;
             --rdp-background-color: #27272a;
             margin: 0;
             font-size: 11px;
           }
-          @media (min-width: 1024px) {
+          @media (min-width: 640px) {
             .rdp {
               --rdp-cell-size: 36px;
-              font-size: 13px;
+              font-size: 12px;
             }
           }
-          @media (min-width: 1280px) {
+          @media (min-width: 1024px) {
             .rdp {
               --rdp-cell-size: 40px;
-              font-size: 14px;
+              font-size: 13px;
             }
           }
           .rdp-head_cell {
@@ -88,9 +88,9 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
             padding: 1px;
             color: #71717a;
           }
-          @media (min-width: 1024px) {
+          @media (min-width: 640px) {
             .rdp-head_cell {
-              font-size: 11px;
+              font-size: 10px;
               padding: 2px;
             }
           }
@@ -99,9 +99,9 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
             padding: 1px;
             color: #e4e4e7;
           }
-          @media (min-width: 1024px) {
+          @media (min-width: 640px) {
             .rdp-day {
-              font-size: 13px;
+              font-size: 12px;
               padding: 2px;
             }
           }

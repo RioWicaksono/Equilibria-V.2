@@ -112,7 +112,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
-      className="card p-2 lg:p-3 xl:p-4 h-full flex flex-col"
+      className="card p-2 sm:p-3 xl:p-4 h-full flex flex-col overflow-hidden"
       role="region"
       aria-label="Pelacakan Anggaran Bulanan"
     >
