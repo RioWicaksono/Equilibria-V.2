@@ -4,6 +4,12 @@
    CSS VARIABLES - Design System (DARK)
    Professional Corporate Style
    ======================================== */
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 :root, body.dark {
   /* Colors - Sophisticated Dark Palette */
   --bg-primary: #09090b;

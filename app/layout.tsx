@@ -41,11 +41,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="id" suppressHydrationWarning className="h-full">
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />
         <style>{`
+          html, body {
+            height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+          }
           :root {
             --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           }
@@ -56,7 +61,7 @@ export default function RootLayout({
           }
         `}</style>
       </head>
-      <body className="font-sans bg-[#09090b] text-zinc-100 antialiased">
+      <body className="font-sans bg-[#09090b] text-zinc-100 antialiased h-full overflow-hidden">
         <ErrorBoundary>
           <QueryProvider>
             <PWARegistration />
@@ -64,25 +69,28 @@ export default function RootLayout({
             <OfflineIndicator position="top" showPendingCount={true} />
             <SettingsProvider>
               <PinLockWrapper />
-              <div className="flex min-h-screen">
+              {/* App Container - Full viewport height */}
+              <div className="flex h-full w-full overflow-hidden">
                   {/* Desktop Sidebar - Hidden on mobile and tablet (< 1024px) */}
-                  <div className="hidden lg:block">
+                  <div className="hidden lg:flex lg:shrink-0">
                     <Sidebar />
                   </div>
 
                   {/* Main Content Area */}
-                  <main className="flex-1 w-full min-w-0 pt-14 lg:pt-0 pb-20 lg:pb-6 flex flex-col overflow-hidden">
+                  <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                     {/* Mobile/Tablet Header - Hidden on lg+ */}
-                    <MobileHeader />
+                    <div className="lg:hidden shrink-0">
+                      <MobileHeader />
+                    </div>
 
-                    {/* Content Container */}
-                    <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-1 flex-1 flex flex-col min-h-0">
+                    {/* Content Container - Takes remaining height */}
+                    <div className="flex-1 min-h-0 w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-2 overflow-hidden">
                       {children}
                     </div>
                   </main>
 
                   {/* Mobile/Tablet Bottom Navigation - Hidden on lg+ */}
-                  <div className="lg:hidden">
+                  <div className="lg:hidden shrink-0">
                     <MobileNav />
                   </div>
                 </div>

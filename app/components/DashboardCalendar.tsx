@@ -58,23 +58,23 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
 
   return (
     <>
-      <div className="w-full flex justify-center text-white relative">
+      <div className="w-full flex justify-center text-white relative overflow-auto max-h-full">
         <style>{`
           .rdp {
-            --rdp-cell-size: 28px;
+            --rdp-cell-size: 24px;
             --rdp-accent-color: #14b8a6;
             --rdp-background-color: #27272a;
             margin: 0;
-            font-size: 11px;
+            font-size: 10px;
           }
           .rdp-head_cell {
-            font-size: 9px;
-            padding: 2px;
+            font-size: 8px;
+            padding: 1px;
             color: #71717a;
           }
           .rdp-day {
-            font-size: 11px;
-            padding: 2px;
+            font-size: 10px;
+            padding: 1px;
             color: #e4e4e7;
           }
           .rdp-day_selected, .rdp-day_selected:focus-visible, .rdp-day_selected:hover {
@@ -90,22 +90,22 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
           .day-with-reminder::after {
             content: '';
             position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 4px;
-            height: 4px;
+            top: 1px;
+            right: 1px;
+            width: 3px;
+            height: 3px;
             background-color: #22c55e;
             border-radius: 50%;
           }
           .rdp-nav {
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
           }
           .rdp-nav button {
             padding: 0;
           }
           .rdp-caption_label {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: #fafafa;
           }
