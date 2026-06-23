@@ -13,3 +13,8 @@ CLAUDE.md
 .env.test.local
 .env.production.local
 .claude
+playwright-report/
+test-results/
+*.zip
+*.png
+*.md
