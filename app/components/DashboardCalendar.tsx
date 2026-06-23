@@ -61,7 +61,7 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="w-full h-full flex flex-col items-center justify-center text-white relative overflow-hidden"
+      className="w-full h-full flex flex-col items-center justify-center text-white relative"
     >
         <style>{`
           .rdp {

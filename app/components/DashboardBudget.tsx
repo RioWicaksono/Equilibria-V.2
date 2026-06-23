@@ -112,20 +112,20 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
-      className="card p-2 sm:p-3 xl:p-4 h-full flex flex-col overflow-hidden"
+      className="p-3 sm:p-4 xl:p-5 h-full flex flex-col"
       role="region"
       aria-label="Pelacakan Anggaran Bulanan"
     >
-      <div className="flex items-center justify-between mb-2 lg:mb-3 shrink-0">
-        <div className="flex items-center gap-1.5 lg:gap-2">
-          <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+      <div className="flex items-center justify-between mb-3 lg:mb-4 shrink-0">
+        <div className="flex items-center gap-2.5 lg:gap-3">
+          <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center border border-indigo-500/30">
             <Target className="w-4 h-4 lg:w-5 lg:h-5 text-indigo-400" />
           </div>
           <div>
-            <h3 className="text-xs lg:text-sm font-semibold text-white">Anggaran Bulanan</h3>
+            <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-white">Anggaran Bulanan</h3>
             {hasAlert && (
               <p className="text-[9px] lg:text-[10px] text-amber-400 flex items-center gap-0.5 lg:gap-1">
-                <Bell className="w-2.5 h-2.5 lg:w-3 lg:h-3" /> Hampir penuh
+                <Bell className="w-2.5 h-2.5 lg:w-3 lg:h-3" /> Perlu perhatian
               </p>
             )}
           </div>
@@ -134,7 +134,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
           <button
             aria-label="Tambah Budget"
             onClick={() => setIsAdding(true)}
-            className="p-1.5 lg:p-2 text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
+            className="p-1.5 lg:p-2 text-zinc-500 hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-all duration-200 hover:scale-105"
           >
             <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
           </button>
@@ -143,10 +143,12 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
 
       <div className="space-y-2 lg:space-y-3 flex-1 overflow-y-auto">
         {budgets.length === 0 && !isAdding && (
-          <div className="flex flex-col items-center justify-center py-4 lg:py-6 text-center">
-            <Target className="w-8 h-8 lg:w-10 lg:h-10 text-zinc-700 mb-2 lg:mb-3" />
-            <p className="text-xs lg:text-sm text-zinc-400">Belum ada anggaran</p>
-            <p className="text-[10px] lg:text-xs text-zinc-600">Klik + untuk menambahkan</p>
+          <div className="flex flex-col items-center justify-center py-8 lg:py-12 text-center">
+            <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 flex items-center justify-center mb-3 lg:mb-4">
+              <Target className="w-7 h-7 lg:w-8 lg:h-8 text-zinc-700" />
+            </div>
+            <p className="text-xs lg:text-sm text-zinc-400 font-medium">Belum ada anggaran</p>
+            <p className="text-[10px] lg:text-xs text-zinc-600 mt-1">Klik tombol + untuk menambahkan</p>
           </div>
         )}
 
@@ -155,6 +157,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
           const progress = Math.min((spent / budget.limit) * 100, 100);
           const isNearLimit = progress >= alertThreshold;
           const isOverLimit = progress >= 100;
+          const remaining = budget.limit - spent;
 
           return (
             <motion.div
@@ -162,30 +165,54 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.2, delay: 0.1 + index * 0.05 }}
-              className="p-2 lg:p-3 rounded-lg bg-[#1f1f23] border border-zinc-800/50 hover:border-indigo-500/30 transition-colors"
+              className="group relative overflow-hidden p-2.5 lg:p-3 rounded-xl bg-[#1f1f23]/50 border border-zinc-800/30 hover:border-indigo-500/30 transition-all duration-300"
             >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs lg:text-sm font-medium text-white truncate">{budget.category}</span>
-                <span className={`text-xs lg:text-sm font-bold ${isOverLimit ? 'text-rose-400' : isNearLimit ? 'text-amber-400' : 'text-indigo-400'}`}>
-                  {Math.round(progress)}%
-                </span>
-              </div>
-              <div className="h-1.5 lg:h-2 bg-zinc-800 rounded-full overflow-hidden mb-1.5">
-                <div
-                  className={`h-full rounded-full transition-all ${isOverLimit ? 'bg-rose-500' : isNearLimit ? 'bg-amber-500' : 'bg-indigo-500'}`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-[10px] lg:text-xs text-zinc-500">
-                <span>Rp {formatCurrency(spent)}</span>
-                <span>Limit: Rp {formatCurrency(budget.limit)}</span>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs lg:text-sm font-semibold text-white truncate">{budget.category}</span>
+                    {isOverLimit && (
+                      <span className="text-[8px] lg:text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 font-medium">
+                        Over
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs lg:text-sm font-bold ${isOverLimit ? 'text-rose-400' : isNearLimit ? 'text-amber-400' : 'text-indigo-400'}`}>
+                    {Math.round(progress)}%
+                  </span>
+                </div>
+                <div className="h-1.5 lg:h-2 bg-zinc-800/50 rounded-full overflow-hidden mb-2">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.5, delay: 0.2 + index * 0.05, ease: 'easeOut' }}
+                    className={`h-full rounded-full ${
+                      isOverLimit ? 'bg-gradient-to-r from-rose-500 to-rose-400'
+                      : isNearLimit ? 'bg-gradient-to-r from-amber-500 to-amber-400'
+                      : 'bg-gradient-to-r from-indigo-500 to-indigo-400'
+                    }`}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] lg:text-xs">
+                  <span className={`${isOverLimit ? 'text-rose-400' : 'text-zinc-400'}`}>
+                    Rp {formatCurrency(spent)} terpakai
+                  </span>
+                  <span className="text-zinc-500">
+                    Sisa: Rp {formatCurrency(Math.max(0, remaining))}
+                  </span>
+                </div>
               </div>
             </motion.div>
           );
         })}
 
         {isAdding && (
-          <motion.div className="p-3 lg:p-4 rounded-lg border border-indigo-500/30 bg-indigo-500/5 space-y-3">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 lg:p-4 rounded-xl border border-indigo-500/30 bg-linear-to-br from-indigo-500/5 to-purple-500/5 space-y-3"
+          >
             <div className="flex gap-2 lg:gap-3">
               <input
                 type="text"
