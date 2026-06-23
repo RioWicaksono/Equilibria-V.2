@@ -41,13 +41,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" suppressHydrationWarning className="h-full">
+    <html lang="id" suppressHydrationWarning className="h-full overflow-hidden">
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />
         <style>{`
           html, body {
             height: 100%;
+            height: 100dvh;
             overflow: hidden;
             overscroll-behavior: none;
           }
@@ -70,27 +71,27 @@ export default function RootLayout({
             <SettingsProvider>
               <PinLockWrapper />
               {/* App Container - Full viewport height */}
-              <div className="flex h-full w-full overflow-hidden">
-                  {/* Desktop Sidebar - Hidden on mobile and tablet (< 1024px) */}
-                  <div className="hidden lg:flex lg:shrink-0">
+              <div className="flex h-[100dvh] h-[100vh] w-full overflow-hidden">
+                  {/* Desktop Sidebar */}
+                  <div className="hidden lg:flex lg:shrink-0 h-full">
                     <Sidebar />
                   </div>
 
                   {/* Main Content Area */}
                   <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                    {/* Mobile/Tablet Header - Hidden on lg+ */}
-                    <div className="lg:hidden shrink-0">
+                    {/* Mobile Header */}
+                    <div className="lg:hidden shrink-0 h-14">
                       <MobileHeader />
                     </div>
 
-                    {/* Content Container - Takes remaining height */}
+                    {/* Content - Takes remaining space */}
                     <div className="flex-1 min-h-0 w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-2 overflow-hidden">
                       {children}
                     </div>
                   </main>
 
-                  {/* Mobile/Tablet Bottom Navigation - Hidden on lg+ */}
-                  <div className="lg:hidden shrink-0">
+                  {/* Mobile Bottom Navigation */}
+                  <div className="lg:hidden shrink-0 h-16">
                     <MobileNav />
                   </div>
                 </div>
