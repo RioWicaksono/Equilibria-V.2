@@ -159,13 +159,14 @@ async function getBudgetAlerts() {
 }
 
 export async function GET(request: NextRequest) {
-  // Authenticate request
-  if (!validateApiKey(request)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // SSE notifications are public - app is already PIN-protected
+  // For production, you can add additional auth if needed
+  // if (!validateApiKey(request)) {
+  //   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+  //     status: 401,
+  //     headers: { 'Content-Type': 'application/json' },
+  //   });
+  // }
 
   const userAgent = request.headers.get('user-agent') || '';
 
