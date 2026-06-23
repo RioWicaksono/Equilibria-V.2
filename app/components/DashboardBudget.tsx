@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Target, Plus, Bell } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { motion } from 'motion/react';
 import { Budget } from '@/domain/entities/Budget';
 import { useSettings } from '../contexts/SettingsContext';
 
@@ -107,7 +108,14 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
   });
 
   return (
-    <div className="card p-2 lg:p-3 xl:p-4 h-full flex flex-col" role="region" aria-label="Pelacakan Anggaran Bulanan">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut', delay: 0.1 }}
+      className="card p-2 lg:p-3 xl:p-4 h-full flex flex-col"
+      role="region"
+      aria-label="Pelacakan Anggaran Bulanan"
+    >
       <div className="flex items-center justify-between mb-2 lg:mb-3 shrink-0">
         <div className="flex items-center gap-1.5 lg:gap-2">
           <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center">
@@ -142,14 +150,20 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
           </div>
         )}
 
-        {budgets.map((budget) => {
+        {budgets.map((budget, index) => {
           const spent = categoryTotals[budget.category] || 0;
           const progress = Math.min((spent / budget.limit) * 100, 100);
           const isNearLimit = progress >= alertThreshold;
           const isOverLimit = progress >= 100;
 
           return (
-            <div key={budget.id} className="p-2 lg:p-3 rounded-lg bg-[#1f1f23] border border-zinc-800/50">
+            <motion.div
+              key={budget.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, delay: 0.1 + index * 0.05 }}
+              className="p-2 lg:p-3 rounded-lg bg-[#1f1f23] border border-zinc-800/50 hover:border-indigo-500/30 transition-colors"
+            >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs lg:text-sm font-medium text-white truncate">{budget.category}</span>
                 <span className={`text-xs lg:text-sm font-bold ${isOverLimit ? 'text-rose-400' : isNearLimit ? 'text-amber-400' : 'text-indigo-400'}`}>
@@ -166,7 +180,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
                 <span>Rp {formatCurrency(spent)}</span>
                 <span>Limit: Rp {formatCurrency(budget.limit)}</span>
               </div>
-            </div>
+            </motion.div>
           );
         })}
 
@@ -203,9 +217,9 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
                 {isSubmitting ? 'Menyimpan...' : 'Simpan'}
               </button>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -57,8 +57,12 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
   };
 
   return (
-    <>
-      <div className="w-full flex justify-center text-white relative overflow-auto max-h-full">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="w-full flex justify-center text-white relative overflow-auto max-h-full"
+    >
         <style>{`
           .rdp {
             --rdp-cell-size: 28px;
@@ -179,15 +183,15 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
           }}
           showOutsideDays
         />
-      </div>
+      </motion.div>
 
       {/* Reminder Detail Modal */}
       <AnimatePresence>
         {showModal && selectedDate && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowModal(false)}
           >
