@@ -1,5 +1,12 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 
+// Railway PostgreSQL SSL requirement
+const SSL_CONFIG = {
+  ssl: {
+    rejectUnauthorized: false,
+  },
+};
+
 interface PrismaInstance {
   client: PrismaClient | null;
   isConnected: boolean;
@@ -17,8 +24,24 @@ const PRISMA_LOG_LEVEL: Prisma.LogLevel[] = process.env.NODE_ENV === 'developmen
   : ['error'];
 
 async function createPrismaClient(datasourceUrl: string): Promise<PrismaClient> {
+  // Add connection pool limits and SSL
+  let safeUrl = datasourceUrl;
+  if (!safeUrl.includes('sslmode=')) {
+    safeUrl = safeUrl.includes('?')
+      ? `${safeUrl}&sslmode=require`
+      : `${safeUrl}?sslmode=require`;
+  }
+  // Add connection pool settings
+  if (!safeUrl.includes('connection_limit=')) {
+    safeUrl = `${safeUrl}&connection_limit=5`;
+  }
+
   return new PrismaClient({
-    datasourceUrl,
+    datasources: {
+      db: {
+        url: safeUrl,
+      },
+    },
     log: PRISMA_LOG_LEVEL,
   });
 }
@@ -38,12 +61,28 @@ async function initPrisma(): Promise<PrismaClient> {
 
   if (railwayUrl) {
     try {
-      const client = await createPrismaClient(railwayUrl);
+      // Ensure SSL is enabled for Railway
+      let safeUrl = railwayUrl;
+      if (!safeUrl.includes('sslmode=')) {
+        safeUrl = safeUrl.includes('?')
+          ? `${safeUrl}&sslmode=require`
+          : `${safeUrl}?sslmode=require`;
+      }
+
+      const client = new PrismaClient({
+        datasources: {
+          db: {
+            url: safeUrl,
+          },
+        },
+        log: PRISMA_LOG_LEVEL,
+      });
+
       if (await testConnection(client)) {
         instance.client = client;
         instance.isConnected = true;
         instance.source = 'railway';
-        console.log('[DB] Connected to Railway PostgreSQL (Primary)');
+        console.log('[DB] Connected to Railway PostgreSQL (SSL enabled)');
         return client;
       }
       await client.$disconnect().catch(() => {});
@@ -56,12 +95,27 @@ async function initPrisma(): Promise<PrismaClient> {
   const neonUrl = process.env.NEON_DATABASE_URL;
   if (neonUrl && neonUrl !== railwayUrl) {
     try {
-      const client = await createPrismaClient(neonUrl);
+      let safeUrl = neonUrl;
+      if (!safeUrl.includes('sslmode=')) {
+        safeUrl = safeUrl.includes('?')
+          ? `${safeUrl}&sslmode=require`
+          : `${safeUrl}?sslmode=require`;
+      }
+
+      const client = new PrismaClient({
+        datasources: {
+          db: {
+            url: safeUrl,
+          },
+        },
+        log: PRISMA_LOG_LEVEL,
+      });
+
       if (await testConnection(client)) {
         instance.client = client;
         instance.isConnected = true;
         instance.source = 'neon';
-        console.log('[DB] Connected to Neon PostgreSQL (Backup)');
+        console.log('[DB] Connected to Neon PostgreSQL (SSL enabled)');
         return client;
       }
       await client.$disconnect().catch(() => {});
@@ -73,30 +127,27 @@ async function initPrisma(): Promise<PrismaClient> {
   throw new Error('[DB] All database connections failed');
 }
 
-// Singleton pattern with failover
-const prismaClientSingleton = async () => {
+// Singleton pattern - reuse same instance
+const prismaClientSingleton = async (): Promise<PrismaClient> => {
   if (!instance.client || !instance.isConnected) {
     await initPrisma();
   }
   return instance.client!;
 };
 
-// For backward compatibility - sync access (uses Railway only)
-declare const globalThis: {
-  prismaGlobal: PrismaClient | undefined;
-} & typeof global;
+// Export async version only (avoids duplicate instances)
+export const getPrismaAsync = prismaClientSingleton;
 
-const prismaSync = globalThis.prismaGlobal ?? new PrismaClient({
-  log: PRISMA_LOG_LEVEL,
-});
-
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.prismaGlobal = prismaSync;
-}
-
-// Export both sync (for backward compat) and async (for failover)
-export { prismaSync as prisma };
-export { prismaClientSingleton as getPrismaAsync };
+// For backward compatibility - returns the singleton
+export const prisma = {
+  get client() {
+    if (!instance.client) {
+      // Sync access - initialize lazily
+      initPrisma().catch(console.error);
+    }
+    return instance.client;
+  },
+} as { client: PrismaClient | null };
 
 export const getDbSource = (): 'railway' | 'neon' | null => instance.source;
 
@@ -106,5 +157,19 @@ export async function disconnectPrisma(): Promise<void> {
     instance.client = null;
     instance.isConnected = false;
     instance.source = null;
+    console.log('[DB] Disconnected');
   }
+}
+
+// Graceful shutdown handler
+if (typeof process !== 'undefined') {
+  process.on('SIGTERM', async () => {
+    console.log('[DB] SIGTERM received, disconnecting...');
+    await disconnectPrisma();
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('[DB] SIGINT received, disconnecting...');
+    await disconnectPrisma();
+  });
 }
