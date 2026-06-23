@@ -56,7 +56,7 @@ export default function RootLayout({
           }
         `}</style>
       </head>
-      <body className="font-sans bg-[#0A0A0A] text-[#E5E5E5] antialiased">
+      <body className="font-sans bg-[#09090b] text-zinc-100 antialiased">
         <ErrorBoundary>
           <QueryProvider>
             <PWARegistration />

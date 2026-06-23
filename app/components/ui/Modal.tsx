@@ -63,20 +63,20 @@ export function Modal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.15 }}
             onClick={closeOnOverlayClick ? onClose : undefined}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             aria-hidden="true"
           />
 
           {/* Modal Content */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className={cn(
-              'relative w-full bg-[#141414] border border-[#262626] rounded-xl p-6 shadow-2xl',
+              'relative w-full bg-[#18181b] border border-zinc-800 rounded-xl shadow-2xl',
               'max-h-[90vh] overflow-y-auto custom-scrollbar',
               sizeStyles[size],
               className
@@ -87,12 +87,12 @@ export function Modal({
           >
             {/* Header */}
             {(title || showCloseButton) && (
-              <div className="flex items-start justify-between mb-6">
+              <div className="flex items-start justify-between p-5 border-b border-zinc-800/50">
                 <div>
                   {title && (
                     <h2
                       id="modal-title"
-                      className="text-xl font-bold text-white"
+                      className="text-lg font-semibold text-white"
                     >
                       {title}
                     </h2>
@@ -104,7 +104,7 @@ export function Modal({
                 {showCloseButton && (
                   <button
                     onClick={onClose}
-                    className="text-zinc-500 hover:text-white p-1.5 rounded-lg hover:bg-zinc-800 transition-colors"
+                    className="text-zinc-500 hover:text-white p-2 rounded-lg hover:bg-zinc-800/50 transition-colors"
                     aria-label="Close modal"
                   >
                     <X className="w-5 h-5" />
@@ -114,7 +114,7 @@ export function Modal({
             )}
 
             {/* Body */}
-            <div className="">{children}</div>
+            <div className="p-5">{children}</div>
           </motion.div>
         </div>
       )}
@@ -146,9 +146,9 @@ export function ConfirmModal({
   isLoading = false,
 }: ConfirmModalProps) {
   const variantStyles = {
-    danger: 'bg-rose-500 hover:bg-rose-400',
-    warning: 'bg-amber-500 hover:bg-amber-400 text-black',
-    info: 'bg-blue-500 hover:bg-blue-400',
+    danger: 'bg-rose-500 hover:bg-rose-400 shadow-sm shadow-rose-500/20',
+    warning: 'bg-amber-500 hover:bg-amber-400 text-black shadow-sm shadow-amber-500/20',
+    info: 'bg-blue-500 hover:bg-blue-400 shadow-sm shadow-blue-500/20',
   };
 
   return (
@@ -156,7 +156,7 @@ export function ConfirmModal({
       <div className="flex flex-col items-center text-center space-y-4">
         <div
           className={cn(
-            'w-12 h-12 rounded-full flex items-center justify-center',
+            'w-14 h-14 rounded-full flex items-center justify-center',
             variant === 'danger' && 'bg-rose-500/10',
             variant === 'warning' && 'bg-amber-500/10',
             variant === 'info' && 'bg-blue-500/10'
@@ -172,14 +172,14 @@ export function ConfirmModal({
           />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">{title}</h3>
+          <h3 className="text-base font-semibold text-white">{title}</h3>
           <p className="text-sm text-zinc-400 mt-2">{message}</p>
         </div>
         <div className="flex w-full gap-3 pt-2">
           <button
             onClick={onClose}
             disabled={isLoading}
-            className="flex-1 px-4 py-2.5 bg-[#1A1A1A] hover:bg-zinc-800 border border-[#262626] rounded-lg text-white font-medium text-sm transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded-lg text-white font-medium text-sm transition-all disabled:opacity-50"
           >
             {cancelText}
           </button>
@@ -187,7 +187,7 @@ export function ConfirmModal({
             onClick={onConfirm}
             disabled={isLoading}
             className={cn(
-              'flex-1 px-4 py-2.5 text-white font-bold rounded-lg text-sm transition-colors disabled:opacity-50',
+              'flex-1 px-4 py-2.5 text-white font-semibold rounded-lg text-sm transition-all disabled:opacity-50 active:scale-[0.98]',
               variantStyles[variant]
             )}
           >

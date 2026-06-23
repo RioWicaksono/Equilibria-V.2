@@ -62,23 +62,23 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
         <style>{`
           .rdp {
             --rdp-cell-size: 28px;
-            --rdp-accent-color: #2dd4bf;
-            --rdp-background-color: #262626;
-            --rdp-accent-color-dark: #14b8a6;
-            --rdp-background-color-dark: #171717;
+            --rdp-accent-color: #14b8a6;
+            --rdp-background-color: #27272a;
             margin: 0;
             font-size: 11px;
           }
           .rdp-head_cell {
             font-size: 9px;
             padding: 2px;
+            color: #71717a;
           }
           .rdp-day {
             font-size: 11px;
             padding: 2px;
+            color: #e4e4e7;
           }
           .rdp-day_selected, .rdp-day_selected:focus-visible, .rdp-day_selected:hover {
-            color: black;
+            color: white;
             background-color: var(--rdp-accent-color);
           }
           .rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
@@ -90,27 +90,30 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
           .day-with-reminder::after {
             content: '';
             position: absolute;
-            top: 1px;
-            right: 1px;
+            top: 2px;
+            right: 2px;
             width: 4px;
             height: 4px;
             background-color: #22c55e;
             border-radius: 50%;
-            border: 1px solid #0a0a0a;
           }
           .rdp-nav {
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
           }
           .rdp-nav button {
             padding: 0;
           }
           .rdp-caption_label {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
+            color: #fafafa;
           }
           .rdp-months {
             gap: 0;
+          }
+          .rdp-day:hover:not([disabled]):not(.rdp-day_selected) {
+            background-color: #27272a;
           }
         `}</style>
         <DayPicker

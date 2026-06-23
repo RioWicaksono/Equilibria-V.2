@@ -2,33 +2,55 @@
 
 /* ========================================
    CSS VARIABLES - Design System (DARK)
+   Professional Corporate Style
    ======================================== */
 :root, body.dark {
-  /* Colors */
-  --bg-primary: #0A0A0A;
-  --bg-secondary: #141414;
-  --bg-tertiary: #1A1A1A;
-  --border-color: #262626;
-  --text-primary: #E5E5E5;
-  --text-secondary: #A1A1AA;
-  --text-muted: #71717A;
+  /* Colors - Sophisticated Dark Palette */
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --bg-tertiary: #27272a;
+  --bg-elevated: #1f1f23;
+  --border-color: #3f3f46;
+  --border-subtle: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  /* Accent Colors */
-  --accent-teal: #2dd4bf;
-  --accent-rose: #f43f5e;
-  --accent-amber: #f59e0b;
-  --accent-yellow: #faff04;
+  /* Accent Colors - Subtle & Professional */
+  --accent-primary: #14b8a6;
+  --accent-primary-hover: #2dd4bf;
+  --accent-secondary: #6366f1;
+  --accent-danger: #ef4444;
+  --accent-warning: #f59e0b;
+  --accent-success: #22c55e;
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5);
-  --shadow-glow-teal: 0 0 20px rgba(45, 212, 191, 0.15);
-  --shadow-glow-rose: 0 0 20px rgba(244, 63, 94, 0.15);
+  /* Shadows - More refined */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+
+  /* Glow Effects - Subtle */
+  --glow-primary: 0 0 20px rgba(20, 184, 166, 0.15);
+  --glow-danger: 0 0 20px rgba(239, 68, 68, 0.15);
 
   /* Scrollbar */
-  --scrollbar-track: #1a1a1a;
+  --scrollbar-track: #18181b;
   --scrollbar-thumb: #3f3f46;
+  --scrollbar-thumb-hover: #52525b;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
 /* ========================================
@@ -159,7 +181,7 @@ body.light {
 }
 
 /* ========================================
-   ANIMATIONS
+   ANIMATIONS - Subtle & Professional
    ======================================== */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -167,34 +189,23 @@ body.light {
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
+  from { transform: translateY(8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-10px); opacity: 0; }
+  from { transform: translateY(-8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(45, 212, 191, 0.2); }
-  50% { box-shadow: 0 0 30px rgba(45, 212, 191, 0.4); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 @keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
-  20%, 40%, 60%, 80% { transform: translateX(4px); }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 @keyframes spin {
@@ -202,14 +213,27 @@ body.light {
   to { transform: rotate(360deg); }
 }
 
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.animate-slide-up { animation: slideUp 0.4s ease-out; }
-.animate-slide-down { animation: slideDown 0.4s ease-out; }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
-.animate-float { animation: float 3s ease-in-out infinite; }
-.animate-shimmer { animation: shimmer 2s linear infinite; }
-.animate-shake { animation: shake 0.5s ease-in-out; }
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
+.animate-slide-down { animation: slideDown 0.3s ease-out; }
+.animate-scale-in { animation: scaleIn 0.2s ease-out; }
+.animate-shimmer { animation: shimmer 1.5s linear infinite; }
 .animate-spin { animation: spin 1s linear infinite; }
+
+/* Staggered animations for lists */
+.stagger-children > * {
+  animation: slideUp 0.3s ease-out forwards;
+  opacity: 0;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
 
 /* ========================================
    REDUCED MOTION
@@ -262,60 +286,63 @@ body.light {
 }
 
 /* ========================================
-   CARD COMPONENTS
+   CARD COMPONENTS - Professional Style
    ======================================== */
 .card {
   background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  transition: all 0.2s ease;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
 }
 
 .card:hover {
-  border-color: rgba(45, 212, 191, 0.3);
+  border-color: var(--border-color);
 }
 
 .card-elevated {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: var(--shadow-md);
-  transition: all 0.2s ease;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
 }
 
 .card-elevated:hover {
-  border-color: rgba(45, 212, 191, 0.3);
-  box-shadow: var(--shadow-lg), var(--shadow-glow-teal);
+  border-color: rgba(20, 184, 166, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 /* ========================================
-   BUTTON STYLES
+   BUTTON STYLES - Modern & Professional
    ======================================== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
   font-weight: 600;
   font-size: 14px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
   cursor: pointer;
   border: none;
   outline: none;
+  white-space: nowrap;
 }
 
 .btn-primary {
-  background: var(--accent-teal);
-  color: #000;
+  background: var(--accent-primary);
+  color: #fff;
 }
 
 .btn-primary:hover {
-  background: #5eead4;
-  transform: translateY(-1px);
+  background: var(--accent-primary-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
 .btn-secondary {
@@ -325,18 +352,22 @@ body.light {
 }
 
 .btn-secondary:hover {
-  background: #262626;
-  border-color: rgba(45, 212, 191, 0.3);
+  background: var(--bg-elevated);
+  border-color: var(--accent-primary);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
 }
 
 .btn-danger {
-  background: var(--accent-rose);
+  background: var(--accent-danger);
   color: #fff;
 }
 
 .btn-danger:hover {
-  background: #fb7185;
-  transform: translateY(-1px);
+  background: #dc2626;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-ghost {
@@ -349,60 +380,93 @@ body.light {
   color: var(--text-primary);
 }
 
+/* Button Sizes */
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.btn-lg {
+  padding: 14px 24px;
+  font-size: 15px;
+}
+
+.btn-icon {
+  padding: 8px;
+  aspect-ratio: 1;
+}
+
 /* ========================================
-   INPUT STYLES
+   INPUT STYLES - Clean & Professional
    ======================================== */
 .input {
   width: 100%;
-  padding: 10px 14px;
+  padding: 12px 14px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 14px;
-  transition: all 0.2s ease;
+  transition: all var(--transition-fast);
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--accent-teal);
-  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.1);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
 }
 
 .input::placeholder {
   color: var(--text-muted);
 }
 
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ========================================
-   BADGE STYLES
+   BADGE STYLES - Subtle & Professional
    ======================================== */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 8px;
+  padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.badge-primary {
+  background: rgba(20, 184, 166, 0.1);
+  color: var(--accent-primary);
+  border: 1px solid rgba(20, 184, 166, 0.2);
 }
 
 .badge-success {
-  background: rgba(45, 212, 191, 0.1);
-  color: var(--accent-teal);
-  border: 1px solid rgba(45, 212, 191, 0.2);
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--accent-success);
+  border: 1px solid rgba(34, 197, 94, 0.2);
 }
 
 .badge-danger {
-  background: rgba(244, 63, 94, 0.1);
-  color: var(--accent-rose);
-  border: 1px solid rgba(244, 63, 94, 0.2);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
 .badge-warning {
   background: rgba(245, 158, 11, 0.1);
-  color: var(--accent-amber);
+  color: var(--accent-warning);
   border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badge-neutral {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
 }
 
 /* ========================================
@@ -433,11 +497,11 @@ body.light {
 }
 
 /* ========================================
-   PROGRESS BAR
+   PROGRESS BAR - Clean & Modern
    ======================================== */
 .progress-bar {
   width: 100%;
-  height: 8px;
+  height: 6px;
   background: var(--bg-tertiary);
   border-radius: 9999px;
   overflow: hidden;
@@ -449,16 +513,20 @@ body.light {
   transition: width 0.5s ease;
 }
 
-.progress-bar-fill.teal {
-  background: linear-gradient(90deg, var(--accent-teal), #5eead4);
+.progress-bar-fill.primary {
+  background: var(--accent-primary);
 }
 
-.progress-bar-fill.rose {
-  background: linear-gradient(90deg, var(--accent-rose), #fb7185);
+.progress-bar-fill.success {
+  background: var(--accent-success);
 }
 
-.progress-bar-fill.amber {
-  background: linear-gradient(90deg, var(--accent-amber), #fbbf24);
+.progress-bar-fill.danger {
+  background: var(--accent-danger);
+}
+
+.progress-bar-fill.warning {
+  background: var(--accent-warning);
 }
 
 /* ========================================
