@@ -185,7 +185,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
         })}
 
         {isAdding && (
-          <div className="p-3 lg:p-4 rounded-lg border border-indigo-500/30 bg-indigo-500/5 space-y-3">
+          <motion.div className="p-3 lg:p-4 rounded-lg border border-indigo-500/30 bg-indigo-500/5 space-y-3">
             <div className="flex gap-2 lg:gap-3">
               <input
                 type="text"
