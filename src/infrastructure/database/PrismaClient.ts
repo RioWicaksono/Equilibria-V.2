@@ -20,69 +20,96 @@ const instance: PrismaInstance = {
 };
 
 const PRISMA_LOG_LEVEL: Prisma.LogLevel[] = process.env.NODE_ENV === 'development'
-  ? ['error', 'warn']
+  ? ['error', 'warn', 'info']
   : ['error'];
 
-async function createPrismaClient(datasourceUrl: string): Promise<PrismaClient> {
-  // Add connection pool limits and SSL
-  let safeUrl = datasourceUrl;
-  if (!safeUrl.includes('sslmode=')) {
-    safeUrl = safeUrl.includes('?')
-      ? `${safeUrl}&sslmode=require`
-      : `${safeUrl}?sslmode=require`;
-  }
-  // Add connection pool settings
-  if (!safeUrl.includes('connection_limit=')) {
-    safeUrl = `${safeUrl}&connection_limit=5`;
+function buildConnectionUrl(baseUrl: string): string {
+  if (!baseUrl) return baseUrl;
+
+  const params = new URLSearchParams();
+
+  // SSL requirement for Railway/Neon
+  if (!baseUrl.includes('sslmode=')) {
+    params.set('sslmode', 'require');
   }
 
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: safeUrl,
-      },
-    },
-    log: PRISMA_LOG_LEVEL,
-  });
+  // Connection pool limits to prevent exhaustion
+  if (!baseUrl.includes('connection_limit=')) {
+    params.set('connection_limit', '2'); // Reduced from 5 to 2 for stability
+  }
+
+  // Query timeout - prevent long-running queries
+  if (!baseUrl.includes('statement_timeout=')) {
+    params.set('statement_timeout', '10000'); // 10 seconds
+  }
+
+  // Idle connection timeout
+  if (!baseUrl.includes('pool_timeout=')) {
+    params.set('pool_timeout', '5'); // 5 seconds
+  }
+
+  // Connection timeout
+  if (!baseUrl.includes('connect_timeout=')) {
+    params.set('connect_timeout', '10'); // 10 seconds
+  }
+
+  // Parse existing URL and merge params
+  try {
+    const url = new URL(baseUrl);
+    params.forEach((value, key) => {
+      if (!url.searchParams.has(key)) {
+        url.searchParams.set(key, value);
+      }
+    });
+    return url.toString();
+  } catch {
+    // If URL parsing fails, append params directly
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return baseUrl + separator + params.toString();
+  }
 }
 
-async function testConnection(prisma: PrismaClient): Promise<boolean> {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return true;
-  } catch {
-    return false;
+async function testConnection(prisma: PrismaClient, maxRetries = 3): Promise<boolean> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return true;
+    } catch (error) {
+      console.warn(`[DB] Connection test attempt ${attempt}/${maxRetries} failed:`, error);
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+      }
+    }
   }
+  return false;
 }
 
 async function initPrisma(): Promise<PrismaClient> {
+  const createClient = (url: string, source: 'railway' | 'neon'): PrismaClient => {
+    const safeUrl = buildConnectionUrl(url);
+
+    return new PrismaClient({
+      datasources: {
+        db: {
+          url: safeUrl,
+        },
+      },
+      log: PRISMA_LOG_LEVEL,
+    });
+  };
+
   // Primary: Railway (DATABASE_URL)
   const railwayUrl = process.env.DATABASE_URL;
 
   if (railwayUrl) {
     try {
-      // Ensure SSL is enabled for Railway
-      let safeUrl = railwayUrl;
-      if (!safeUrl.includes('sslmode=')) {
-        safeUrl = safeUrl.includes('?')
-          ? `${safeUrl}&sslmode=require`
-          : `${safeUrl}?sslmode=require`;
-      }
-
-      const client = new PrismaClient({
-        datasources: {
-          db: {
-            url: safeUrl,
-          },
-        },
-        log: PRISMA_LOG_LEVEL,
-      });
+      const client = createClient(railwayUrl, 'railway');
 
       if (await testConnection(client)) {
         instance.client = client;
         instance.isConnected = true;
         instance.source = 'railway';
-        console.log('[DB] Connected to Railway PostgreSQL (SSL enabled)');
+        console.log('[DB] Connected to Railway PostgreSQL (SSL + pool limits enabled)');
         return client;
       }
       await client.$disconnect().catch(() => {});
@@ -95,27 +122,13 @@ async function initPrisma(): Promise<PrismaClient> {
   const neonUrl = process.env.NEON_DATABASE_URL;
   if (neonUrl && neonUrl !== railwayUrl) {
     try {
-      let safeUrl = neonUrl;
-      if (!safeUrl.includes('sslmode=')) {
-        safeUrl = safeUrl.includes('?')
-          ? `${safeUrl}&sslmode=require`
-          : `${safeUrl}?sslmode=require`;
-      }
-
-      const client = new PrismaClient({
-        datasources: {
-          db: {
-            url: safeUrl,
-          },
-        },
-        log: PRISMA_LOG_LEVEL,
-      });
+      const client = createClient(neonUrl, 'neon');
 
       if (await testConnection(client)) {
         instance.client = client;
         instance.isConnected = true;
         instance.source = 'neon';
-        console.log('[DB] Connected to Neon PostgreSQL (SSL enabled)');
+        console.log('[DB] Connected to Neon PostgreSQL (SSL + pool limits enabled)');
         return client;
       }
       await client.$disconnect().catch(() => {});
@@ -153,7 +166,11 @@ export const getDbSource = (): 'railway' | 'neon' | null => instance.source;
 
 export async function disconnectPrisma(): Promise<void> {
   if (instance.client) {
-    await instance.client.$disconnect();
+    try {
+      await instance.client.$disconnect();
+    } catch (error) {
+      console.warn('[DB] Disconnect error:', error);
+    }
     instance.client = null;
     instance.isConnected = false;
     instance.source = null;
@@ -166,10 +183,12 @@ if (typeof process !== 'undefined') {
   process.on('SIGTERM', async () => {
     console.log('[DB] SIGTERM received, disconnecting...');
     await disconnectPrisma();
+    process.exit(0);
   });
 
   process.on('SIGINT', async () => {
     console.log('[DB] SIGINT received, disconnecting...');
     await disconnectPrisma();
+    process.exit(0);
   });
 }
