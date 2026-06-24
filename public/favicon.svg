@@ -9,10 +9,7 @@
       <stop offset="100%" style="stop-color:#2dd4bf"/>
     </linearGradient>
   </defs>
-  <!-- Rounded square background -->
-  <rect x="1" y="1" width="30" height="30" rx="6" ry="6" fill="url(#bg)"/>
-  <!-- Inner glow/border effect -->
-  <rect x="2.5" y="2.5" width="27" height="27" rx="5" ry="5" fill="none" stroke="url(#text)" stroke-width="1"/>
-  <!-- E Letter centered -->
-  <text x="16" y="23" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="url(#text)" text-anchor="middle">E</text>
+  <circle cx="16" cy="16" r="15" fill="url(#bg)"/>
+  <circle cx="16" cy="16" r="14" fill="none" stroke="url(#text)" stroke-width="1.5"/>
+  <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="url(#text)">E</text>
 </svg>
