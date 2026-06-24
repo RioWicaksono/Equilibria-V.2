@@ -71,7 +71,7 @@ export default function RootLayout({
             <SettingsProvider>
               <PinLockWrapper />
               {/* App Container - Full viewport height */}
-              <div className="flex h-[100dvh] h-[100vh] w-full overflow-hidden">
+              <div className="flex h-dvh w-full overflow-hidden">
                   {/* Desktop Sidebar */}
                   <div className="hidden lg:flex lg:shrink-0 h-full">
                     <Sidebar />
@@ -84,8 +84,8 @@ export default function RootLayout({
                       <MobileHeader />
                     </div>
 
-                    {/* Content - Takes remaining space */}
-                    <div className="flex-1 min-h-0 w-full max-w-[1400px] mx-auto px-2 sm:px-3 md:px-4 py-2 overflow-hidden">
+                    {/* Content - Takes remaining space, responsive padding */}
+                    <div className="flex-1 min-h-0 w-full px-2 sm:px-3 md:px-4 py-2 overflow-y-auto overflow-x-hidden">
                       {children}
                     </div>
                   </main>

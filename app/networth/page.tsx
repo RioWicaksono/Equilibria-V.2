@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Wallet, Target, CreditCard, RefreshCw, Loader2, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 interface NetWorthData {
   success: boolean;
+  error?: string;
   netWorth: number;
   breakdown: {
     assets: {
@@ -69,15 +71,14 @@ export default function NetWorthPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/networth');
-      const result = await res.json();
+      const result = await apiFetch<NetWorthData>('/api/networth');
       if (result.success) {
         setData(result);
       } else {
         setError(result.error || 'Failed to load data');
       }
-    } catch {
-      setError('Gagal memuat data');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat data');
     } finally {
       setIsLoading(false);
     }
