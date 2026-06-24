@@ -34,7 +34,7 @@ export default function MobileNav() {
     <>
       {/* Mobile Bottom Navigation */}
       <nav
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#09090b]/98 backdrop-blur-xl border-t border-zinc-800/50"
+        className="lg:hidden bg-[#09090b]/98 backdrop-blur-xl border-t border-zinc-800/50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         aria-label="Mobile navigation"
       >

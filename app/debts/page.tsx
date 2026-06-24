@@ -207,8 +207,8 @@ export default function DebtsPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex flex-col">
           <h2 className="text-lg sm:text-xl font-semibold text-white flex items-center gap-2">
             <HandCoins className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />

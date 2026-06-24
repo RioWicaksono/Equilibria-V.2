@@ -118,8 +118,8 @@ export default function RecurringPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
         <div className="flex flex-col">
           <h2 className="text-lg sm:text-2xl font-semibold text-white flex items-center gap-2">
             <Repeat className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
@@ -139,7 +139,7 @@ export default function RecurringPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {recurring.map(item => (
-          <div key={item.id} className="bg-[#141414] border border-[#262626] rounded-xl p-5 flex flex-col justify-between gap-4 relative overflow-hidden group hover:border-zinc-700 transition-colors">
+          <div key={item.id} className="bg-[#141414] border border-[#262626] rounded-xl p-4 flex flex-col justify-between gap-3 relative overflow-hidden group hover:border-zinc-700 transition-colors">
              <div className="flex justify-between items-start">
                <div className="flex-1">
                  <h4 className="font-bold text-white text-base mb-1">{item.name}</h4>

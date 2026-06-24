@@ -1,11 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap, KeyRound, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
+import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap, KeyRound, Shield, ShieldCheck, ShieldOff, Lock, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { apiFetch } from '@/lib/api-client';
+import CloudBackup from '@/components/settings/CloudBackup';
+import CurrencyExchange from '@/components/settings/CurrencyExchange';
+import BudgetRecap from '@/components/settings/BudgetRecap';
+import BiometricAuth from '@/components/settings/BiometricAuth';
+import ExportEncryption from '@/components/settings/ExportEncryption';
+import AuditLog from '@/components/settings/AuditLog';
 
-type TabType = 'general' | 'integration' | 'advanced';
+type TabType = 'general' | 'integration' | 'advanced' | 'security';
 
 interface Settings {
   theme: string;
@@ -466,13 +472,21 @@ export default function SettingsClient() {
           >
             <Blocks className="w-5 h-5" /> Integrasi
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('advanced')}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${
               activeTab === 'advanced' ? 'bg-rose-500/10 text-rose-400' : 'text-zinc-400 hover:text-rose-400 hover:bg-[#1A1A1A]'
             }`}
           >
             <Terminal className="w-5 h-5" /> Lanjutan
+          </button>
+          <button
+            onClick={() => setActiveTab('security')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${
+              activeTab === 'security' ? 'bg-violet-500/10 text-violet-400' : 'text-zinc-400 hover:text-violet-400 hover:bg-[#1A1A1A]'
+            }`}
+          >
+            <Shield className="w-5 h-5" /> Keamanan
           </button>
         </nav>
       </div>
@@ -900,6 +914,91 @@ export default function SettingsClient() {
                   </button>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'security' && (
+            <motion.div
+              key="security"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-6"
+            >
+              {/* Header */}
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">
+                  <Shield className="w-5 h-5 inline-block mr-2 text-violet-400" />
+                  Keamanan & Backup
+                </h3>
+                <p className="text-sm text-zinc-400 mb-6">
+                  Kelola keamanan aplikasi dan backup data Anda.
+                </p>
+              </div>
+
+              {/* Biometric Auth */}
+              <BiometricAuth />
+
+              {/* PIN Lock Info */}
+              <div className="p-3 bg-[#141414] border border-[#262626] rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${isPinEnabled ? 'bg-emerald-500/10' : 'bg-zinc-800'}`}>
+                      {isPinEnabled ? (
+                        <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                      ) : (
+                        <ShieldOff className="w-5 h-5 text-zinc-500" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white">PIN Lock</p>
+                      <p className="text-[10px] text-zinc-500">
+                        {isPinEnabled ? 'Aktif - Aplikasi terkunci dengan PIN' : 'Nonaktif'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={isPinEnabled ? handleOpenPinDisable : handleOpenPinSetup}
+                    className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                      isPinEnabled
+                        ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'
+                        : 'bg-teal-500/10 text-teal-400 hover:bg-teal-500/20'
+                    }`}
+                  >
+                    {isPinEnabled ? 'Nonaktifkan' : 'Aktifkan'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800" />
+
+              {/* Cloud Backup */}
+              <CloudBackup />
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800" />
+
+              {/* Export Encryption */}
+              <ExportEncryption />
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800" />
+
+              {/* Budget Recap */}
+              <BudgetRecap />
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800" />
+
+              {/* Currency Exchange */}
+              <CurrencyExchange />
+
+              {/* Divider */}
+              <div className="border-t border-zinc-800" />
+
+              {/* Audit Log */}
+              <AuditLog />
             </motion.div>
           )}
         </AnimatePresence>

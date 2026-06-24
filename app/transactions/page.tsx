@@ -82,7 +82,7 @@ export default async function TransactionsPage(props: {
   return (
     <div className="space-y-4">
       {/* Header - Mobile Friendly */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h2 className="text-lg sm:text-xl font-semibold text-white">Transaksi</h2>
           <p className="text-xs text-zinc-500 mt-0.5">{totalItems} item ditemukan{totalPages > 1 ? ` (halaman ${page}/${totalPages})` : ''}</p>
@@ -94,7 +94,7 @@ export default async function TransactionsPage(props: {
       </header>
 
       {/* Filters */}
-      <div className="bg-[#141414] border border-[#262626] rounded-xl p-3 sm:p-4">
+      <div className="bg-[#141414] border border-[#262626] rounded-xl p-2.5 sm:p-3">
         <form className="flex flex-wrap gap-2 items-end">
           {/* Date Filter */}
           <div className="flex-1 min-w-[120px]">
@@ -165,7 +165,7 @@ export default async function TransactionsPage(props: {
       </div>
 
       {/* Transaction List */}
-      <div className="bg-[#141414] border border-[#262626] rounded-xl p-3 sm:p-4">
+      <div className="bg-[#141414] border border-[#262626] rounded-xl p-2.5 sm:p-3">
         <ClientTransactionList
           initialTransactions={paginatedTransactions}
           onDelete={deleteTransaction}

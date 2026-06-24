@@ -71,7 +71,7 @@ export default function RootLayout({
             <SettingsProvider>
               <PinLockWrapper />
               {/* App Container - Full viewport height */}
-              <div className="flex h-dvh w-full overflow-hidden">
+              <div className="flex h-dvh w-full overflow-hidden relative">
                   {/* Desktop Sidebar */}
                   <div className="hidden lg:flex lg:shrink-0 h-full">
                     <Sidebar />
@@ -79,21 +79,21 @@ export default function RootLayout({
 
                   {/* Main Content Area */}
                   <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-                    {/* Mobile Header */}
-                    <div className="lg:hidden shrink-0 h-14">
+                    {/* Mobile Header - Fixed at top */}
+                    <div className="lg:hidden shrink-0 h-14 bg-[#09090b]/98 backdrop-blur-xl border-b border-zinc-800/50">
                       <MobileHeader />
                     </div>
 
-                    {/* Content - Takes remaining space, responsive padding */}
-                    <div className="flex-1 min-h-0 w-full px-2 sm:px-3 md:px-4 py-2 overflow-y-auto overflow-x-hidden">
+                    {/* Content - Takes remaining space, proper padding for fixed elements */}
+                    <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden px-2 sm:px-3 md:px-4 py-3 lg:pt-3 pb-20 lg:pb-3">
                       {children}
                     </div>
-                  </main>
 
-                  {/* Mobile Bottom Navigation */}
-                  <div className="lg:hidden shrink-0 h-16">
-                    <MobileNav />
-                  </div>
+                    {/* Mobile Bottom Navigation - Fixed at bottom */}
+                    <div className="lg:hidden shrink-0 fixed bottom-0 left-0 right-0 z-50">
+                      <MobileNav />
+                    </div>
+                  </main>
                 </div>
             </SettingsProvider>
           </QueryProvider>

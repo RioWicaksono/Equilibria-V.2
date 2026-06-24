@@ -117,8 +117,8 @@ export default function BudgetsPage() {
   const getTotalSpent = () => budgets.reduce((sum, b) => sum + b.spent, 0);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
         <div className="flex flex-col">
           <h2 className="text-lg sm:text-2xl font-semibold text-white flex items-center gap-2">
             <Target className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
@@ -139,7 +139,7 @@ export default function BudgetsPage() {
       </header>
 
       {/* Summary Card */}
-      <div className="bg-[#141414] border border-[#262626] rounded-xl p-6">
+      <div className="bg-[#141414] border border-[#262626] rounded-xl p-4 sm:p-5">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h3 className="text-lg font-bold text-white">Total Budget</h3>

@@ -1,9 +1,13 @@
 // Enhanced Service Worker for Equilibria PWA
 const CACHE_NAME = 'equilibria-v2';
-const STATIC_CACHE = 'equilibria-static-v1';
-const DYNAMIC_CACHE = 'equilibria-dynamic-v1';
+const STATIC_CACHE = 'equilibria-static-v2';
+const DYNAMIC_CACHE = 'equilibria-dynamic-v2';
 const OFFLINE_URL = '/';
-const API_CACHE_NAME = 'equilibria-api-v1';
+const API_CACHE_NAME = 'equilibria-api-v2';
+
+// Cache expiration times (in milliseconds)
+const API_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+const STATIC_CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
 // Static assets to cache on install
 const STATIC_ASSETS = [
@@ -19,13 +23,22 @@ const STATIC_ASSETS = [
   '/favicon.svg',
 ];
 
-// API routes to cache
-const API_ROUTES = [
+// API routes to cache with network-first strategy
+const NETWORK_FIRST_API_ROUTES = [
   '/api/transactions',
   '/api/wallets',
   '/api/goals',
   '/api/debts',
   '/api/budgets',
+  '/api/health',
+  '/api/summary',
+  '/api/networth',
+  '/api/settings',
+];
+
+// API routes to cache with stale-while-revalidate
+const STALE_WHILE_REVALIDATE_ROUTES = [
+  '/api/categories',
   '/api/health',
 ];
 
@@ -42,6 +55,10 @@ self.addEventListener('install', (event) => {
       }),
       caches.open(DYNAMIC_CACHE).then((cache) => {
         console.log('[SW] Dynamic cache ready');
+        return cache;
+      }),
+      caches.open(API_CACHE_NAME).then((cache) => {
+        console.log('[SW] API cache ready');
         return cache;
       })
     ]).then(() => {
@@ -79,9 +96,26 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // API requests - network first with cache fallback
+  // Skip cross-origin requests
+  if (url.origin !== self.location.origin) return;
+
+  // API requests - different strategies based on route
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirstWithCache(request, API_CACHE_NAME));
+    // Network first for data that needs to be fresh
+    if (NETWORK_FIRST_API_ROUTES.some(route => url.pathname.startsWith(route))) {
+      event.respondWith(networkFirstWithCache(request, API_CACHE_NAME));
+      return;
+    }
+    // Stale-while-revalidate for reference data
+    if (STALE_WHILE_REVALIDATE_ROUTES.some(route => url.pathname.startsWith(route))) {
+      event.respondWith(staleWhileRevalidate(request, API_CACHE_NAME));
+      return;
+    }
+    // Cache only for health checks
+    if (url.pathname === '/api/health') {
+      event.respondWith(cacheFirstWithNetwork(request, API_CACHE_NAME));
+      return;
+    }
     return;
   }
 
@@ -97,9 +131,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests - network first
+  // Navigation requests - network first with offline fallback
   if (request.mode === 'navigate') {
     event.respondWith(networkFirstWithCache(request, DYNAMIC_CACHE));
+    return;
+  }
+
+  // External resources (CDN) - stale-while-revalidate
+  if (url.hostname.includes('unpkg.com') || url.hostname.includes('cdnjs.cloudflare.com')) {
+    event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
     return;
   }
 
@@ -111,16 +151,37 @@ self.addEventListener('fetch', (event) => {
 
 // Network first with cache fallback
 async function networkFirstWithCache(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+  const cachedTime = cachedResponse?.headers.get('sw-cached-time');
+  const isCacheValid = cachedTime && (Date.now() - parseInt(cachedTime, 10)) < API_CACHE_EXPIRY;
+
   try {
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
+      // Clone and add cache timestamp
+      const responseToCache = networkResponse.clone();
+      const headers = new Headers(responseToCache.headers);
+      headers.set('sw-cached-time', Date.now().toString());
+
+      const responseWithTimestamp = new Response(await responseToCache.blob(), {
+        status: responseToCache.status,
+        statusText: responseToCache.statusText,
+        headers: headers
+      });
+
+      cache.put(request, responseWithTimestamp);
     }
     return networkResponse;
   } catch (error) {
-    const cachedResponse = await caches.match(request);
+    // Return cached response if available
+    if (cachedResponse && isCacheValid) {
+      console.log('[SW] Returning cached response for:', request.url);
+      return cachedResponse;
+    }
+    // Return stale cache if network fails
     if (cachedResponse) {
+      console.log('[SW] Returning stale cache for:', request.url);
       return cachedResponse;
     }
     // Return offline page for navigation requests
@@ -129,6 +190,22 @@ async function networkFirstWithCache(request, cacheName) {
     }
     throw error;
   }
+}
+
+// Stale-while-revalidate strategy
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cachedResponse = await cache.match(request);
+
+  const fetchPromise = fetch(request).then((networkResponse) => {
+    if (networkResponse.ok) {
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  }).catch(() => null);
+
+  // Return cached response immediately if available, otherwise wait for network
+  return cachedResponse || fetchPromise;
 }
 
 // Cache first with network fallback
@@ -151,10 +228,36 @@ async function cacheFirstWithNetwork(request, cacheName) {
     }
     return networkResponse;
   } catch (error) {
-    // Return nothing for failed resources
     throw error;
   }
 }
+
+// Cache expiration cleanup
+async function cleanupExpiredCache(cacheName, maxAge) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+
+  for (const request of keys) {
+    const response = await cache.match(request);
+    const cachedTime = response?.headers.get('sw-cached-time');
+
+    if (cachedTime) {
+      const age = Date.now() - parseInt(cachedTime, 10);
+      if (age > maxAge) {
+        await cache.delete(request);
+        console.log('[SW] Deleted expired cache:', request.url);
+      }
+    }
+  }
+}
+
+// Periodic cache cleanup (runs on startup)
+self.addEventListener('message', (event) => {
+  if (event.data.type === 'CLEANUP_CACHE') {
+    cleanupExpiredCache(API_CACHE_NAME, API_CACHE_EXPIRY);
+    cleanupExpiredCache(STATIC_CACHE, STATIC_CACHE_EXPIRY);
+  }
+});
 
 // Push notification event
 self.addEventListener('push', (event) => {

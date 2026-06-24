@@ -144,8 +144,8 @@ export default function WalletsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
         <div className="flex flex-col">
           <h2 className="text-lg sm:text-2xl font-semibold text-white flex items-center gap-2">
             <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
@@ -163,15 +163,15 @@ export default function WalletsPage() {
           <Loader2 className="w-8 h-8 text-teal-400 animate-spin" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {wallets.map(wallet => {
             const currency = CURRENCIES.find(c => c.code === (wallet.currency || 'IDR')) || CURRENCIES[0];
             const displayBalance = currency.code === 'IDR'
               ? formatCurrency(wallet.balance)
               : `${currency.symbol} ${wallet.balance.toLocaleString('id-ID')}`;
             return (
-              <div key={wallet.id} className="bg-[#141414] border border-[#262626] rounded-xl p-6 relative group hover:border-teal-500/50 transition-colors">
-                <div className="flex justify-between items-start mb-6">
+              <div key={wallet.id} className="bg-[#141414] border border-[#262626] rounded-xl p-4 relative group hover:border-teal-500/50 transition-colors">
+                <div className="flex justify-between items-start mb-4">
                   <div className="p-3 bg-[#1A1A1A] rounded-lg">
                     <CreditCard className="w-6 h-6 text-zinc-400" />
                   </div>

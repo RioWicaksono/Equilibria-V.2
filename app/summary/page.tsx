@@ -10,10 +10,10 @@ export default async function SummaryPage() {
   const allTransactions = await financeService.getTransactions();
 
   return (
-    <div className="space-y-8">
-      <header className="mb-8">
-        <h2 className="text-lg sm:text-2xl font-semibold text-white">Summary Report</h2>
-        <p className="text-sm text-zinc-500 mt-1">Laporan lengkap e-statement untuk seluruh transaksi Anda.</p>
+    <div className="space-y-4">
+      <header className="mb-4">
+        <h2 className="text-base sm:text-lg font-semibold text-white">Summary Report</h2>
+        <p className="text-xs text-zinc-500 mt-1">Laporan lengkap e-statement.</p>
       </header>
 
       <SummaryClient allTransactions={allTransactions} />

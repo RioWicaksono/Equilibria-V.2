@@ -125,9 +125,9 @@ export default function NetWorthPage() {
   const isPositive = netWorth >= 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-white">Net Worth</h1>
           <p className="text-sm text-zinc-500 mt-1">Ringkasan kekayaan bersih Anda</p>
@@ -143,7 +143,7 @@ export default function NetWorthPage() {
 
       {/* Main Net Worth Card */}
       <div className={`card border-2 ${isPositive ? 'border-teal-500/30' : 'border-rose-500/30'}`}>
-        <div className="text-center py-6">
+        <div className="text-center py-4 sm:py-5">
           <p className="text-sm font-medium text-zinc-500 uppercase tracking-wider mb-2">
             Total Kekayaan Bersih
           </p>
