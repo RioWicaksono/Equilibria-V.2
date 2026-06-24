@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, TrendingUp, TrendingDown, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
+import { apiFetch } from '@/lib/api-client';
 
 export default function QuickActions() {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,16 +23,15 @@ export default function QuickActions() {
     setIsSubmitting(true);
 
     try {
-      await fetch('/api/transactions', {
+      await apiFetch('/api/transactions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           amount: Number(amount.replace(/\D/g, '')),
-          type: type?.toUpperCase(),
+          type: type?.toUpperCase() || 'EXPENSE',
           category,
           description: description || category,
           date: new Date().toISOString(),
-        }),
+        },
       });
       setIsOpen(false);
       setType(null);

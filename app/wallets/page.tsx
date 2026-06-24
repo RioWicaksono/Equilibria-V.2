@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Wallet, Plus, CreditCard, ArrowUpRight, ArrowDownRight, X, Trash2, AlertTriangle, Pencil, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface WalletItem {
   id: string;
@@ -41,8 +42,7 @@ export default function WalletsPage() {
 
   const fetchWallets = async () => {
     try {
-      const res = await fetch('/api/wallets');
-      const data = await res.json();
+      const data = await apiFetch<{ wallets?: WalletItem[] }>('/api/wallets');
       if (data.wallets && data.wallets.length > 0) {
         setWallets(data.wallets);
       } else {
@@ -56,14 +56,12 @@ export default function WalletsPage() {
 
         const created: WalletItem[] = [];
         for (const w of initialWallets) {
-          const res = await fetch('/api/wallets', {
+          const res = await apiFetch<{ wallet?: WalletItem }>('/api/wallets', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: w.name, balance: w.balance }),
           });
-          const data = await res.json();
-          if (data.wallet) {
-            created.push({ ...data.wallet, description: w.description, currency: w.currency });
+          if (res.wallet) {
+            created.push({ ...res.wallet, description: w.description, currency: w.currency });
           }
         }
         setWallets(created);
@@ -81,24 +79,20 @@ export default function WalletsPage() {
 
     try {
       if (modalType === 'NEW') {
-        const res = await fetch('/api/wallets', {
+        const data = await apiFetch<{ wallet?: WalletItem }>('/api/wallets', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: formData.name, balance: amountVal, description: formData.description }),
         });
-        const data = await res.json();
         if (data.wallet) {
           const newWallet = { ...data.wallet, description: formData.description };
           const updated = [...wallets, newWallet];
           setWallets(updated);
         }
       } else if (modalType === 'EDIT' && editingWallet) {
-        const res = await fetch('/api/wallets', {
+        const data = await apiFetch<{ wallet?: WalletItem }>('/api/wallets', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: editingWallet.id, name: formData.name, balance: amountVal, description: formData.description }),
         });
-        const data = await res.json();
         if (data.wallet) {
           const updatedWallet = { ...data.wallet, description: formData.description };
           const updated = wallets.map(w => w.id === editingWallet.id ? updatedWallet : w);
@@ -108,14 +102,13 @@ export default function WalletsPage() {
         const wallet = wallets.find(w => w.id === selectedWalletId);
         if (wallet) {
           const newBalance = modalType === 'TOPUP' ? wallet.balance + amountVal : Math.max(0, wallet.balance - amountVal);
-          const res = await fetch('/api/wallets', {
+          const data = await apiFetch<{ wallet?: WalletItem }>('/api/wallets', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: selectedWalletId, balance: newBalance }),
+            body: { id: selectedWalletId, balance: newBalance },
           });
-          const data = await res.json();
           if (data.wallet) {
-            const updated = wallets.map(w => w.id === selectedWalletId ? data.wallet : w);
+            const updatedWallet = data.wallet;
+            const updated: WalletItem[] = wallets.map(w => w.id === selectedWalletId ? updatedWallet : w);
             setWallets(updated);
           }
         }
@@ -131,9 +124,8 @@ export default function WalletsPage() {
 
   const handleDeleteWallet = async (id: string) => {
     try {
-      await fetch('/api/wallets', {
+      await apiFetch('/api/wallets', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
       const updated = wallets.filter(w => w.id !== id);

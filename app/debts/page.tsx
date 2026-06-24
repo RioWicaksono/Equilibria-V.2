@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { HandCoins, Plus, ArrowDownRight, ArrowUpRight, X, Pencil, Trash2, AlertTriangle, Loader2, Calendar, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface DebtItem {
   id: string;
@@ -78,9 +79,8 @@ export default function DebtsPage() {
           }
 
           // Telegram notification via API
-          fetch('/api/telegram', {
+          apiFetch('/api/telegram', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               message: daysUntilDue < 0
                 ? `⚠️ *Reminder Hutang/Piutang*\n"${debt.name}" SUDAH JATUH TEMPO!\nSisa: ${formatCurrency(debt.amount - (debt.paidAmount || 0))}`
@@ -94,8 +94,7 @@ export default function DebtsPage() {
 
   const fetchDebts = async () => {
     try {
-      const res = await fetch('/api/debts');
-      const data = await res.json();
+      const data = await apiFetch<{ debts?: DebtItem[] }>('/api/debts');
       if (data.debts && data.debts.length > 0) {
         setDebts(data.debts);
         checkDebtReminders(data.debts);
@@ -114,23 +113,19 @@ export default function DebtsPage() {
 
     try {
       if (editingDebt) {
-        const res = await fetch('/api/debts', {
+        const data = await apiFetch<{ debt?: DebtItem }>('/api/debts', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: editingDebt.id, name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }),
         });
-        const data = await res.json();
         if (data.debt) {
           const updated = debts.map(d => d.id === editingDebt.id ? { ...d, name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate } : d);
           setDebts(updated);
         }
       } else {
-        const res = await fetch('/api/debts', {
+        const data = await apiFetch<{ debt?: DebtItem }>('/api/debts', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: formData.name, amount: amountVal, type: formData.type, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }),
         });
-        const data = await res.json();
         if (data.debt) {
           const updated = [...debts, { ...data.debt, paidAmount: 0, description: formData.description, loanDate: formData.loanDate, dueDate: formData.dueDate }];
           setDebts(updated);
@@ -153,16 +148,15 @@ export default function DebtsPage() {
       const debt = debts.find(d => d.id === selectedDebtId);
       if (debt) {
         const newPaid = (debt.paidAmount || 0) + pVal;
-        const res = await fetch('/api/debts', {
+        const data = await apiFetch<{ debt?: DebtItem }>('/api/debts', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: selectedDebtId, paidAmount: newPaid, status: newPaid >= debt.amount ? 'PAID' : 'UNPAID' }),
+          body: { id: selectedDebtId, paidAmount: newPaid, status: newPaid >= debt.amount ? 'PAID' : 'UNPAID' },
         });
-        const data = await res.json();
         if (data.debt) {
-          let updated = debts.map(d => d.id === selectedDebtId ? data.debt : d);
-          updated = updated.filter(d => d.status !== 'PAID');
-          setDebts(updated);
+          const updatedDebt = data.debt;
+          const updated: DebtItem[] = debts.map(d => d.id === selectedDebtId ? updatedDebt : d);
+          const filtered = updated.filter((d) => d && d.status !== 'PAID');
+          setDebts(filtered);
         }
       }
     } catch (error) {
@@ -175,9 +169,8 @@ export default function DebtsPage() {
 
   const handleDeleteDebt = async (id: string) => {
     try {
-      await fetch('/api/debts', {
+      await apiFetch('/api/debts', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
       const updated = debts.filter(d => d.id !== id);

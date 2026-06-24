@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Edit2, Trash2, Plus, X, Search, Calendar, CheckCircle2, Circle, AlertCircle, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface Reminder {
   id: string;
@@ -49,8 +50,7 @@ export default function ClientReminderList() {
   const fetchReminders = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/api/reminders');
-      const data = await res.json();
+      const data = await apiFetch<{ reminders?: Reminder[] }>('/api/reminders');
       if (data.reminders) {
         setReminders(data.reminders);
       }
@@ -65,19 +65,15 @@ export default function ClientReminderList() {
 
     try {
       if (isEditing) {
-        const res = await fetch('/api/reminders', {
+        await apiFetch(`/api/reminders`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: isEditing, ...formData })
+          body: { id: isEditing, ...formData }
         });
-        if (!res.ok) throw new Error('Failed to update');
       } else {
-        const res = await fetch('/api/reminders', {
+        await apiFetch('/api/reminders', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+          body: formData
         });
-        if (!res.ok) throw new Error('Failed to create');
       }
       await fetchReminders();
       setIsEditing(null);
@@ -91,8 +87,7 @@ export default function ClientReminderList() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Yakin ingin menghapus pengingat ini?')) return;
     try {
-      const res = await fetch(`/api/reminders?id=${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
+      await apiFetch(`/api/reminders?id=${id}`, { method: 'DELETE' });
       await fetchReminders();
     } catch (error) {
       console.error('Failed to delete reminder:', error);
@@ -102,12 +97,10 @@ export default function ClientReminderList() {
   const toggleStatus = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'PENDING' ? 'COMPLETED' : 'PENDING';
     try {
-      const res = await fetch('/api/reminders', {
+      await apiFetch('/api/reminders', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status: newStatus })
+        body: { id, status: newStatus }
       });
-      if (!res.ok) throw new Error('Failed to update status');
       await fetchReminders();
     } catch (error) {
       console.error('Failed to toggle status:', error);

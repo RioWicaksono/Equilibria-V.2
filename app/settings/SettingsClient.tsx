@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Send, CheckCircle, RefreshCw, HelpCircle, X, ChevronDown, ChevronUp, Terminal, Palette, Globe, Bell, Trash2, Blocks, Settings2, Save, Download, Upload, Eye, EyeOff, Database, Zap, KeyRound, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { apiFetch } from '@/lib/api-client';
 
 type TabType = 'general' | 'integration' | 'advanced';
 
@@ -56,16 +57,15 @@ export default function SettingsClient() {
 
   // Load settings from API
   useEffect(() => {
-    fetch('/api/settings')
-      .then(r => r.json())
+    apiFetch<{ success?: boolean; settings?: Record<string, unknown> }>('/api/settings')
       .then(data => {
         if (data.success && data.settings) {
-          setCurrency(data.settings.currency || 'IDR');
-          setTheme(data.settings.theme || 'dark');
-          setLanguage(data.settings.language || 'id');
-          setAutoLockTimeout(data.settings.autoLockTimeout ?? 5);
-          setTelegramToken(data.settings.telegramToken || '');
-          setIsPinEnabled(data.settings.isPinEnabled || false);
+          setCurrency((data.settings as { currency?: string }).currency || 'IDR');
+          setTheme((data.settings as { theme?: string }).theme || 'dark');
+          setLanguage((data.settings as { language?: string }).language || 'id');
+          setAutoLockTimeout((data.settings as { autoLockTimeout?: number }).autoLockTimeout ?? 5);
+          setTelegramToken((data.settings as { telegramToken?: string }).telegramToken || '');
+          setIsPinEnabled((data.settings as { isPinEnabled?: boolean }).isPinEnabled || false);
         }
       })
       .catch(console.error);
@@ -90,12 +90,10 @@ export default function SettingsClient() {
 
     // Save to API
     try {
-      const res = await fetch('/api/settings', {
+      const data = await apiFetch<{ success?: boolean }>('/api/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [key]: value }),
+        body: { [key]: value },
       });
-      const data = await res.json();
       if (!data.success) {
         showToast('Gagal menyimpan pengaturan', 'error');
       }
@@ -106,12 +104,10 @@ export default function SettingsClient() {
 
   const handleSaveGeneral = async () => {
     try {
-      const res = await fetch('/api/settings', {
+      const data = await apiFetch<{ success?: boolean }>('/api/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currency, theme, language }),
+        body: { currency, theme, language },
       });
-      const data = await res.json();
       if (data.success) {
         showToast('Pengaturan Umum disimpan');
         window.dispatchEvent(new Event('settingsUpdated'));
@@ -127,12 +123,10 @@ export default function SettingsClient() {
 
   const handleSaveTimeout = async () => {
     try {
-      const res = await fetch('/api/settings', {
+      const data = await apiFetch<{ success?: boolean }>('/api/settings', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ autoLockTimeout }),
+        body: { autoLockTimeout },
       });
-      const data = await res.json();
       if (data.success) {
         window.dispatchEvent(new Event('settingsUpdated'));
         showToast(`Pengaturan auto-lock disimpan (${autoLockTimeout === 0 ? 'Dinonaktifkan' : `${autoLockTimeout} menit`})`);
@@ -216,12 +210,10 @@ export default function SettingsClient() {
         .map(b => b.toString(16).padStart(2, '0')).join('');
 
       try {
-        const res = await fetch('/api/settings/pin', {
+        const result = await apiFetch<{ success?: boolean; error?: string }>('/api/settings/pin', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'enable', pinHash: hash, pinSalt: salt }),
+          body: { action: 'enable', pinHash: hash, pinSalt: salt },
         });
-        const result = await res.json();
         if (result.success) {
           setIsPinEnabled(true);
           setShowPinModal(false);
@@ -236,15 +228,13 @@ export default function SettingsClient() {
     } else {
       // Disable PIN - verify old PIN first
       try {
-        const res = await fetch('/api/settings/pin', {
+        const result = await apiFetch<{ success?: boolean; error?: string }>('/api/settings/pin', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pin: newPin }),
+          body: { pin: newPin },
         });
-        const result = await res.json();
         if (result.success) {
           // PIN correct, now disable
-          await fetch('/api/settings/pin', { method: 'DELETE' });
+          await apiFetch('/api/settings/pin', { method: 'DELETE' });
           setIsPinEnabled(false);
           setShowPinModal(false);
           showToast('PIN Lock dinonaktifkan');
@@ -263,8 +253,7 @@ export default function SettingsClient() {
     setIsTesting(true);
     setTestPayload(null);
     try {
-      const res = await fetch('/api/telegram-webhook?test=true');
-      const data = await res.json();
+      const data = await apiFetch<{ bot?: string; status?: string; success?: boolean; message?: string; error?: string }>('/api/telegram-webhook?test=true');
       setTestPayload(data);
 
       const botStatus = data.bot || data.status;
@@ -394,8 +383,7 @@ export default function SettingsClient() {
   const checkHealth = async () => {
     setApiHealthStatus('unknown');
     try {
-      const res = await fetch('/api/health');
-      const data = await res.json();
+      const data = await fetch('/api/health').then(r => r.json());
       const dbStatus = data.checks?.database?.status;
       const apiStatus = data.checks?.api?.status;
 
@@ -418,8 +406,7 @@ export default function SettingsClient() {
     let active = true;
 
     const doFetchLogs = () => {
-      fetch('/api/telegram-webhook?logs=true')
-        .then(res => res.json())
+      apiFetch<{ logs?: Array<{ message: string; status: string; timestamp: string }> }>('/api/telegram-webhook?logs=true')
         .then(data => {
           if (active && data.logs) setTelegramLogs(data.logs);
         })
@@ -428,8 +415,7 @@ export default function SettingsClient() {
 
     const doFetchStatus = () => {
       setTelegramStatus('LOADING');
-      fetch('/api/telegram-webhook')
-        .then(res => res.json())
+      apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook')
         .then(data => {
           if (!active) return;
           const botState = data.bot || 'INACTIVE';
@@ -730,18 +716,15 @@ export default function SettingsClient() {
                       <button
                         onClick={async () => {
                           try {
-                            const res = await fetch('/api/settings', {
+                            const data = await apiFetch<{ success?: boolean }>('/api/settings', {
                               method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ telegramToken }),
+                              body: { telegramToken },
                             });
-                            const data = await res.json();
                             if (data.success) {
                               showToast('Token Telegram disimpan');
                               // Refresh status
-                              fetch('/api/telegram-webhook')
-                                .then(res => res.json())
-                                .then(data => setTelegramStatus(data.status))
+                              apiFetch<{ status?: string }>('/api/telegram-webhook')
+                                .then(res => setTelegramStatus((res.status === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE') as 'ACTIVE' | 'INACTIVE' | 'LOADING'))
                                 .catch(() => setTelegramStatus('INACTIVE'));
                             } else {
                               showToast('Gagal menyimpan token', 'error');

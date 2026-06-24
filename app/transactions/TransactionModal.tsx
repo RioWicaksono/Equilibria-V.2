@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import CategorySelector from './CategorySelector';
 import { useOfflineQueueProcessor, addToQueue, getQueueCount } from '../../src/lib/useOfflineQueue';
 import { useTemplates, TransactionTemplate } from '../hooks/useTemplates';
+import { apiFetch } from '@/lib/api-client';
 import dynamic from 'next/dynamic';
 
 const ReceiptScanner = dynamic(() => import('../components/ReceiptScanner'), { ssr: false });
@@ -283,11 +284,11 @@ export default function TransactionModal({ onSaveLocal, isFAB = false }: { onSav
 
     try {
       if (navigator.onLine) {
-        const response = await fetch('/api/transactions', {
+        const response = await apiFetch('/api/transactions', {
           method: 'POST',
           body: formData,
         });
-        if (response.ok) {
+        if (response) {
           router.refresh();
         }
       } else {

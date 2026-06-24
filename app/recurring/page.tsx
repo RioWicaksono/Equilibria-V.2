@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Repeat, Plus, CalendarClock, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface RecurringItem {
   id: string;
@@ -31,8 +32,7 @@ export default function RecurringPage() {
 
   const fetchRecurring = async () => {
     try {
-      const res = await fetch('/api/recurring');
-      const data = await res.json();
+      const data = await apiFetch<{ recurring?: RecurringItem[] }>('/api/recurring');
       if (data.recurring && data.recurring.length > 0) {
         setRecurring(data.recurring);
       } else {
@@ -44,14 +44,12 @@ export default function RecurringPage() {
 
         const created: RecurringItem[] = [];
         for (const item of initialItems) {
-          const res = await fetch('/api/recurring', {
+          const res = await apiFetch<{ recurring?: RecurringItem }>('/api/recurring', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(item),
           });
-          const data = await res.json();
-          if (data.recurring) {
-            created.push({ ...data.recurring, description: item.description });
+          if (res.recurring) {
+            created.push({ ...res.recurring, description: item.description });
           }
         }
         setRecurring(created);
@@ -70,24 +68,20 @@ export default function RecurringPage() {
 
     try {
       if (editingItem) {
-        const res = await fetch('/api/recurring', {
+        const data = await apiFetch<{ recurring?: RecurringItem }>('/api/recurring', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: editingItem.id, name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate, description: formData.description }),
         });
-        const data = await res.json();
         if (data.recurring) {
           const updatedItem = { ...data.recurring, description: formData.description };
           const updated = recurring.map(r => r.id === editingItem.id ? updatedItem : r);
           setRecurring(updated);
         }
       } else {
-        const res = await fetch('/api/recurring', {
+        const data = await apiFetch<{ recurring?: RecurringItem }>('/api/recurring', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: formData.name, amount: amountVal, frequency: formData.frequency, nextDate: formData.nextDate, description: formData.description }),
         });
-        const data = await res.json();
         if (data.recurring) {
           const newItem = { ...data.recurring, description: formData.description };
           const updated = [...recurring, newItem];
@@ -105,9 +99,8 @@ export default function RecurringPage() {
 
   const handleDeleteItem = async (id: string) => {
     try {
-      await fetch('/api/recurring', {
+      await apiFetch('/api/recurring', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
       const updated = recurring.filter(r => r.id !== id);

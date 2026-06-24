@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useRouter } from 'next/navigation';
 import { useSettings } from '../contexts/SettingsContext';
 import { Transaction } from '@/domain/entities/Transaction';
+import { apiFetch } from '@/lib/api-client';
 
 interface OfflineQueueItem extends Transaction {
   isOffline: boolean;
@@ -173,7 +174,14 @@ const ClientTransactionList = memo(function ClientTransactionList({
 
     try {
       if (navigator.onLine) {
-        await fetch('/api/transactions', {
+        const formData = new FormData();
+        formData.append('type', item.type);
+        formData.append('amount', item.amount.toString());
+        formData.append('category', item.category);
+        formData.append('description', item.description || '');
+        formData.append('date', new Date().toISOString().split('T')[0]);
+
+        await apiFetch('/api/transactions', {
           method: 'POST',
           body: formData,
         });
@@ -191,8 +199,8 @@ const ClientTransactionList = memo(function ClientTransactionList({
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
       if (!editingItem) return;
+      const formData = new FormData();
       formData.append('id', editingItem.id);
       formData.append('type', editingItem.type);
       formData.append('amount', editingItem.amount.toString());
@@ -201,7 +209,7 @@ const ClientTransactionList = memo(function ClientTransactionList({
       formData.append('date', new Date(editingItem.date).toISOString().split('T')[0]);
 
       if (navigator.onLine) {
-        await fetch('/api/transactions', {
+        await apiFetch('/api/transactions', {
           method: 'PUT',
           body: formData,
         });

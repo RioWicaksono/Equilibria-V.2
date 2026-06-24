@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, TrendingDown, Wallet, Target, PiggyBank, RefreshCw } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line } from 'recharts';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface Transaction {
   id: string;
@@ -46,9 +47,9 @@ export default function StatisticsPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const transRes = await fetch('/api/transactions').then(r => r.json()).catch(() => ({ transactions: [] }));
-      const goalRes = await fetch('/api/goals').then(r => r.json()).catch(() => ({ goals: [] }));
-      const debtRes = await fetch('/api/debts').then(r => r.json()).catch(() => ({ debts: [] }));
+      const transRes = await apiFetch<{ transactions?: Transaction[] }>('/api/transactions').catch(() => ({ transactions: [] }));
+      const goalRes = await apiFetch<{ goals?: Goal[] }>('/api/goals').catch(() => ({ goals: [] }));
+      const debtRes = await apiFetch<{ debts?: Debt[] }>('/api/debts').catch(() => ({ debts: [] }));
 
       // All transactions come from database via API
       const allTrans: Transaction[] = transRes.transactions || [];

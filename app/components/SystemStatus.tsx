@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { RefreshCw, Wifi, WifiOff, Database, BotMessageSquare, LucideIcon } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 type StatusKey = 'telegram' | 'database' | 'system';
 type StatusValue = 'LOADING' | 'ACTIVE' | 'INACTIVE' | 'CONNECTED' | 'DISCONNECTED' | 'green' | 'yellow' | 'red';
@@ -51,9 +52,7 @@ export default function SystemStatus() {
 
     const checkTelegram = async () => {
       try {
-        const res = await fetch('/api/telegram-webhook');
-        if (!res.ok) throw new Error();
-        const data = await res.json();
+        const data = await apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook');
         if (isActive) {
           const botStatus = data.bot || data.status;
           setStatus(prev => ({ ...prev, telegram: botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE' }));
@@ -173,8 +172,7 @@ export default function SystemStatus() {
 
   const refreshStatus = () => {
     setStatus(prev => ({ ...prev, telegram: 'LOADING', database: 'LOADING' }));
-    fetch('/api/telegram-webhook')
-      .then(res => res.json())
+    apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook')
       .then(data => {
         const botStatus = data.bot || data.status;
         setStatus(prev => ({ ...prev, telegram: botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE' }));

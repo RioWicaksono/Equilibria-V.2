@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { Budget } from '@/domain/entities/Budget';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface DashboardBudgetProps {
   budgets: Budget[];
@@ -22,8 +23,7 @@ export default function DashboardBudget({ budgets, categoryTotals }: DashboardBu
   const { formatCurrency } = useSettings();
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then(r => r.json())
+    apiFetch<{ settings?: { telegramToken?: string } }>('/api/settings')
       .then(data => {
         if (data.settings?.telegramToken) {
           setTelegramToken(data.settings.telegramToken);

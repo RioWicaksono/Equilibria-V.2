@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Target, Plus, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
+import { apiFetch } from '@/lib/api-client';
 
 interface GoalItem {
   id: string;
@@ -31,8 +32,7 @@ export default function GoalsPage() {
 
   const fetchGoals = async () => {
     try {
-      const res = await fetch('/api/goals');
-      const data = await res.json();
+      const data = await apiFetch<{ goals?: GoalItem[] }>('/api/goals');
       if (data.goals && data.goals.length > 0) {
         setGoals(data.goals);
       } else {
@@ -44,14 +44,12 @@ export default function GoalsPage() {
 
         const created: GoalItem[] = [];
         for (const g of initialGoals) {
-          const res = await fetch('/api/goals', {
+          const res = await apiFetch<{ goal?: GoalItem }>('/api/goals', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(g),
           });
-          const data = await res.json();
-          if (data.goal) {
-            created.push({ ...data.goal, deadline: g.deadline, description: g.description });
+          if (res.goal) {
+            created.push({ ...res.goal, deadline: g.deadline, description: g.description });
           }
         }
         setGoals(created);
@@ -71,24 +69,20 @@ export default function GoalsPage() {
 
     try {
       if (editingGoal) {
-        const res = await fetch('/api/goals', {
+        const data = await apiFetch<{ goal?: GoalItem }>('/api/goals', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: editingGoal.id, name: formData.name, targetAmount: targetVal, currentAmount: currentVal, deadline: formData.deadline, description: formData.description }),
         });
-        const data = await res.json();
         if (data.goal) {
           const updatedGoal = { ...data.goal, description: formData.description };
           const updated = goals.map(g => g.id === editingGoal.id ? updatedGoal : g);
           setGoals(updated);
         }
       } else {
-        const res = await fetch('/api/goals', {
+        const data = await apiFetch<{ goal?: GoalItem }>('/api/goals', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: formData.name, targetAmount: targetVal, currentAmount: currentVal, deadline: formData.deadline, description: formData.description }),
         });
-        const data = await res.json();
         if (data.goal) {
           const newGoal = { ...data.goal, description: formData.description };
           const updated = [...goals, newGoal];
@@ -106,9 +100,8 @@ export default function GoalsPage() {
 
   const handleDeleteGoal = async (id: string) => {
     try {
-      await fetch('/api/goals', {
+      await apiFetch('/api/goals', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
       const updated = goals.filter(g => g.id !== id);

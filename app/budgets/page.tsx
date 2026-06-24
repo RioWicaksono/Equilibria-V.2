@@ -5,6 +5,7 @@ import { Target, Plus, X, Pencil, Trash2, AlertTriangle, Loader2 } from 'lucide-
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../contexts/SettingsContext';
 import { ALL_DEFAULT_CATEGORIES } from '@/domain/value-objects/TransactionCategory';
+import { apiFetch } from '@/lib/api-client';
 
 interface BudgetItem {
   id: string;
@@ -33,8 +34,7 @@ export default function BudgetsPage() {
 
   const loadBudgets = async () => {
     try {
-      const res = await fetch('/api/budgets');
-      const data = await res.json();
+      const data = await apiFetch<{ budgets?: BudgetItem[] }>('/api/budgets');
       if (data.budgets && data.budgets.length > 0) {
         setBudgets(data.budgets);
       }
@@ -70,13 +70,10 @@ export default function BudgetsPage() {
       const url = editingBudget ? `/api/budgets?id=${editingBudget.id}` : '/api/budgets';
       const method = editingBudget ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const data = await apiFetch<{ budget?: BudgetItem }>(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(budgetData),
       });
-
-      const data = await res.json();
 
       if (editingBudget) {
         const updated = budgets.map(b => b.id === editingBudget.id ? data.budget || { ...editingBudget, ...budgetData } : b);
@@ -97,7 +94,7 @@ export default function BudgetsPage() {
 
   const handleDeleteBudget = async (id: string) => {
     try {
-      await fetch(`/api/budgets?id=${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/budgets?id=${id}`, { method: 'DELETE' });
       const updated = budgets.filter(b => b.id !== id);
       setBudgets(updated);
     } catch (error) {

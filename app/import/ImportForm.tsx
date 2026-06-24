@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle2, X, Download, Info } from 'lucide-react';
+import { apiFetch } from '@/lib/api-client';
 
 interface ImportResult {
   success: number;
@@ -67,15 +68,13 @@ export default function ImportPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/import', {
+      const data = await apiFetch<{ data?: { result?: ImportResult }; error?: { message?: string } }>('/api/import', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error?.message || 'Import gagal');
+      if (data.error?.message) {
+        setError(data.error.message);
       } else {
         setResult(data.data?.result || { success: 0, failed: 0, errors: [] });
       }
