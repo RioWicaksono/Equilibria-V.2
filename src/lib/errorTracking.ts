@@ -133,12 +133,12 @@ export function getErrorCount(): { total: number; byLevel: Record<string, number
   };
 }
 
-// Client-side error boundary hook
-export function useErrorTracking() {
-  if (typeof window === 'undefined') return;
+// Client-side error boundary hook - returns cleanup function
+export function useErrorTracking(): (() => void) | undefined {
+  if (typeof window === 'undefined') return undefined;
 
-  // Capture unhandled promise rejections
-  window.addEventListener('unhandledrejection', (event) => {
+  // Handler references for proper cleanup
+  const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
     captureError(
       event.reason instanceof Error
         ? event.reason
@@ -147,10 +147,9 @@ export function useErrorTracking() {
       { type: 'unhandled_rejection' },
       'error'
     );
-  });
+  };
 
-  // Capture global errors
-  window.addEventListener('error', (event) => {
+  const handleGlobalError = (event: ErrorEvent) => {
     captureError(
       event.error instanceof Error
         ? event.error
@@ -159,7 +158,17 @@ export function useErrorTracking() {
       { type: 'global_error' },
       'error'
     );
-  });
+  };
+
+  // Add listeners
+  window.addEventListener('unhandledrejection', handleUnhandledRejection);
+  window.addEventListener('error', handleGlobalError);
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    window.removeEventListener('error', handleGlobalError);
+  };
 }
 
 export default {

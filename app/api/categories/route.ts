@@ -1,11 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { PrismaCustomCategoryRepository } from '@/infrastructure/repositories/PrismaCustomCategoryRepository';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
+import { authenticateRequest } from '@/lib/auth';
 
 const categoryRepo = new PrismaCustomCategoryRepository();
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');
@@ -21,12 +27,22 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { name, icon, color, type } = await req.json();
 
     if (!name || !type) {
       return ApiResponse.badRequest('Name and type are required');
+    }
+
+    // Validate type
+    if (!['INCOME', 'EXPENSE'].includes(type)) {
+      return ApiResponse.badRequest('Type must be INCOME or EXPENSE');
     }
 
     const category = await categoryRepo.save({
@@ -43,10 +59,15 @@ export async function POST(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const body = await req.json();
+    const { id } = body;
 
     if (!id) {
       return ApiResponse.badRequest('ID is required');

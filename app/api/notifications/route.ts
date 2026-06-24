@@ -159,14 +159,40 @@ async function getBudgetAlerts() {
 }
 
 export async function GET(request: NextRequest) {
-  // SSE notifications are public - app is already PIN-protected
-  // For production, you can add additional auth if needed
-  // if (!validateApiKey(request)) {
-  //   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-  //     status: 401,
-  //     headers: { 'Content-Type': 'application/json' },
-  //   });
-  // }
+  // Validate API key for SSE connection
+  const apiKey = request.headers.get('x-api-key');
+  const expectedKey = process.env.API_SECRET_KEY;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // Allow unauthenticated access in development only if no API key is set
+  if (isProduction || expectedKey) {
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: 'Unauthorized', message: 'API key required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Constant-time comparison to prevent timing attacks
+    if (!expectedKey || apiKey.length !== expectedKey.length) {
+      return new Response(JSON.stringify({ error: 'Unauthorized', message: 'Invalid API key' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    let result = 0;
+    for (let i = 0; i < apiKey.length; i++) {
+      result |= apiKey.codePointAt(i)! ^ expectedKey.codePointAt(i)!;
+    }
+
+    if (result !== 0) {
+      return new Response(JSON.stringify({ error: 'Unauthorized', message: 'Invalid API key' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
 
   const userAgent = request.headers.get('user-agent') || '';
 
@@ -255,25 +281,34 @@ export async function GET(request: NextRequest) {
 
   const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
 
+  // Get allowed origins from environment or use a default
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['https://equilibria-v2.com'];
+  const origin = request.headers.get('origin');
+  const isAllowedOrigin = !origin || allowedOrigins.includes(origin);
+
   return new Response(stream, {
     headers: {
       'Content-Type': isSafari ? 'text/event-stream' : 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': isAllowedOrigin ? origin || '*' : 'none',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
     },
   });
 }
 
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['https://equilibria-v2.com'];
+  const origin = request.headers.get('origin');
+  const isAllowedOrigin = !origin || allowedOrigins.includes(origin);
+
   return new Response(null, {
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': isAllowedOrigin ? origin || '*' : 'none',
       'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, x-api-key',
     },
   });
 }

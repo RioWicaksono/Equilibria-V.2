@@ -5,6 +5,7 @@ import { parseAmount, validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
 import { ZodError } from 'zod';
 import { ApiResponse, parsePaginationParams, createPaginationMeta } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
+import { authenticateRequest } from '@/lib/auth';
 
 const financeService = new FinanceService();
 
@@ -13,6 +14,12 @@ function formatZodError(error: ZodError): string {
 }
 
 export async function GET(req: NextRequest) {
+  // Authenticate request
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { page = 1, limit = 20 } = parsePaginationParams(req.nextUrl.searchParams);
     const transactions = await financeService.getTransactions();

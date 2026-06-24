@@ -12,6 +12,7 @@ export interface NotificationPayload {
 class NotificationService {
   private permission: NotificationPermission = 'default';
   private listeners: Map<string, (notification: NotificationPayload) => void> = new Map();
+  private scheduledIntervalId: ReturnType<typeof setInterval> | null = null;
 
   async init(): Promise<boolean> {
     if (typeof window === 'undefined') return false;
@@ -195,21 +196,30 @@ class NotificationService {
   scheduleDailyReminderCheck(): void {
     if (typeof window === 'undefined') return;
 
-    // Check immediately if it's around 9 AM
+    // Clear existing interval if any
+    this.stopScheduledChecks();
 
-    // Initial check (can be removed in production)
-    setTimeout(() => {
+    // Initial check after 5 seconds
+    const initialTimeout = setTimeout(() => {
       this.checkReminders();
       this.checkRecurringDue();
       this.checkDebtsDue();
     }, 5000);
 
-    // Schedule next check in 1 hour
-    setInterval(() => {
+    // Schedule next check every hour
+    this.scheduledIntervalId = setInterval(() => {
       this.checkReminders();
       this.checkRecurringDue();
       this.checkDebtsDue();
     }, 60 * 60 * 1000); // Every hour
+  }
+
+  // Cleanup method to stop scheduled checks
+  stopScheduledChecks(): void {
+    if (this.scheduledIntervalId !== null) {
+      clearInterval(this.scheduledIntervalId);
+      this.scheduledIntervalId = null;
+    }
   }
 
   addListener(id: string, callback: (notification: NotificationPayload) => void): void {

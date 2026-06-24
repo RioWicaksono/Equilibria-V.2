@@ -1,34 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { getFinanceService } from '@/application/services/FinanceService';
 import { ExportQuerySchema } from '@/lib/validation';
 import { exportToCSV, exportToXLSX, exportToJSON, getExportFilename } from '@/lib/export';
 import { Transaction } from '@/domain/entities/Transaction';
+import { authenticateRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-// Export limits
 const EXPORT_CONFIG = {
-  MAX_RECORDS: 10000, // Maximum records per export
+  MAX_RECORDS: 10000,
   DEFAULT_LIMIT: 1000,
 };
 
 export async function GET(request: NextRequest) {
+  const auth = authenticateRequest(request);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const format = searchParams.get('format') || 'csv';
     const type = searchParams.get('type') || 'all';
     const month = searchParams.get('month');
 
-    // Parse and validate pagination
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = Math.min(
       parseInt(searchParams.get('limit') || String(EXPORT_CONFIG.DEFAULT_LIMIT), 10),
       EXPORT_CONFIG.MAX_RECORDS
     );
 
-    // Validate query parameters
     const validation = ExportQuerySchema.safeParse({
       format,
       type,
@@ -42,12 +45,10 @@ export async function GET(request: NextRequest) {
 
     const financeService = getFinanceService();
 
-    // Fetch transactions
     let transactions: Transaction[] = [];
     if (type === 'all' || type === 'transactions') {
       transactions = await financeService.getTransactions();
 
-      // Filter by month if specified
       if (month) {
         transactions = transactions.filter((t: Transaction) => {
           const d = new Date(t.date);
@@ -56,7 +57,6 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // Apply pagination
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
       transactions = transactions.slice(startIndex, endIndex);
@@ -79,7 +79,6 @@ export async function GET(request: NextRequest) {
 
     const filename = getExportFilename(type, format);
 
-    // Generate export based on format
     let content: string | Uint8Array;
     let contentType: string;
 
@@ -99,7 +98,7 @@ export async function GET(request: NextRequest) {
         break;
     }
 
-    return new NextResponse(content, {
+    return new Response(content, {
       status: 200,
       headers: {
         'Content-Type': contentType,

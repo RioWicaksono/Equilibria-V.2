@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { getFinanceService } from '@/application/services/FinanceService';
+import { authenticateRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get('month') || new Date().toISOString().slice(0, 7);
@@ -78,6 +84,11 @@ export async function GET(req: NextRequest) {
 
 // Send summary to Telegram
 export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get('month') || new Date().toISOString().slice(0, 7);

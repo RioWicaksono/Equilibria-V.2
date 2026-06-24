@@ -1,7 +1,9 @@
+import { NextRequest } from 'next/server';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaDebtRepository } from '@/infrastructure/repositories/PrismaDebtRepository';
 import { validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
+import { authenticateRequest } from '@/lib/auth';
 
 const debtRepo = new PrismaDebtRepository();
 
@@ -23,7 +25,12 @@ function safeParseAmount(amount: unknown): { valid: true; value: number } | { va
   return { valid: true, value: validation.amount };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const debts = await debtRepo.findAll();
     return ApiResponse.ok({ debts });
@@ -33,7 +40,12 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { name, amount, type, dueDate, description } = await req.json();
     if (!name) {
@@ -44,6 +56,19 @@ export async function POST(req: Request) {
     const amountValidation = safeParseAmount(amount);
     if (!amountValidation.valid) {
       return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
+    }
+
+    // Validate type
+    if (type && !['DEBT', 'LOAN'].includes(type)) {
+      return ApiResponse.badRequest('Type must be DEBT or LOAN');
+    }
+
+    // Validate dueDate if provided
+    if (dueDate) {
+      const dueDateObj = new Date(dueDate);
+      if (Number.isNaN(dueDateObj.getTime())) {
+        return ApiResponse.badRequest('Invalid dueDate format');
+      }
     }
 
     const debt = {
@@ -67,7 +92,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id, name, amount, type, status, dueDate, description, paidAmount } = await req.json();
     if (!id) {
@@ -105,6 +135,14 @@ export async function PUT(req: Request) {
       parsedPaidAmount = paidValidation.amount!;
     }
 
+    // Validate types
+    if (type && !['DEBT', 'LOAN'].includes(type)) {
+      return ApiResponse.badRequest('Type must be DEBT or LOAN');
+    }
+    if (status && !['UNPAID', 'PAID'].includes(status)) {
+      return ApiResponse.badRequest('Status must be UNPAID or PAID');
+    }
+
     const updated = {
       ...existing,
       ...(name && { name }),
@@ -125,7 +163,12 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id } = await req.json();
     if (!id) {

@@ -1,11 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { PrismaReminderRepository } from '@/infrastructure/repositories/PrismaReminderRepository';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
+import { authenticateRequest } from '@/lib/auth';
 
 const reminderRepo = new PrismaReminderRepository();
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
@@ -27,7 +33,12 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const body = await req.json();
     const { title, date, amount, status, priority, frequency, urgent } = body;
@@ -36,9 +47,15 @@ export async function POST(req: Request) {
       return ApiResponse.badRequest('Title and date are required');
     }
 
+    // Validate date
+    const dateObj = new Date(date);
+    if (Number.isNaN(dateObj.getTime())) {
+      return ApiResponse.badRequest('Invalid date format');
+    }
+
     const reminder = await reminderRepo.save({
       title,
-      date: new Date(date),
+      date: dateObj,
       amount: amount ? parseFloat(amount) : null,
       status: status || 'PENDING',
       priority: priority || 'MEDIUM',
@@ -53,7 +70,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const body = await req.json();
     const { id, ...data } = body;
@@ -63,7 +85,11 @@ export async function PATCH(req: Request) {
     }
 
     if (data.date) {
-      data.date = new Date(data.date);
+      const dateObj = new Date(data.date);
+      if (Number.isNaN(dateObj.getTime())) {
+        return ApiResponse.badRequest('Invalid date format');
+      }
+      data.date = dateObj;
     }
     if (data.amount !== undefined) {
       data.amount = data.amount ? parseFloat(data.amount) : null;
@@ -77,7 +103,12 @@ export async function PATCH(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');

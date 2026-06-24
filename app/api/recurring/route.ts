@@ -1,7 +1,9 @@
+import { NextRequest } from 'next/server';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaRecurringTransactionRepository } from '@/infrastructure/repositories/PrismaRecurringTransactionRepository';
 import { validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
+import { authenticateRequest } from '@/lib/auth';
 
 const recurringRepo = new PrismaRecurringTransactionRepository();
 
@@ -23,7 +25,16 @@ function safeParseAmount(amount: unknown): { valid: true; value: number } | { va
   return { valid: true, value: validation.amount };
 }
 
-export async function GET() {
+// Valid frequency values
+const VALID_FREQUENCIES = ['DAILY', 'WEEKLY', 'MONTHLY', 'YEARLY'];
+const VALID_TYPES = ['INCOME', 'EXPENSE'];
+
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const recurring = await recurringRepo.findAll();
     return ApiResponse.ok({ recurring });
@@ -33,7 +44,12 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { name, amount, type, category, frequency, nextDate, description } = await req.json();
     if (!name || !amount || !frequency || !nextDate) {
@@ -44,6 +60,16 @@ export async function POST(req: Request) {
     const amountValidation = safeParseAmount(amount);
     if (!amountValidation.valid) {
       return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
+    }
+
+    // Validate frequency
+    if (!VALID_FREQUENCIES.includes(frequency)) {
+      return ApiResponse.badRequest(`Frequency must be one of: ${VALID_FREQUENCIES.join(', ')}`);
+    }
+
+    // Validate type if provided
+    if (type && !VALID_TYPES.includes(type)) {
+      return ApiResponse.badRequest(`Type must be one of: ${VALID_TYPES.join(', ')}`);
     }
 
     // Validate date
@@ -71,7 +97,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id, name, amount, type, category, frequency, nextDate, description } = await req.json();
     if (!id) {
@@ -93,6 +124,16 @@ export async function PUT(req: Request) {
         return ApiResponse.badRequest(amountValidation.error || 'Invalid amount');
       }
       parsedAmount = amountValidation.value;
+    }
+
+    // Validate frequency if provided
+    if (frequency && !VALID_FREQUENCIES.includes(frequency)) {
+      return ApiResponse.badRequest(`Frequency must be one of: ${VALID_FREQUENCIES.join(', ')}`);
+    }
+
+    // Validate type if provided
+    if (type && !VALID_TYPES.includes(type)) {
+      return ApiResponse.badRequest(`Type must be one of: ${VALID_TYPES.join(', ')}`);
     }
 
     // Validate date if provided
@@ -122,7 +163,12 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id } = await req.json();
     if (!id) {

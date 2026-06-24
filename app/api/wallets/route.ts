@@ -1,10 +1,17 @@
+import { NextRequest } from 'next/server';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaWalletRepository } from '@/infrastructure/repositories/PrismaWalletRepository';
+import { authenticateRequest } from '@/lib/auth';
 
 const walletRepo = new PrismaWalletRepository();
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const wallets = await walletRepo.findAll();
     return ApiResponse.ok({ wallets });
@@ -14,7 +21,12 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { name, balance } = await req.json();
     if (!name) {
@@ -36,7 +48,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id, name, balance } = await req.json();
     if (!id) {
@@ -62,7 +79,12 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id } = await req.json();
     if (!id) {

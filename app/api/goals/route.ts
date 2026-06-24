@@ -1,7 +1,9 @@
+import { NextRequest } from 'next/server';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaFinancialGoalRepository } from '@/infrastructure/repositories/PrismaFinancialGoalRepository';
 import { validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
+import { authenticateRequest } from '@/lib/auth';
 
 const goalRepo = new PrismaFinancialGoalRepository();
 
@@ -23,7 +25,12 @@ function safeParseAmount(amount: unknown): { valid: true; value: number } | { va
   return { valid: true, value: validation.amount };
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const goals = await goalRepo.findAll();
     return ApiResponse.ok({ goals });
@@ -33,7 +40,12 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { name, targetAmount, currentAmount, deadline, description } = await req.json();
     if (!name) {
@@ -59,6 +71,14 @@ export async function POST(req: Request) {
       }
     }
 
+    // Validate deadline if provided
+    if (deadline) {
+      const deadlineObj = new Date(deadline);
+      if (Number.isNaN(deadlineObj.getTime())) {
+        return ApiResponse.badRequest('Invalid deadline format');
+      }
+    }
+
     const goal = {
       id: crypto.randomUUID(),
       name,
@@ -78,7 +98,12 @@ export async function POST(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id, name, targetAmount, currentAmount, deadline, description } = await req.json();
     if (!id) {
@@ -116,6 +141,14 @@ export async function PUT(req: Request) {
       parsedCurrentAmount = currentValidation.amount!;
     }
 
+    // Validate deadline if provided
+    if (deadline !== undefined) {
+      const deadlineObj = new Date(deadline);
+      if (Number.isNaN(deadlineObj.getTime())) {
+        return ApiResponse.badRequest('Invalid deadline format');
+      }
+    }
+
     const updated = {
       ...existing,
       ...(name && { name }),
@@ -134,7 +167,12 @@ export async function PUT(req: Request) {
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const { id } = await req.json();
     if (!id) {

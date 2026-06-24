@@ -2,18 +2,20 @@ import { NextRequest } from 'next/server';
 import { getSettings, updateSettings } from '@/infrastructure/repositories/SettingsRepository';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
+import { authenticateRequest } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const settings = await getSettings();
 
-    // Include PIN status in main settings response
-    // This eliminates the need for separate /api/settings/pin GET call
     return ApiResponse.ok({
       settings: {
         ...settings,
-        // PIN status is already included in settings from getSettings()
-        // Just ensure it's properly exposed
         pinEnabled: settings.isPinEnabled,
         hasPin: !!settings.pinHash,
         lockoutActive: settings.lockoutUntil
@@ -28,11 +30,15 @@ export async function GET() {
 }
 
 export async function PATCH(req: NextRequest) {
+  const auth = authenticateRequest(req);
+  if (!auth.authenticated) {
+    return ApiResponse.unauthorized(auth.reason || 'Authentication required');
+  }
+
   try {
     const data = await req.json();
 
-    // Validate allowed fields
-    const allowedFields = [
+    const allowedFields = new Set([
       'theme',
       'language',
       'currency',
@@ -43,11 +49,11 @@ export async function PATCH(req: NextRequest) {
       'pinSalt',
       'failedAttempts',
       'lockoutUntil',
-    ];
+    ]);
 
     const updateData: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
-      if (allowedFields.includes(key)) {
+      if (allowedFields.has(key)) {
         updateData[key] = value;
       }
     }

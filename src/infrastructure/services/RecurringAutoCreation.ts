@@ -23,6 +23,8 @@ interface AutoCreatedTransaction {
 class RecurringAutoCreationService {
   private storageKey = 'equilibria_auto_created';
   private listeners: Array<(transactions: AutoCreatedTransaction[]) => void> = [];
+  private timeoutId: ReturnType<typeof setTimeout> | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     // Initialize listener
@@ -31,14 +33,33 @@ class RecurringAutoCreationService {
     }
   }
 
-  async loadAndProcess(): Promise<void> {
+  loadAndProcess(): void {
+    if (typeof window === 'undefined') return;
+
+    // Clear existing timers
+    this.stopTimers();
+
     // Wait for app to be ready
-    setTimeout(() => this.processDueRecurring(), 2000);
+    this.timeoutId = setTimeout(() => {
+      this.processDueRecurring();
+    }, 2000);
 
     // Check every hour
-    setInterval(() => {
+    this.intervalId = setInterval(() => {
       this.processDueRecurring();
     }, 60 * 60 * 1000);
+  }
+
+  // Cleanup method to stop timers
+  stopTimers(): void {
+    if (this.timeoutId !== null) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+    if (this.intervalId !== null) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
   }
 
   processDueRecurring(): void {

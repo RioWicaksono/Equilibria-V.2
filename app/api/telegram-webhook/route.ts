@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const CRON_SECRET = process.env.CRON_SECRET;
+
+/**
+ * Validate secret token for cron/service routes
+ */
+function validateCronSecret(request: NextRequest): boolean {
+  if (!CRON_SECRET) {
+    // If no secret configured, allow only in non-production
+    return process.env.NODE_ENV !== 'production';
+  }
+
+  const headerSecret = request.headers.get('x-cron-secret');
+  return headerSecret === CRON_SECRET;
+}
+
 export async function POST(req: NextRequest) {
+  // Validate cron secret
+  if (!validateCronSecret(req)) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -216,6 +236,11 @@ Equilibria Finance`);
 export async function GET(req: NextRequest) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const isTest = req.nextUrl.searchParams.get('test') === 'true';
+
+  // Test endpoint doesn't need auth, but status check does
+  if (!isTest && !validateCronSecret(req)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   // Check bot health
   let botStatus = 'NOT_CONFIGURED';
