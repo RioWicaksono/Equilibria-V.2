@@ -23,7 +23,8 @@ export function withLazyLoading<P extends object>(
 
     return (
       <Suspense fallback={customFallback || fallback || <Skeleton className="w-full h-full" />}>
-        <LazyComponent {...rest} />
+        {/* Cast rest to any to bypass TypeScript generics narrowing issue with React.lazy + spread */}
+        <LazyComponent {...(rest as P)} />
       </Suspense>
     );
   };
