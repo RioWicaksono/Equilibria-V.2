@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { PrismaWalletRepository } from '@/infrastructure/repositories/PrismaWalletRepository';
@@ -99,6 +100,10 @@ export async function DELETE(req: NextRequest) {
     await walletRepo.delete(id);
     return ApiResponse.noContent();
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      // Record already deleted — idempotent success
+      return ApiResponse.noContent();
+    }
     logger.error('[DELETE /api/wallets]', { error });
     return ApiResponse.internalError('Failed to delete wallet');
   }
