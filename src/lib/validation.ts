@@ -138,7 +138,7 @@ export const UpdateSettingsSchema = z.object({
   language: LanguageSchema.optional(),
   currency: CurrencySchema2.optional(),
   autoLockTimeout: z.number().int().min(1).max(1440).default(5).optional(),
-  telegramToken: z.string().max(200).optional().nullable(),
+  telegramToken: z.string().max(200).optional(),
   isPinEnabled: z.boolean().optional(),
   pinHash: z.string().max(255).optional().nullable(),
   pinSalt: z.string().max(255).optional().nullable(),
