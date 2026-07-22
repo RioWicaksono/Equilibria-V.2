@@ -10,7 +10,7 @@ import { X, Bell, CheckCircle } from 'lucide-react';
 import { Transaction } from '@/domain/entities/Transaction';
 
 interface DashboardCalendarProps {
-  transactions: Transaction[];
+  transactions?: Transaction[];
 }
 
 export default function DashboardCalendar({ transactions }: DashboardCalendarProps) {
