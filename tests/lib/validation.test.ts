@@ -488,7 +488,7 @@ describe('Settings Validation', () => {
     });
 
     it('should accept valid theme values', () => {
-      const themes = ['light', 'dark', 'system'];
+      const themes = ['light', 'dark', 'auto'];
       themes.forEach(theme => {
         const result = UpdateSettingsSchema.safeParse({ theme });
         expect(result.success).toBe(true);

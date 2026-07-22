@@ -129,7 +129,7 @@ export const PaginationSchema = z.object({
 });
 
 // Settings validation schemas
-const ThemeSchema = z.enum(['light', 'dark', 'system']).default('dark');
+const ThemeSchema = z.enum(['light', 'dark', 'auto']).default('dark');
 const LanguageSchema = z.enum(['id', 'en']).default('id');
 const CurrencySchema2 = z.enum(['IDR', 'USD', 'EUR', 'SGD', 'MYR', 'JPY']).default('IDR');
 
