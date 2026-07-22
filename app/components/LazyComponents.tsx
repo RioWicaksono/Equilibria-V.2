@@ -16,7 +16,7 @@ const LazyReceiptScannerComponent = lazy(() => import('./ReceiptScanner'));
  * Receipt scanner wrapper with Suspense
  */
 export function LazyReceiptScanner(props: {
-  onScanComplete?: (data: { amount?: number; category?: string; description?: string }) => void;
+  onParsed: (data: { amount?: number; category?: string; description?: string }) => void;
   onClose?: () => void;
 }) {
   return (
