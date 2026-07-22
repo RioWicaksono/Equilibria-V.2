@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Phase 3: Test Coverage Expansion
+
+- **Validation Tests** - 40+ new tests for Settings validation (theme, language, currency, PIN)
+- **Rate Limiting Tests** - Unit tests for database rate limiting
+- **E2E Critical Flows** - Playwright tests for add transaction, navigation, budget management
+- **Optimistic Updates** - Instant UI feedback for CRUD operations
+- **Retry Logic** - Exponential backoff (3 retries, 1s-10s delay)
+
+#### Phase 2: Frontend Optimization
+
+- **Lazy Loading** - Heavy components (Recharts, Tesseract.js) load on demand
+- **LazyComponents.tsx** - Suspense wrappers for Chart, PieChart, Calendar, ReceiptScanner
+- **PieChart Component** - Category breakdown visualization
+- **Error Boundaries** - Graceful degradation per-section
+
+#### Phase 1: Stabilitas & Security Hardening
+
+- **Database Rate Limiting** - Serverless-compatible rate limiting using PostgreSQL
+- **Rate Limit Cleanup Cron** - Automatic cleanup every 5 minutes
+- **Settings Validation** - Zod schema with strict mode
+- **Sentry Integration** - Error tracking configuration
+- **Enhanced Health Check** - DB status, memory usage, rate limit entries
+
 #### Input Enhancement Features (100% Free)
 
 1. **Quick Add Templates**
