@@ -14,7 +14,7 @@ interface ParsedReceipt {
 
 interface ReceiptScannerProps {
   onParsed: (data: { amount: number; description: string; date?: string }) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export default function ReceiptScanner({ onParsed, onClose }: ReceiptScannerProps) {
