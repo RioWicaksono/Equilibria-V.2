@@ -1,63 +1,19 @@
 'use client';
 
-import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
+import { lazy, Suspense } from 'react';
 import { Skeleton } from './ui/Skeleton';
-
-interface LazyWrapperProps {
-  fallback?: ReactNode;
-  errorFallback?: ReactNode;
-  onError?: (error: Error) => void;
-}
+import { DashboardChart } from './DashboardChart';
+import { PieChart } from './PieChart';
+import { DashboardCalendar } from './DashboardCalendar';
 
 /**
- * Create a lazy-loaded component with fallback
+ * Receipt scanner - Tesseract.js is very heavy (~3MB), lazy load via React.lazy
+ * with Suspense handled by the wrapper component
  */
-export function withLazyLoading<P extends object>(
-  importFn: () => Promise<{ default: ComponentType<P> }>,
-  fallback?: ReactNode
-) {
-  const LazyComponent = lazy(importFn);
-
-  return function LazyWrapper(props: P & LazyWrapperProps) {
-    const { fallback: customFallback, errorFallback, onError, ...rest } = props;
-
-    return (
-      <Suspense fallback={customFallback || fallback || <Skeleton className="w-full h-full" />}>
-        {/* Cast rest to any to bypass TypeScript generics narrowing issue with React.lazy + spread */}
-        <LazyComponent {...(rest as P)} />
-      </Suspense>
-    );
-  };
-}
+const LazyReceiptScannerComponent = lazy(() => import('./ReceiptScanner'));
 
 /**
- * Chart wrapper with lazy loading
- * Use this instead of importing recharts directly
- */
-export function LazyChart(props: {
-  data: Array<{ date: string; amount: number; [key: string]: unknown }>;
-}) {
-  return (
-    <Suspense
-      fallback={
-        <div className="h-full flex items-center justify-center">
-          <Skeleton className="w-full h-48" />
-        </div>
-      }
-    >
-      <LazyChartComponent {...props} />
-    </Suspense>
-  );
-}
-
-const LazyChartComponent = withLazyLoading(
-  () => import('./DashboardChart').then((m) => ({ default: m.default })),
-  <div className="h-full flex items-center justify-center"><Skeleton className="w-full h-48" /></div>
-);
-
-/**
- * Receipt scanner wrapper with lazy loading
- * Tesseract.js is very heavy (~3MB), so we lazy load it
+ * Receipt scanner wrapper with Suspense
  */
 export function LazyReceiptScanner(props: {
   onScanComplete?: (data: { amount?: number; category?: string; description?: string }) => void;
@@ -81,7 +37,24 @@ export function LazyReceiptScanner(props: {
   );
 }
 
-const LazyReceiptScannerComponent = lazy(() => import('./ReceiptScanner'));
+/**
+ * Chart wrapper with Suspense (DashboardChart imports recharts directly)
+ */
+export function LazyChart(props: {
+  data: Array<{ date: string; amount: number; [key: string]: unknown }>;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-full flex items-center justify-center">
+          <Skeleton className="w-full h-48" />
+        </div>
+      }
+    >
+      <DashboardChart {...props} />
+    </Suspense>
+  );
+}
 
 /**
  * Pie chart for category breakdown
@@ -99,18 +72,13 @@ export function LazyPieChart(props: {
         </div>
       }
     >
-      <LazyPieChartComponent {...props} />
+      <PieChart {...props} />
     </Suspense>
   );
 }
 
-const LazyPieChartComponent = withLazyLoading(
-  () => import('./PieChart'),
-  <Skeleton className="w-full h-48" />
-);
-
 /**
- * Calendar component with lazy loading
+ * Calendar component with Suspense
  */
 export function LazyCalendar(props: {
   selectedDate: Date | undefined;
@@ -130,12 +98,7 @@ export function LazyCalendar(props: {
         </div>
       }
     >
-      <LazyCalendarComponent {...props} />
+      <DashboardCalendar {...props} />
     </Suspense>
   );
 }
-
-const LazyCalendarComponent = withLazyLoading(
-  () => import('./DashboardCalendar').then((m) => ({ default: m.default })),
-  <Skeleton className="w-full h-64" />
-);
