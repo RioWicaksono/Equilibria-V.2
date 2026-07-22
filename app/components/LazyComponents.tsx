@@ -2,9 +2,9 @@
 
 import { lazy, Suspense } from 'react';
 import { Skeleton } from './ui/Skeleton';
-import { DashboardChart } from './DashboardChart';
-import { PieChart } from './PieChart';
-import { DashboardCalendar } from './DashboardCalendar';
+import DashboardChart from './DashboardChart';
+import PieChart from './PieChart';
+import DashboardCalendar from './DashboardCalendar';
 
 /**
  * Receipt scanner - Tesseract.js is very heavy (~3MB), lazy load via React.lazy
