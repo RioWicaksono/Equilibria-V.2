@@ -128,6 +128,32 @@ export const PaginationSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).optional(),
 });
 
+// Settings validation schemas
+const ThemeSchema = z.enum(['light', 'dark', 'system']).default('dark');
+const LanguageSchema = z.enum(['id', 'en']).default('id');
+const CurrencySchema2 = z.enum(['IDR', 'USD', 'EUR', 'SGD', 'MYR', 'JPY']).default('IDR');
+
+export const UpdateSettingsSchema = z.object({
+  theme: ThemeSchema.optional(),
+  language: LanguageSchema.optional(),
+  currency: CurrencySchema2.optional(),
+  autoLockTimeout: z.number().int().min(1).max(1440).default(5).optional(),
+  telegramToken: z.string().max(200).optional().nullable(),
+  isPinEnabled: z.boolean().optional(),
+  pinHash: z.string().max(255).optional().nullable(),
+  pinSalt: z.string().max(255).optional().nullable(),
+  failedAttempts: z.number().int().min(0).max(10).optional(),
+  lockoutUntil: z.string().datetime().nullable().optional(),
+}).strict(); // Reject unknown keys
+
+export const UpdateSettingsPinSchema = z.object({
+  pin: z.string().min(4, 'PIN minimal 4 digit').max(8, 'PIN maksimal 8 digit').regex(/^\d+$/, 'PIN harus angka'),
+}).strict();
+
+export const VerifyPinSchema = z.object({
+  pin: z.string().min(4).max(8).regex(/^\d+$/, 'PIN harus angka'),
+}).strict();
+
 // Type exports
 export type CreateTransaction = z.infer<typeof CreateTransactionSchema>;
 export type UpdateTransaction = z.infer<typeof UpdateTransactionSchema>;
@@ -145,3 +171,6 @@ export type CreateReminder = z.infer<typeof CreateReminderSchema>;
 export type UpdateReminder = z.infer<typeof UpdateReminderSchema>;
 export type ExportQuery = z.infer<typeof ExportQuerySchema>;
 export type Pagination = z.infer<typeof PaginationSchema>;
+export type UpdateSettings = z.infer<typeof UpdateSettingsSchema>;
+export type UpdateSettingsPin = z.infer<typeof UpdateSettingsPinSchema>;
+export type VerifyPin = z.infer<typeof VerifyPinSchema>;

@@ -6,6 +6,7 @@ import { ZodError } from 'zod';
 import { ApiResponse, parsePaginationParams, createPaginationMeta } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { authenticateRequest } from '@/lib/auth';
+import { checkDatabaseRateLimit, createRateLimitResponse, addRateLimitHeaders, DEFAULT_RATE_LIMIT } from '@/lib/db-rate-limit';
 
 const financeService = new FinanceService();
 
@@ -14,6 +15,12 @@ function formatZodError(error: ZodError): string {
 }
 
 export async function GET(req: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = await checkDatabaseRateLimit(req, DEFAULT_RATE_LIMIT);
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse(rateLimitResult, DEFAULT_RATE_LIMIT);
+  }
+
   // Authenticate request
   const auth = authenticateRequest(req);
   if (!auth.authenticated) {
@@ -30,7 +37,9 @@ export async function GET(req: NextRequest) {
     const paginatedTransactions = transactions.slice(start, start + limit);
     const meta = createPaginationMeta(page, limit, transactions.length);
 
-    return ApiResponse.ok({ transactions: paginatedTransactions, summary }, meta);
+    const response = ApiResponse.ok({ transactions: paginatedTransactions, summary }, meta);
+    addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+    return response;
   } catch (error) {
     logger.error('[GET /api/transactions]', error);
     return ApiResponse.internalError('Failed to fetch transactions');
@@ -38,6 +47,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: Request) {
+  // Rate limiting check
+  const rateLimitResult = await checkDatabaseRateLimit(req as NextRequest, DEFAULT_RATE_LIMIT);
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse(rateLimitResult, DEFAULT_RATE_LIMIT);
+  }
+
   try {
     const formData = await req.formData();
 
@@ -82,7 +97,9 @@ export async function POST(req: Request) {
       description,
       date
     );
-    return ApiResponse.created({ transaction });
+    const response = ApiResponse.created({ transaction });
+    addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+    return response;
 
   } catch (error) {
     logger.error('[POST /api/transactions]', { error });
@@ -91,6 +108,12 @@ export async function POST(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  // Rate limiting check
+  const rateLimitResult = await checkDatabaseRateLimit(req as NextRequest, DEFAULT_RATE_LIMIT);
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse(rateLimitResult, DEFAULT_RATE_LIMIT);
+  }
+
   try {
     const formData = await req.formData();
 
@@ -143,7 +166,9 @@ export async function PUT(req: Request) {
         description,
         date
       );
-      return ApiResponse.ok({ transaction });
+      const response = ApiResponse.ok({ transaction });
+      addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+      return response;
     }
 
     // Update without amount
@@ -155,7 +180,9 @@ export async function PUT(req: Request) {
       description,
       date
     );
-    return ApiResponse.ok({ transaction });
+    const response = ApiResponse.ok({ transaction });
+    addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+    return response;
 
   } catch (error) {
     logger.error('[PUT /api/transactions]', { error });
@@ -164,6 +191,12 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
+  // Rate limiting check
+  const rateLimitResult = await checkDatabaseRateLimit(req as NextRequest, DEFAULT_RATE_LIMIT);
+  if (!rateLimitResult.allowed) {
+    return createRateLimitResponse(rateLimitResult, DEFAULT_RATE_LIMIT);
+  }
+
   try {
     const { id } = await req.json();
     if (!id) {
@@ -171,7 +204,9 @@ export async function DELETE(req: Request) {
     }
 
     await financeService.deleteTransaction(id);
-    return ApiResponse.noContent();
+    const response = ApiResponse.noContent();
+    addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+    return response;
   } catch (error) {
     logger.error('[DELETE /api/transactions]', { error });
     return ApiResponse.internalError('Failed to delete transaction');

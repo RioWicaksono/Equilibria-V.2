@@ -157,6 +157,56 @@ docker run -p 3000:3000 equilibria
 - [ ] Connection pooling configured
 - [ ] Backups enabled
 
+---
+
+## 💾 Database Backup Strategy
+
+### Railway PostgreSQL (Primary)
+
+Railway provides automatic backups for PostgreSQL databases:
+- **Automatic Backups:** Railway creates daily backups automatically
+- **Retention:** Last 7 days of backups retained
+- **Point-in-Time Recovery:** Available on Pro plans
+
+To configure backup retention:
+1. Go to Railway Dashboard → PostgreSQL → Backups
+2. Set retention period
+3. Test restore procedure regularly
+
+### Backup Cron Job
+
+The application includes automatic cleanup for rate limit entries to prevent database bloat:
+
+**Endpoint:** `GET /api/cron/cleanup-rate-limit`
+
+**Schedule:** Recommended every 5 minutes via Railway Cron or external scheduler
+
+```bash
+# Test manually
+curl -H "X-Cron-Secret: $CRON_SECRET" \
+  https://your-domain/api/cron/cleanup-rate-limit
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Cleanup completed successfully",
+  "deletedEntries": 42,
+  "executionTimeMs": 15,
+  "timestamp": "2026-07-22T12:00:00.000Z"
+}
+```
+
+### Disaster Recovery Checklist
+
+1. **Daily Backups:** Railway automatic
+2. **Point-in-Time Recovery:** Available within retention period
+3. **Cross-Region Backup:** Neon as failover database configured
+4. **Test Restore:** Quarterly restore test recommended
+
+---
+
 ### Monitoring
 
 - [ ] Health check endpoint working (`/api/health`)

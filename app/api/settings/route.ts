@@ -3,6 +3,12 @@ import { getSettings, updateSettings } from '@/infrastructure/repositories/Setti
 import { ApiResponse } from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { authenticateRequest } from '@/lib/auth';
+import { UpdateSettingsSchema } from '@/lib/validation';
+import { ZodError } from 'zod';
+
+function formatZodError(error: ZodError): string {
+  return error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+}
 
 export async function GET(req: NextRequest) {
   const auth = authenticateRequest(req);
@@ -38,27 +44,13 @@ export async function PATCH(req: NextRequest) {
   try {
     const data = await req.json();
 
-    const allowedFields = new Set([
-      'theme',
-      'language',
-      'currency',
-      'autoLockTimeout',
-      'telegramToken',
-      'isPinEnabled',
-      'pinHash',
-      'pinSalt',
-      'failedAttempts',
-      'lockoutUntil',
-    ]);
-
-    const updateData: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (allowedFields.has(key)) {
-        updateData[key] = value;
-      }
+    // Validate input with Zod schema
+    const validation = UpdateSettingsSchema.safeParse(data);
+    if (!validation.success) {
+      return ApiResponse.badRequest('Invalid settings data', formatZodError(validation.error));
     }
 
-    const settings = await updateSettings(updateData);
+    const settings = await updateSettings(validation.data);
 
     return ApiResponse.ok({
       settings: {

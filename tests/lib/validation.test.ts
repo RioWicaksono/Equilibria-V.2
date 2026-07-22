@@ -10,6 +10,9 @@ import {
   TransactionTypeSchema,
   DebtTypeSchema,
   FrequencySchema,
+  UpdateSettingsSchema,
+  UpdateSettingsPinSchema,
+  VerifyPinSchema,
 } from '@/lib/validation';
 
 describe('Transaction Validation', () => {
@@ -466,6 +469,193 @@ describe('Export Validation', () => {
         const result = ExportQuerySchema.safeParse({ type });
         expect(result.success).toBe(true);
       });
+    });
+  });
+});
+
+describe('Settings Validation', () => {
+  describe('UpdateSettingsSchema', () => {
+    it('should validate valid settings update', () => {
+      const validData = {
+        theme: 'dark',
+        language: 'id',
+        currency: 'IDR',
+        autoLockTimeout: 10,
+      };
+
+      const result = UpdateSettingsSchema.safeParse(validData);
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept valid theme values', () => {
+      const themes = ['light', 'dark', 'system'];
+      themes.forEach(theme => {
+        const result = UpdateSettingsSchema.safeParse({ theme });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should reject invalid theme', () => {
+      const result = UpdateSettingsSchema.safeParse({ theme: 'blue' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept valid language values', () => {
+      const languages = ['id', 'en'];
+      languages.forEach(lang => {
+        const result = UpdateSettingsSchema.safeParse({ language: lang });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should reject invalid language', () => {
+      const result = UpdateSettingsSchema.safeParse({ language: 'fr' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept valid currency values', () => {
+      const currencies = ['IDR', 'USD', 'EUR', 'SGD', 'MYR', 'JPY'];
+      currencies.forEach(currency => {
+        const result = UpdateSettingsSchema.safeParse({ currency });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should reject invalid currency', () => {
+      const result = UpdateSettingsSchema.safeParse({ currency: 'BTC' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept valid autoLockTimeout range', () => {
+      const timeouts = [1, 5, 30, 60, 1440];
+      timeouts.forEach(timeout => {
+        const result = UpdateSettingsSchema.safeParse({ autoLockTimeout: timeout });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should reject autoLockTimeout below minimum', () => {
+      const result = UpdateSettingsSchema.safeParse({ autoLockTimeout: 0 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject autoLockTimeout above maximum', () => {
+      const result = UpdateSettingsSchema.safeParse({ autoLockTimeout: 1441 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept valid telegram token', () => {
+      const result = UpdateSettingsSchema.safeParse({
+        telegramToken: '123456789:AABBCCDDEEFFaabbccddeeffaabbccddeeffaabb',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept null telegram token', () => {
+      const result = UpdateSettingsSchema.safeParse({ telegramToken: null });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept isPinEnabled boolean', () => {
+      const trueResult = UpdateSettingsSchema.safeParse({ isPinEnabled: true });
+      const falseResult = UpdateSettingsSchema.safeParse({ isPinEnabled: false });
+      expect(trueResult.success).toBe(true);
+      expect(falseResult.success).toBe(true);
+    });
+
+    it('should accept valid failedAttempts', () => {
+      const attempts = [0, 1, 5, 10];
+      attempts.forEach(attempt => {
+        const result = UpdateSettingsSchema.safeParse({ failedAttempts: attempt });
+        expect(result.success).toBe(true);
+      });
+    });
+
+    it('should reject failedAttempts above maximum', () => {
+      const result = UpdateSettingsSchema.safeParse({ failedAttempts: 11 });
+      expect(result.success).toBe(false);
+    });
+
+    it('should accept valid lockoutUntil datetime', () => {
+      const result = UpdateSettingsSchema.safeParse({
+        lockoutUntil: '2026-07-22T12:00:00.000Z',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject unknown fields with strict mode', () => {
+      const result = UpdateSettingsSchema.safeParse({
+        theme: 'dark',
+        unknownField: 'value',
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('should allow partial updates', () => {
+      const result = UpdateSettingsSchema.safeParse({ theme: 'light' });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('UpdateSettingsPinSchema', () => {
+    it('should validate valid PIN (4 digits)', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '1234' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate valid PIN (8 digits)', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '12345678' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject PIN below minimum length', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '123' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject PIN above maximum length', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '123456789' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject PIN with non-numeric characters', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '1234a' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject PIN with special characters', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '1234!' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject empty PIN', () => {
+      const result = UpdateSettingsPinSchema.safeParse({ pin: '' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should reject unknown fields', () => {
+      const result = UpdateSettingsPinSchema.safeParse({
+        pin: '1234',
+        unknownField: 'value',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('VerifyPinSchema', () => {
+    it('should validate valid PIN for verification', () => {
+      const result = VerifyPinSchema.safeParse({ pin: '5678' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept PIN within valid length range', () => {
+      const result = VerifyPinSchema.safeParse({ pin: '123456' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject non-numeric PIN', () => {
+      const result = VerifyPinSchema.safeParse({ pin: 'abcd' });
+      expect(result.success).toBe(false);
     });
   });
 });

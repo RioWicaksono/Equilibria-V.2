@@ -8,5 +8,12 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10,
     "command": "npx prisma migrate deploy && pnpm start"
+  },
+  "cron": {
+    "cleanup-rate-limit": {
+      "command": "curl -s -H \"X-Cron-Secret: $CRON_SECRET\" http://localhost:3000/api/cron/cleanup-rate-limit",
+      "schedule": "*/5 * * * *",
+      "description": "Clean up expired rate limit entries every 5 minutes"
+    }
   }
 }
