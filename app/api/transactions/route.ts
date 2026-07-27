@@ -1,9 +1,16 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { FinanceService } from '@/application/services/FinanceService';
 import { CreateTransactionSchema, UpdateTransactionSchema } from '@/lib/validation';
 import { parseAmount, validateAmount, AMOUNT_LIMITS } from '@/lib/amountUtils';
 import { ZodError } from 'zod';
-import { ApiResponse, parsePaginationParams, createPaginationMeta } from '@/lib/api-helpers';
+import {
+  ApiResponse,
+  parsePaginationParams,
+  createPaginationMeta,
+  parseCursorPaginationParams,
+  createCursorPaginatedResponse,
+  type CursorPaginationParams,
+} from '@/lib/api-helpers';
 import { logger } from '@/lib/logger';
 import { authenticateRequest } from '@/lib/auth';
 import { checkDatabaseRateLimit, createRateLimitResponse, addRateLimitHeaders, DEFAULT_RATE_LIMIT } from '@/lib/db-rate-limit';
@@ -14,6 +21,20 @@ function formatZodError(error: ZodError): string {
   return error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
 }
 
+/**
+ * GET /api/transactions
+ *
+ * Supports two pagination modes:
+ * 1. Cursor-based (recommended for large datasets):
+ *    ?cursor=<encoded_cursor>&limit=20
+ *
+ * 2. Offset-based (backward compatible):
+ *    ?page=1&limit=20
+ *
+ * Response includes:
+ * - data: Array of transactions
+ * - meta: Pagination metadata
+ */
 export async function GET(req: NextRequest) {
   // Rate limiting check
   const rateLimitResult = await checkDatabaseRateLimit(req, DEFAULT_RATE_LIMIT);
@@ -28,18 +49,72 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { page = 1, limit = 20 } = parsePaginationParams(req.nextUrl.searchParams);
-    const transactions = await financeService.getTransactions();
-    const summary = await financeService.getSummary();
+    const searchParams = req.nextUrl.searchParams;
 
-    // Apply pagination
-    const start = (page - 1) * limit;
-    const paginatedTransactions = transactions.slice(start, start + limit);
-    const meta = createPaginationMeta(page, limit, transactions.length);
+    // Check which pagination mode is requested
+    const hasCursor = searchParams.has('cursor');
 
-    const response = ApiResponse.ok({ transactions: paginatedTransactions, summary }, meta);
-    addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
-    return response;
+    if (hasCursor) {
+      // ========================================
+      // CURSOR-BASED PAGINATION (New - Recommended)
+      // ========================================
+      const { cursor, limit } = parseCursorPaginationParams(searchParams);
+
+      // Parse optional filters
+      const filters = {
+        type: searchParams.get('type') as 'INCOME' | 'EXPENSE' | undefined,
+        category: searchParams.get('category') || undefined,
+        walletId: searchParams.get('walletId') || undefined,
+      };
+
+      // Get summary (for dashboard stats)
+      const summary = await financeService.getSummary();
+
+      // Fetch paginated transactions
+      const result = await financeService.getTransactionsPaginated({
+        cursor,
+        limit,
+        filters: filters.type || filters.category || filters.walletId ? filters : undefined,
+      });
+
+      // Create cursor-based response
+      const getLastItem = (items: typeof result.data) => {
+        if (items.length === 0) return null;
+        const last = items[items.length - 1];
+        return {
+          id: last.id,
+          createdAt: last.createdAt ? new Date(last.createdAt).toISOString() : new Date().toISOString(),
+        };
+      };
+
+      const response = NextResponse.json(
+        createCursorPaginatedResponse(result.data, limit, getLastItem)
+      );
+
+      // Add summary to response
+      response.headers.set('X-Summary', JSON.stringify(summary));
+
+      addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+      return response;
+
+    } else {
+      // ========================================
+      // OFFSET-BASED PAGINATION (Legacy - Backward Compatible)
+      // ========================================
+      const { page = 1, limit = 20 } = parsePaginationParams(searchParams);
+      const transactions = await financeService.getTransactions();
+      const summary = await financeService.getSummary();
+
+      // Apply pagination
+      const start = (page - 1) * limit;
+      const paginatedTransactions = transactions.slice(start, start + limit);
+      const meta = createPaginationMeta(page, limit, transactions.length);
+
+      const response = ApiResponse.ok({ transactions: paginatedTransactions, summary }, meta);
+      addRateLimitHeaders(response, rateLimitResult, DEFAULT_RATE_LIMIT);
+      return response;
+    }
+
   } catch (error) {
     logger.error('[GET /api/transactions]', error);
     return ApiResponse.internalError('Failed to fetch transactions');

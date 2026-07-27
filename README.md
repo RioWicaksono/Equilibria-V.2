@@ -202,4 +202,4 @@ Private - All rights reserved
 
 ## 🌐 Live Demo
 
-**Production:** [Equilibria V.2](https://equilibria-v2.vercel.app)
+**Production:** [Equilibria V.2](https://equilibria-v2.com)

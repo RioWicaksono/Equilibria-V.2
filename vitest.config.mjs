@@ -19,4 +19,6 @@ export default defineConfig({
       '@/app': path.resolve(__dirname, './app'),
     },
   },
+  // Skip CSS processing for unit tests
+  css: false,
 });

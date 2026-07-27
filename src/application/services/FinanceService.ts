@@ -1,9 +1,9 @@
-import { ITransactionRepository } from '../../domain/repositories/ITransactionRepository';
-import { IBudgetRepository } from '../../domain/repositories/IBudgetRepository';
-import { Transaction } from '../../domain/entities/Transaction';
-import { Budget } from '../../domain/entities/Budget';
-import { TransactionType } from '../../domain/value-objects/TransactionType';
-import { getRepositories } from '../../infrastructure/repositories';
+import { ITransactionRepository } from '../repositories/ITransactionRepository';
+import { IBudgetRepository } from '../repositories/IBudgetRepository';
+import { Transaction } from '../entities/Transaction';
+import { Budget } from '../entities/Budget';
+import { TransactionType } from '../value-objects/TransactionType';
+import { getRepositories } from '../repositories';
 
 // Factory function for repository selection
 export type RepositoryFactory = () => {
@@ -19,6 +19,13 @@ const defaultFactory: RepositoryFactory = () => {
     budget: repos.budget,
   };
 };
+
+// Cursor pagination result type
+export interface PaginatedTransactions {
+  data: Transaction[];
+  hasMore: boolean;
+  nextCursor: string | null;
+}
 
 // Lazy load use cases
 async function createTransactionUseCases(repo: ITransactionRepository) {
@@ -74,6 +81,85 @@ export class FinanceService {
   async getTransactions(): Promise<Transaction[]> {
     const useCases = await this.getTransactionUseCases() as { getAllTransactions: () => Promise<Transaction[]> };
     return useCases.getAllTransactions();
+  }
+
+  /**
+   * Get transactions with cursor-based pagination
+   * More efficient for large datasets
+   */
+  async getTransactionsPaginated(options: {
+    cursor?: string;
+    limit?: number;
+    filters?: {
+      type?: TransactionType;
+      category?: string;
+      walletId?: string;
+    };
+  }): Promise<PaginatedTransactions> {
+    const { cursor, limit = 20, filters } = options;
+
+    // Get all transactions (current implementation)
+    // In production, this should query at the repository level with cursor
+    let allTransactions = await this.getTransactions();
+
+    // Apply filters
+    if (filters?.type) {
+      allTransactions = allTransactions.filter(t => t.type === filters.type);
+    }
+    if (filters?.category) {
+      allTransactions = allTransactions.filter(t => t.category === filters.category);
+    }
+    if (filters?.walletId) {
+      allTransactions = allTransactions.filter(t => t.walletId === filters.walletId);
+    }
+
+    // Sort by createdAt DESC, then by id
+    allTransactions.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (dateA !== dateB) return dateB - dateA;
+      return b.id.localeCompare(a.id);
+    });
+
+    // Find starting position based on cursor
+    let startIndex = 0;
+    if (cursor) {
+      try {
+        const decodedCursor = Buffer.from(cursor, 'base64url').toString('utf-8');
+        const cursorData = JSON.parse(decodedCursor);
+        const cursorDate = new Date(cursorData.createdAt).getTime();
+        const cursorId = cursorData.id;
+
+        const cursorIndex = allTransactions.findIndex(t => {
+          const tDate = t.createdAt ? new Date(t.createdAt).getTime() : 0;
+          return tDate < cursorDate || (tDate === cursorDate && t.id < cursorId);
+        });
+
+        if (cursorIndex !== -1) {
+          startIndex = cursorIndex;
+        }
+      } catch {
+        // Invalid cursor, start from beginning
+        startIndex = 0;
+      }
+    }
+
+    // Get requested items + 1 to check for more
+    const items = allTransactions.slice(startIndex, startIndex + limit + 1);
+    const hasMore = items.length > limit;
+    const data = hasMore ? items.slice(0, limit) : items;
+
+    // Generate next cursor
+    let nextCursor: string | null = null;
+    if (hasMore && data.length > 0) {
+      const lastItem = data[data.length - 1];
+      nextCursor = Buffer.from(JSON.stringify({
+        id: lastItem.id,
+        createdAt: (lastItem.createdAt as Date)?.toISOString() ?? new Date().toISOString(),
+      })).toString('base64url');
+    }
+
+    return { data, hasMore, nextCursor };
   }
 
   async updateTransaction(
@@ -151,6 +237,8 @@ export const financeService = {
   addTransaction: (amount: number, type: TransactionType, category: string, description: string, date: string) =>
     getFinanceService().addTransaction(amount, type, category, description, date),
   getTransactions: () => getFinanceService().getTransactions(),
+  getTransactionsPaginated: (options: Parameters<FinanceService['getTransactionsPaginated']>[0]) =>
+    getFinanceService().getTransactionsPaginated(options),
   updateTransaction: (id: string, amount: number, type: TransactionType, category: string, description: string, date: string) =>
     getFinanceService().updateTransaction(id, amount, type, category, description, date),
   getSummary: () => getFinanceService().getSummary(),

@@ -177,3 +177,124 @@ export function parsePaginationParams(
 export function calculateOffset(page: number, limit: number): number {
   return (page - 1) * limit;
 }
+
+// ============================================
+// CURSOR-BASED PAGINATION (for large datasets)
+// ============================================
+
+/**
+ * Cursor pagination params
+ */
+export interface CursorPaginationParams {
+  cursor?: string;  // Encoded cursor string
+  limit?: number;   // Number of items per page
+}
+
+/**
+ * Cursor pagination metadata (for response headers)
+ */
+export interface CursorPaginationMeta {
+  next_cursor: string | null;
+  has_more: boolean;
+  limit: number;
+}
+
+/**
+ * Paginated response with cursor
+ */
+export interface CursorPaginatedResponse<T> {
+  success: true;
+  data: T[];
+  meta: CursorPaginationMeta;
+}
+
+/**
+ * Base cursor structure - encode/decode for stable pagination
+ */
+export interface CursorData {
+  id: string;           // Last item's ID
+  createdAt: string;    // Last item's createdAt for tie-breaking
+  sortField?: string;   // Optional sort field value
+}
+
+/**
+ * Encode cursor data to base64 string
+ */
+export function encodeCursor(data: CursorData): string {
+  return Buffer.from(JSON.stringify(data)).toString('base64url');
+}
+
+/**
+ * Decode cursor string to cursor data
+ * Returns null if invalid
+ */
+export function decodeCursor(cursor: string): CursorData | null {
+  try {
+    const decoded = Buffer.from(cursor, 'base64url').toString('utf-8');
+    const data = JSON.parse(decoded) as CursorData;
+
+    // Validate required fields
+    if (!data.id || !data.createdAt) {
+      return null;
+    }
+
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse cursor pagination params from URL search params
+ */
+export function parseCursorPaginationParams(
+  searchParams: URLSearchParams
+): CursorPaginationParams {
+  const limit = Math.min(
+    parseInt(searchParams.get('limit') || '20', 10),
+    100 // Max limit
+  );
+
+  return {
+    cursor: searchParams.get('cursor') || undefined,
+    limit: isNaN(limit) || limit < 1 ? 20 : limit,
+  };
+}
+
+/**
+ * Create cursor pagination metadata
+ */
+export function createCursorPaginationMeta(
+  items: unknown[],
+  limit: number,
+  getLastItem: (items: unknown[]) => CursorData | null
+): CursorPaginationMeta {
+  const lastItem = getLastItem(items);
+
+  return {
+    next_cursor: lastItem ? encodeCursor(lastItem) : null,
+    has_more: items.length === limit,
+    limit,
+  };
+}
+
+/**
+ * Create cursor pagination response
+ */
+export function createCursorPaginatedResponse<T>(
+  data: T[],
+  limit: number,
+  getLastItem: (items: T[]) => CursorData | null
+): CursorPaginatedResponse<T> {
+  const lastItem = data.length > 0 ? getLastItem(data) : null;
+
+  return {
+    success: true,
+    data,
+    meta: {
+      next_cursor: lastItem ? encodeCursor(lastItem) : null,
+      has_more: data.length === limit,
+      limit,
+    },
+  };
+}
