@@ -38,7 +38,7 @@ export default function DashboardCalendar({ transactions }: DashboardCalendarPro
     return () => window.removeEventListener('reminders-updated', updateReminders);
   }, []);
 
-  const transactionDates = transactions.map(t => new Date(t.date));
+  const transactionDates = (transactions ?? []).map(t => new Date(t.date));
 
   const handleSelectDate = (date: Date) => {
     const dateKey = date.toISOString().split('T')[0];
