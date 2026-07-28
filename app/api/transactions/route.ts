@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
       };
 
       const response = NextResponse.json(
-        createCursorPaginatedResponse(result.data, limit, getLastItem)
+        createCursorPaginatedResponse(result.data, limit ?? 20, getLastItem)
       );
 
       // Add summary to response
