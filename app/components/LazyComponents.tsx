@@ -83,7 +83,14 @@ export function LazyPieChart(props: {
 export function LazyCalendar(props: {
   selectedDate: Date | undefined;
   onDateSelect?: (date: Date) => void;
-  transactions?: Array<{ date: Date; amount: number }>;
+  transactions?: {
+    id: string;
+    date: Date;
+    amount: number;
+    type: string;
+    category: string;
+    description: string;
+  }[];
 }) {
   return (
     <Suspense
