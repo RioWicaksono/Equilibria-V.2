@@ -1,9 +1,9 @@
-import { ITransactionRepository } from '../repositories/ITransactionRepository';
-import { IBudgetRepository } from '../repositories/IBudgetRepository';
-import { Transaction } from '../entities/Transaction';
-import { Budget } from '../entities/Budget';
-import { TransactionType } from '../value-objects/TransactionType';
-import { getRepositories } from '../repositories';
+import { ITransactionRepository } from '../../infrastructure/repositories/ITransactionRepository';
+import { IBudgetRepository } from '../../infrastructure/repositories/IBudgetRepository';
+import { Transaction } from '../../domain/entities/Transaction';
+import { Budget } from '../../domain/entities/Budget';
+import { TransactionType } from '../../domain/value-objects/TransactionType';
+import { getRepositories } from '../../infrastructure/repositories';
 
 // Factory function for repository selection
 export type RepositoryFactory = () => {
