@@ -5,6 +5,7 @@ import { Skeleton } from './ui/Skeleton';
 import DashboardChart from './DashboardChart';
 import PieChart from './PieChart';
 import DashboardCalendar from './DashboardCalendar';
+import { Transaction } from '@/domain/entities/Transaction';
 
 /**
  * Receipt scanner - Tesseract.js is very heavy (~3MB), lazy load via React.lazy
@@ -83,14 +84,7 @@ export function LazyPieChart(props: {
 export function LazyCalendar(props: {
   selectedDate: Date | undefined;
   onDateSelect?: (date: Date) => void;
-  transactions?: {
-    id: string;
-    date: Date;
-    amount: number;
-    type: string;
-    category: string;
-    description: string;
-  }[];
+  transactions?: Transaction[];
 }) {
   return (
     <Suspense
