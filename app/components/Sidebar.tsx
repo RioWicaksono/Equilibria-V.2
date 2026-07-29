@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, ArrowLeftRight, Wallet, CreditCard, Target, Repeat, Bell, BarChart3, Settings, Upload, Share2, DollarSign, ChevronLeft, ChevronRight, TrendingUp, PiggyBank } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Wallet, CreditCard, Target, Repeat, Bell, BarChart3, Settings, Upload, Share2, DollarSign, ChevronLeft, ChevronRight, PiggyBank } from 'lucide-react';
 
 interface NavItem {
   href: string;
@@ -34,7 +34,6 @@ export default function Sidebar() {
       items: [
         { href: '/summary', icon: PiggyBank, label: 'Summary' },
         { href: '/statistics', icon: BarChart3, label: 'Statistik' },
-        { href: '/networth', icon: TrendingUp, label: 'Net Worth' },
       ],
     },
     {

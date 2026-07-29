@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { Home, Receipt, Wallet, Target, Settings, LayoutGrid, CreditCard, RefreshCw, Bell, BarChart3, DollarSign, Repeat, TrendingUp } from 'lucide-react';
+import { Home, Receipt, Wallet, Target, Settings, LayoutGrid, CreditCard, RefreshCw, Bell, BarChart3, DollarSign, Repeat } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
@@ -16,7 +16,6 @@ const navItems = [
 
 const moreMenuItems = [
   { href: '/budgets', label: 'Budget', icon: CreditCard, color: 'text-teal-400' },
-  { href: '/networth', label: 'Net Worth', icon: TrendingUp, color: 'text-teal-400' },
   { href: '/debts', label: 'Hutang', icon: DollarSign, color: 'text-rose-400' },
   { href: '/recurring', label: 'Auto', icon: Repeat, color: 'text-amber-400' },
   { href: '/reminders', label: 'Reminder', icon: Bell, color: 'text-purple-400' },
