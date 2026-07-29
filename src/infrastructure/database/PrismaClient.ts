@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, type Prisma } from '@prisma/client';
 
 // Railway PostgreSQL SSL requirement
 const SSL_CONFIG = {
