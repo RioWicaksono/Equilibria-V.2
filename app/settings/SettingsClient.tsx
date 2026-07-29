@@ -422,7 +422,7 @@ export default function SettingsClient() {
 
     const doFetchStatus = () => {
       setTelegramStatus('LOADING');
-      apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook')
+      apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook?test=true')
         .then(data => {
           if (!active) return;
           const botState = data.bot || 'INACTIVE';

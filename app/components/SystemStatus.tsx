@@ -52,7 +52,7 @@ export default function SystemStatus() {
 
     const checkTelegram = async () => {
       try {
-        const data = await apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook');
+        const data = await apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook?test=true');
         if (isActive) {
           const botStatus = data.bot || data.status;
           setStatus(prev => ({ ...prev, telegram: botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE' }));
@@ -172,7 +172,7 @@ export default function SystemStatus() {
 
   const refreshStatus = () => {
     setStatus(prev => ({ ...prev, telegram: 'LOADING', database: 'LOADING' }));
-    apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook')
+    apiFetch<{ bot?: string; status?: string }>('/api/telegram-webhook?test=true')
       .then(data => {
         const botStatus = data.bot || data.status;
         setStatus(prev => ({ ...prev, telegram: botStatus === 'CONNECTED' ? 'ACTIVE' : 'INACTIVE' }));
