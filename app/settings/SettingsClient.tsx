@@ -391,9 +391,10 @@ export default function SettingsClient() {
     try {
       const data = await fetch('/api/health').then(r => r.json());
       const dbStatus = data.checks?.database?.status;
-      const apiStatus = data.checks?.api?.status;
+      const serverStatus = data.checks?.server?.status;
 
-      if (dbStatus === 'pass' && apiStatus === 'pass') {
+      // Overall health is good if database and server are passing
+      if (dbStatus === 'pass' && serverStatus === 'pass') {
         setApiHealthStatus('healthy');
         setDatabaseConnected(true);
       } else {
