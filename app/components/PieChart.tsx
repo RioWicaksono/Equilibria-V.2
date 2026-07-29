@@ -77,8 +77,8 @@ const PieChart = memo(function PieChart({
                 color: '#E5E5E5',
                 boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.5)',
               }}
-              formatter={(value: number) => [
-                `Rp ${value.toLocaleString('id-ID')}`,
+              formatter={(value) => [
+                `Rp ${Number(value).toLocaleString('id-ID')}`,
                 '',
               ]}
             />
