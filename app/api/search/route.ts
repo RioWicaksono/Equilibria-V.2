@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
         amount: t.amount,
         date: t.date,
         walletId: t.walletId,
-        walletName: (t.Wallet as any)?.name || 'Tanpa Dompet',
+        walletName: t.Wallet?.name || 'Tanpa Dompet',
       }));
     }
 
@@ -100,7 +100,11 @@ export async function GET(req: NextRequest) {
         orderBy: { _count: { category: 'desc' } },
         take: Math.min(limit, 10),
       });
-      results.categories = categories.map(c => ({ name: c.category, count: c._count, totalAmount: c._sum?.amount || 0 }));
+      results.categories = categories.map(c => ({
+        name: c.category,
+        count: c._count,
+        totalAmount: c._sum?.amount || 0
+      }));
     }
 
     if (type === 'all' || type === 'wallets') {

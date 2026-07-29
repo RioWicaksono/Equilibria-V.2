@@ -60,7 +60,9 @@ export async function GET(req: NextRequest) {
           goals: {
             total: totalGoalSavings,
             items: goals.map(g => ({
-              id: g.id, name: g.name, targetAmount: g.targetAmount,
+              id: g.id,
+              name: g.name,
+              targetAmount: g.targetAmount,
               currentAmount: g.currentAmount,
               progress: g.targetAmount > 0 ? (g.currentAmount / g.targetAmount) * 100 : 0,
               deadline: g.deadline,

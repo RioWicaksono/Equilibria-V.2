@@ -190,7 +190,7 @@ export default function ReceiptScanner({ onParsed, onClose }: ReceiptScannerProp
       description: manualDescription || parsedData?.merchant || 'Dari struk',
       date: parsedData?.date,
     });
-    onClose();
+    onClose?.();
   };
 
   return (

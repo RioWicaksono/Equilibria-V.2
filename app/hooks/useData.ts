@@ -62,15 +62,15 @@ interface OptimisticUpdate<T> {
  * Create optimistic transaction for adding
  */
 function createOptimisticTransaction(data: Partial<Transaction>): Transaction {
+  const now = new Date().toISOString();
   return {
     id: `temp_${Date.now()}`,
     amount: data.amount || 0,
     type: data.type || 'EXPENSE',
     category: data.category || '',
     description: data.description || '',
-    date: data.date ? new Date(data.date) : new Date(),
-    createdAt: new Date(),
-    walletId: data.walletId,
+    date: data.date as string || now,
+    createdAt: now,
   };
 }
 
@@ -192,7 +192,7 @@ export function useUpdateTransaction() {
                   type: updatedType || t.type,
                   category: updatedCategory || t.category,
                   description: updatedDescription ?? t.description,
-                  date: updatedDate ? new Date(updatedDate) : t.date,
+                  date: updatedDate || t.date,
                 }
               : t
           )

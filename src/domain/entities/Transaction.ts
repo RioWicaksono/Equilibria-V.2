@@ -11,4 +11,5 @@ export interface Transaction {
   date: string;
   description: string;
   createdAt?: string;
+  walletId?: string;
 }

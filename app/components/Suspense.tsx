@@ -41,7 +41,7 @@ export function SuspenseBoundary({
 // ERROR BOUNDARY WRAPPER
 // ============================================
 
-import { Component, ReactElement } from 'react';
+import { Component, type ReactElement } from 'react';
 import Link from 'next/link';
 
 interface ErrorBoundaryWrapperProps {
@@ -69,7 +69,7 @@ class ErrorBoundaryWrapper extends Component<ErrorBoundaryWrapperProps, ErrorBou
     this.props.onError?.(error, errorInfo);
   }
 
-  render(): ReactElement {
+  render(): ReactNode {
     if (this.state.hasError) {
       return this.props.fallback ?? (
         <div className="p-6 text-center">

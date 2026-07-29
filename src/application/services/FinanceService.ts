@@ -1,5 +1,5 @@
-import { ITransactionRepository } from '../../infrastructure/repositories/ITransactionRepository';
-import { IBudgetRepository } from '../../infrastructure/repositories/IBudgetRepository';
+import { ITransactionRepository } from '../../domain/repositories/ITransactionRepository';
+import { IBudgetRepository } from '../../domain/repositories/IBudgetRepository';
 import { Transaction } from '../../domain/entities/Transaction';
 import { Budget } from '../../domain/entities/Budget';
 import { TransactionType } from '../../domain/value-objects/TransactionType';
@@ -155,7 +155,7 @@ export class FinanceService {
       const lastItem = data[data.length - 1];
       nextCursor = Buffer.from(JSON.stringify({
         id: lastItem.id,
-        createdAt: (lastItem.createdAt as Date)?.toISOString() ?? new Date().toISOString(),
+        createdAt: lastItem.createdAt ?? new Date().toISOString(),
       })).toString('base64url');
     }
 

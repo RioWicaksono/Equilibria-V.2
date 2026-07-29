@@ -28,7 +28,7 @@ import {
 export function createTransactionCursor(transaction: Transaction): CursorData {
   return {
     id: transaction.id,
-    createdAt: transaction.createdAt?.toISOString() ?? new Date().toISOString(),
+    createdAt: transaction.createdAt ?? new Date().toISOString(),
   };
 }
 
@@ -36,9 +36,12 @@ export function createTransactionCursor(transaction: Transaction): CursorData {
  * Create cursor data from a budget
  */
 export function createBudgetCursor(budget: Budget): CursorData {
+  const createdAt = budget.createdAt instanceof Date
+    ? budget.createdAt.toISOString()
+    : String(budget.createdAt);
   return {
     id: budget.id,
-    createdAt: budget.createdAt?.toISOString() ?? new Date().toISOString(),
+    createdAt,
   };
 }
 
@@ -130,12 +133,12 @@ export function buildTransactionPaginationArgs(
 ): Prisma.TransactionFindManyArgs {
   const cursorWhere = getTransactionCursorWhere(cursorString);
 
+  const whereConditions: Prisma.TransactionWhereInput[] = [];
+  if (additionalWhere) whereConditions.push(additionalWhere);
+  if (cursorWhere) whereConditions.push(cursorWhere);
+
   return {
-    where: additionalWhere
-      ? {
-          AND: [additionalWhere, cursorWhere].filter(Boolean),
-        }
-      : cursorWhere,
+    where: whereConditions.length > 1 ? { AND: whereConditions } : whereConditions[0] || undefined,
     orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     take: limit + 1, // Fetch one extra to determine has_more
     select: {
@@ -146,11 +149,7 @@ export function buildTransactionPaginationArgs(
       description: true,
       date: true,
       createdAt: true,
-      updatedAt: true,
       walletId: true,
-      categoryName: true,
-      categoryIcon: true,
-      categoryColor: true,
     },
   };
 }
@@ -165,12 +164,12 @@ export function buildBudgetPaginationArgs(
 ): Prisma.BudgetFindManyArgs {
   const cursorWhere = getBudgetCursorWhere(cursorString);
 
+  const whereConditions: Prisma.BudgetWhereInput[] = [];
+  if (additionalWhere) whereConditions.push(additionalWhere);
+  if (cursorWhere) whereConditions.push(cursorWhere);
+
   return {
-    where: additionalWhere
-      ? {
-          AND: [additionalWhere, cursorWhere].filter(Boolean),
-        }
-      : cursorWhere,
+    where: whereConditions.length > 1 ? { AND: whereConditions } : whereConditions[0] || undefined,
     orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     take: limit + 1,
   };

@@ -24,6 +24,7 @@ function mapPrismaTransaction(t: PrismaTransactionResult): Transaction {
     date: t.date instanceof Date ? t.date.toISOString() : String(t.date),
     description: t.description,
     createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
+    walletId: t.walletId ?? undefined,
   };
 }
 
